@@ -52,30 +52,6 @@ export const useFetch = (endpoint, initialData) => {
     return () => controller.abort();
   }, [endpoint]);
 
-  return [data, loading];
-};
-          throw new Error(`404 on ${endpoint}`);
-        }
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status} on ${endpoint}`);
-        }
-        return res.json();
-      })
-      .then(d => {
-        fetchCache.set(endpoint, { data: d, ts: Date.now() });
-        setData(d);
-        setLoading(false);
-      })
-      .catch(e => {
-        if (e.name !== 'AbortError') {
-          console.error("Erreur de fetch:", e);
-        }
-        setLoading(false);
-      });
-
-    return () => controller.abort();
-  }, [endpoint]);
-
   const setDataAndCache = (nextValue) => {
     setData((prev) => {
       const nextData = typeof nextValue === 'function' ? nextValue(prev) : nextValue;
