@@ -1,4 +1,4 @@
-require('dotenv').config();
+// require('dotenv').config(); // Supprimé pour Vercel - variables injectées automatiquement
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
@@ -9,7 +9,7 @@ const app = express();
 // Configuration de Multer pour le stockage en mémoire (Vercel n'a pas d'accès disque persistent)
 const storage = multer.memoryStorage();
 
-const upload = multer({ 
+const upload = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // Limite de 5MB
   fileFilter: (req, file, cb) => {
@@ -57,11 +57,11 @@ const supabaseFetch = async (path, options = {}) => {
 const getOrCreateCompanyId = async () => {
   const companies = await supabaseFetch('companies?select=id&limit=1');
   if (companies && companies.length > 0) return companies[0].id;
-  
+
   const newCompany = await supabaseFetch('companies', {
     method: 'POST',
     headers: { 'Prefer': 'return=representation' },
-    body: JSON.stringify({ 
+    body: JSON.stringify({
       name: "Ma Quincaillerie Démo",
       email: "contact@quincaillerie.demo"
     })
@@ -113,7 +113,7 @@ app.post('/api/auth/login', async (req, res) => {
     if (!email || !password) return res.status(400).json({ error: "Email et mot de passe requis" });
 
     const users = await supabaseFetch(`users?email=eq.${email}&password_hash=eq.${password}&select=*,companies(name)&limit=1`);
-    
+
     if (users && users.length > 0) {
       res.json({ success: true, user: users[0] });
     } else {
@@ -175,7 +175,7 @@ app.get('/api/dashboard/stats', async (req, res) => {
 
     let sales_total = 0;
     const salesByDay = {};
-    
+
     if (salesData && Array.isArray(salesData)) {
       salesData.forEach(s => {
         const amount = Number(s.total_amount || 0);
@@ -222,10 +222,10 @@ app.get('/api/finance/summary', async (req, res) => {
   try {
     const sales = await supabaseFetch('sales?select=total_amount,sale_date,status&order=sale_date.desc') || [];
     const purchases = await supabaseFetch('purchases?select=total_amount,purchase_date,status&order=purchase_date.desc') || [];
-    
+
     const totalRecettes = sales.filter(s => s.status === 'paid').reduce((sum, s) => sum + Number(s.total_amount), 0);
     const totalDepenses = purchases.reduce((sum, p) => sum + Number(p.total_amount), 0);
-    
+
     const history = [
       ...sales.map(s => ({ id: s.id, type: 'RECETTE', amount: s.total_amount, date: s.sale_date, label: 'Vente' })),
       ...purchases.map(p => ({ id: p.id, type: 'DEPENSE', amount: p.total_amount, date: p.purchase_date, label: 'Achat' }))
@@ -257,10 +257,10 @@ app.post('/api/products', async (req, res) => {
   try {
     const { name, reference, category, purchase_price, selling_price, quantity, image_url } = req.body;
     const companyId = await getOrCreateCompanyId();
-    
+
     const newProduct = {
       company_id: companyId,
-      name, reference, 
+      name, reference,
       category: category || 'Général',
       purchase_price: Number(purchase_price) || 0,
       selling_price: Number(selling_price) || 0,
@@ -268,13 +268,13 @@ app.post('/api/products', async (req, res) => {
       image_url: image_url || null,
       alert_threshold: 5
     };
-    
+
     const prodRes = await supabaseFetch('products', {
       method: 'POST',
       headers: { 'Prefer': 'return=representation' },
       body: JSON.stringify(newProduct)
     });
-    
+
     res.status(201).json(prodRes);
   } catch (err) {
     console.error(err);
@@ -289,3 +289,4 @@ app.get('/api/health', (req, res) => {
 
 // Export pour Vercel Serverless
 module.exports = app;
+
