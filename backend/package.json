@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "build": "echo 'Backend ready'"
+    "build": "node ../vercel-build.js"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
