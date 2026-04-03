@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "npm --prefix frontend install && npm --prefix frontend run build",
+  "buildCommand": "cd frontend && npm install && npm run build",
   "outputDirectory": "frontend/dist",
   "env": {
     "SUPABASE_URL": "@supabase_url",
@@ -14,8 +14,5 @@
       "memory": 1024,
       "maxDuration": 60
     }
-  },
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api" }
-  ]
+  }
 }
