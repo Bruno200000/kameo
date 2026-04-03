@@ -59,7 +59,7 @@ const AdminPanel = () => {
 };
 
 const SaaSConfig = () => {
-  const { data: settings, setData: setSettings, loading } = useFetch('/admin/config', {});
+  const [settings, setSettings] = useFetch('/admin/config', {});
   const [isSaving, setIsSaving] = useState(false);
 
   const handleUpdate = async (key, value) => {

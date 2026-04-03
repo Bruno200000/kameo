@@ -3,8 +3,8 @@ import { Trash2, Edit2, UserPlus, X } from 'lucide-react';
 import { useFetch, API_URL } from '../hooks/useFetch';
 
 const UsersManager = () => {
-  const { data: companies } = useFetch('/admin/companies', []);
-  const { data: users, setData: setUsers, loading } = useFetch('/admin/users', []);
+  const [companies] = useFetch('/admin/companies', []);
+  const [users, setUsers] = useFetch('/admin/users', []);
   const [editingUser, setEditingUser] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const [isSaving, setIsSaving] = useState(false);

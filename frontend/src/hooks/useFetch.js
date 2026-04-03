@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 const fetchCache = new Map();
 const CACHE_TTL_MS = 45 * 1000;
 
@@ -28,6 +28,32 @@ export const useFetch = (endpoint, initialData) => {
       .then(async (res) => {
         if (res.status === 404) {
           window.dispatchEvent(new CustomEvent('kameo_api_404', { detail: { endpoint } }));
+          return null;
+        }
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+        return res.json();
+      })
+      .then((json) => {
+        if (json !== null) {
+          setData(json);
+          fetchCache.set(endpoint, { data: json, ts: Date.now() });
+        }
+      })
+      .catch((err) => {
+        if (err.name !== 'AbortError') {
+          console.error('Fetch error:', err);
+          setData(initialData);
+        }
+      })
+      .finally(() => setLoading(false));
+
+    return () => controller.abort();
+  }, [endpoint]);
+
+  return [data, loading];
+};
           throw new Error(`404 on ${endpoint}`);
         }
         if (!res.ok) {

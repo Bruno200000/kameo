@@ -318,9 +318,9 @@ const NavItem = ({ icon, label, active, onClick }) => (
 // ==========================================
 
 const Dashboard = ({ onNavigate }) => {
-  const { data: stats, loading } = useFetch('/dashboard/stats', { sales_today: 0, stock_value: 0, low_stock_items: 0, active_customers: 0, historical_sales: [] });
-  const { data: sales } = useFetch('/sales', []);
-  const { data: products } = useFetch('/products', []);
+  const [stats, statsLoading] = useFetch('/dashboard/stats', { sales_today: 0, stock_value: 0, low_stock_items: 0, active_customers: 0, historical_sales: [] });
+  const [sales] = useFetch('/sales', []);
+  const [products] = useFetch('/products', []);
 
   // Filtrer les produits en stock critique (<= 5)
   const criticalStockProducts = products.filter(p => p.quantity <= 5).sort((a, b) => a.quantity - b.quantity);
@@ -422,8 +422,8 @@ const Dashboard = ({ onNavigate }) => {
 
 // Composant POS existant conservé identique
 const POS = () => {
-  const { data: products } = useFetch('/products', []);
-  const { data: contacts } = useFetch('/contacts', { customers: [], suppliers: [] });
+  const [products] = useFetch('/products', []);
+  const [contacts] = useFetch('/contacts', { customers: [], suppliers: [] });
   const [cart, setCart] = useState([]);
   const [search, setSearch] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -729,7 +729,7 @@ const POS = () => {
 };
 
 const Products = () => {
-  const { data: products, setData: setProducts } = useFetch('/products', []);
+  const [products, setProducts] = useFetch('/products', []);
   const [showAdd, setShowAdd] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
@@ -1125,8 +1125,8 @@ const Products = () => {
 };
 
 const Stock = () => {
-  const { data: stock, setData: setStock } = useFetch('/stock', []);
-  const { data: products } = useFetch('/products', []);
+  const [stock, setStock] = useFetch('/stock', []);
+  const [products] = useFetch('/products', []);
   const [showAdd, setShowAdd] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [typeFilter, setTypeFilter] = useState('ALL');
@@ -1307,8 +1307,8 @@ const Stock = () => {
 };
 
 const Sales = () => {
-  const { data: sales, setData: setSales } = useFetch('/sales', []);
-  const { data: companySettings } = useFetch('/settings', { name: 'Mon entreprise', phone: '', address: '', currency: 'XOF' });
+  const [sales, setSales] = useFetch('/sales', []);
+  const [companySettings] = useFetch('/settings', { name: 'Mon entreprise', phone: '', address: '', currency: 'XOF' });
   const [showAdd, setShowAdd] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -2172,7 +2172,7 @@ const Sales = () => {
 };
 
 const Purchases = () => {
-  const { data: purchases, setData: setPurchases } = useFetch('/purchases', []);
+  const [purchases, setPurchases] = useFetch('/purchases', []);
   const [showAdd, setShowAdd] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -2353,7 +2353,7 @@ const Purchases = () => {
 };
 
 const Contacts = () => {
-  const { data: contacts, setData: setContacts } = useFetch('/contacts', { customers: [], suppliers: [] });
+  const [contacts, setContacts] = useFetch('/contacts', { customers: [], suppliers: [] });
   const [showAdd, setShowAdd] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -2489,7 +2489,7 @@ const Contacts = () => {
 
 const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState('general');
-  const { data: settings, loading, setData } = useFetch('/settings', { name: '', email: '', phone: '', address: '', currency: 'XOF' });
+  const [settings, settingsLoading, setSettings] = useFetch('/settings', { name: '', email: '', phone: '', address: '', currency: 'XOF' });
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null);
   const [invoiceFormat, setInvoiceFormat] = useState('A4');
@@ -3009,7 +3009,7 @@ const Subscription = () => {
 };
 
 const FinanceModule = () => {
-  const { data: fin, loading, setData } = useFetch('/finance/summary', { totalRecettes: 0, totalDepenses: 0, balance: 0, history: [] });
+  const [fin, finLoading, setFin] = useFetch('/finance/summary', { totalRecettes: 0, totalDepenses: 0, balance: 0, history: [] });
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState('RECETTE'); // RECETTE or DEPENSE
   const [isSaving, setIsSaving] = useState(false);
