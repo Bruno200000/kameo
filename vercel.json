@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "buildCommand": "node vercel-build.js",
+  "buildCommand": "npm run build",
   "outputDirectory": "frontend/dist",
+  "env": {
+    "NODE_ENV": "production"
+  },
   "functions": {
     "api/**": {
       "runtime": "nodejs18.x",
       "memory": 1024,
       "maxDuration": 60
     }
-  },
-  "env": {
-    "NODE_ENV": "production"
   }
 }
