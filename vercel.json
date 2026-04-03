@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "buildCommand": "./vercel-build.sh",
   "outputDirectory": "frontend/dist",
   "functions": {
     "api/**": {
