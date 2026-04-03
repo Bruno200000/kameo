@@ -1,0 +1,11 @@
+{
+  "name": "kameo",
+  "version": "1.0.0",
+  "description": "Kameo SaaS - Full Stack",
+  "private": true,
+  "scripts": {
+    "build": "npm --prefix frontend run build && npm --prefix backend run build",
+    "dev": "npm --prefix frontend run dev & npm --prefix backend run dev",
+    "install-all": "npm --prefix frontend install && npm --prefix backend install"
+  }
+}
