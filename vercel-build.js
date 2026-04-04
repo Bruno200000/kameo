@@ -9,16 +9,24 @@ console.log('📍 Current directory:', process.cwd());
 console.log('📂 Directory contents:', fs.readdirSync('.'));
 
 try {
+  const rootDir = __dirname;
+  console.log('📍 Root directory:', rootDir);
+
   console.log('\n📦 Installing root dependencies...');
-  execSync('npm install', { stdio: 'inherit' });
+  execSync('npm install', { stdio: 'inherit', cwd: rootDir });
 
   console.log('\n📂 Building frontend...');
-  const frontendPath = path.join(process.cwd(), 'frontend');
-  process.chdir(frontendPath);
-  console.log('📍 Frontend directory:', process.cwd());
+  const frontendPath = path.join(rootDir, 'frontend');
+  console.log('📍 Frontend directory:', frontendPath);
   
-  execSync('npm install', { stdio: 'inherit' });
-  execSync('npm run build', { stdio: 'inherit' });
+  if (!fs.existsSync(frontendPath)) {
+    console.error('❌ Frontend directory NOT found at:', frontendPath);
+    console.log('📂 Root directory contents:', fs.readdirSync(rootDir));
+    throw new Error(`Frontend directory not found at ${frontendPath}`);
+  }
+
+  execSync('npm install', { stdio: 'inherit', cwd: frontendPath });
+  execSync('npm run build', { stdio: 'inherit', cwd: frontendPath });
   
   // Vérifier si le dossier dist existe
   const distPath = path.join(frontendPath, 'dist');
