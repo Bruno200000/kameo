@@ -1,7 +1,20 @@
 {
   "version": 2,
-  "buildCommand": "node vercel-build.js",
-  "outputDirectory": "frontend/dist",
+  "builds": [
+    {
+      "src": "vercel-build.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/index.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "dist" }
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/(.*)",
@@ -9,14 +22,7 @@
     },
     {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "destination": "/frontend/$1"
     }
-  ],
-  "functions": {
-    "api/index.js": {
-      "runtime": "nodejs18.x",
-      "memory": 1024,
-      "maxDuration": 60
-    }
-  }
+  ]
 }
