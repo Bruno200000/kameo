@@ -4,6 +4,9 @@
   "outputDirectory": "frontend/dist",
   "routes": [
     {
+      "handle": "filesystem"
+    },
+    {
       "src": "^/(?!api/).*",
       "methods": ["GET", "HEAD"],
       "dest": "/index.html"
