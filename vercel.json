@@ -4,12 +4,7 @@
   "outputDirectory": "frontend/dist",
   "routes": [
     {
-      "src": "/api/(.*)",
-      "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-      "dest": "/api/index.js"
-    },
-    {
-      "src": "/(.*)",
+      "src": "^/(?!api/).*",
       "methods": ["GET", "HEAD"],
       "dest": "/index.html"
     }
