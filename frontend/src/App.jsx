@@ -66,7 +66,7 @@ export default function App() {
         if (!res.ok) return;
         const contentType = res.headers.get('content-type') || '';
         if (!contentType.includes('application/json')) {
-          console.warn('Reponse non JSON pour /settings');
+          console.warn(`Reponse non JSON pour /settings (status=${res.status}, content-type=${contentType || 'n/a'})`);
           return;
         }
         const settings = await res.json();
