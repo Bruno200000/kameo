@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KAméo - Gestion SaaS Quincaillerie</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Icônes -->
+    <script src="https://unpkg.com/feather-icons"></script>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-icon"><i data-feather="tool"></i></span>
+                    <span class="logo-text">KAméo</span>
+                </div>
+                <button class="mobile-toggle" id="closeSidebar"><i data-feather="x"></i></button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <p class="nav-section">PRINCIPAL</p>
+                <a href="#" class="nav-item active" data-page="dashboard"><i data-feather="grid"></i> Tableau de
+                    bord</a>
+                <a href="#" class="nav-item" data-page="pos"><i data-feather="shopping-cart"></i> Caisse (POS)</a>
+
+                <p class="nav-section">INVENTAIRE</p>
+                <a href="#" class="nav-item" data-page="products"><i data-feather="package"></i> Produits</a>
+                <a href="#" class="nav-item" data-page="stock"><i data-feather="layers"></i> Mouvements de stock</a>
+
+                <p class="nav-section">FINANCES</p>
+                <a href="#" class="nav-item" data-page="sales"><i data-feather="file-text"></i> Ventes & Factures</a>
+                <a href="#" class="nav-item" data-page="purchases"><i data-feather="truck"></i> Achats</a>
+
+                <p class="nav-section">GESTION</p>
+                <a href="#" class="nav-item" data-page="contacts"><i data-feather="users"></i> Clients /
+                    Fournisseurs</a>
+                <a href="#" class="nav-item" data-page="settings"><i data-feather="settings"></i> Paramètres</a>
+                <a href="#" class="nav-item" data-page="subscription"><i data-feather="credit-card"></i> Abonnement</a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar">AD</div>
+                    <div class="user-details">
+                        <span class="user-name">Admin Quincaillerie</span>
+                        <span class="user-role">Administrateur</span>
+                    </div>
+                </div>
+                <a href="#" class="logout-btn"><i data-feather="log-out"></i></a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Topbar -->
+            <header class="topbar">
+                <div class="topbar-left">
+                    <button class="mobile-toggle" id="openSidebar"><i data-feather="menu"></i></button>
+                    <h1 class="page-title" id="pageTitle">Tableau de bord</h1>
+                </div>
+                <div class="topbar-right">
+                    <div class="search-bar">
+                        <i data-feather="search"></i>
+                        <input type="text" placeholder="Rechercher...">
+                    </div>
+                    <button class="icon-btn notification-btn">
+                        <i data-feather="bell"></i>
+                        <span class="badge">3</span>
+                    </button>
+                    <button class="primary-btn"><i data-feather="plus"></i> Nouvelle Vente</button>
+                </div>
+            </header>
+
+            <!-- Page Content (Dashboard by default) -->
+            <div class="page-wrapper" id="pageContent">
+
+                <div class="dashboard-stats">
+                    <div class="stat-card">
+                        <div class="stat-icon bg-blue"><i data-feather="dollar-sign"></i></div>
+                        <div class="stat-details">
+                            <p class="stat-title">Ventes du jour</p>
+                            <h3 class="stat-value">1 240,00 €</h3>
+                            <p class="stat-change positive"><i data-feather="arrow-up-right"></i> +12.5% depuis hier</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon bg-green"><i data-feather="box"></i></div>
+                        <div class="stat-details">
+                            <p class="stat-title">Valeur du stock</p>
+                            <h3 class="stat-value">45 800,00 €</h3>
+                            <p class="stat-change text-muted">Mis à jour aujourd'hui</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon bg-red"><i data-feather="alert-triangle"></i></div>
+                        <div class="stat-details">
+                            <p class="stat-title">Produits en rupture</p>
+                            <h3 class="stat-value text-red">8</h3>
+                            <p class="stat-change negative">Alerte stock bas</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon bg-purple"><i data-feather="users"></i></div>
+                        <div class="stat-details">
+                            <p class="stat-title">Clients actifs</p>
+                            <h3 class="stat-value">312</h3>
+                            <p class="stat-change positive"><i data-feather="arrow-up-right"></i> +4 ce mois</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <!-- Dernières ventes -->
+                    <div class="card recent-sales">
+                        <div class="card-header">
+                            <h2>Dernières Ventes</h2>
+                            <a href="#" class="card-link">Voir tout</a>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Réf. Facture</th>
+                                        <th>Date</th>
+                                        <th>Client</th>
+                                        <th>Montant</th>
+                                        <th>Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>#FAC-2023-001</td>
+                                        <td>Aujourd'hui, 10:24</td>
+                                        <td>Client Passager</td>
+                                        <td>145,50 €</td>
+                                        <td><span class="status-badge success">Payé</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>#FAC-2023-002</td>
+                                        <td>Aujourd'hui, 09:15</td>
+                                        <td>Entreprise Dupont BTP</td>
+                                        <td>1 050,00 €</td>
+                                        <td><span class="status-badge warning">En attente</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>#FAC-2023-003</td>
+                                        <td>Hier, 16:45</td>
+                                        <td>Jean Artisan</td>
+                                        <td>45,00 €</td>
+                                        <td><span class="status-badge success">Payé</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>#FAC-2023-004</td>
+                                        <td>Hier, 14:10</td>
+                                        <td>Client Passager</td>
+                                        <td>12,50 €</td>
+                                        <td><span class="status-badge success">Payé</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Produits à réapprovisionner -->
+                    <div class="card low-stock">
+                        <div class="card-header">
+                            <h2>Alertes Stock</h2>
+                            <a href="#" class="card-link">Gérer</a>
+                        </div>
+                        <ul class="item-list">
+                            <li class="item">
+                                <div class="item-icon"><i data-feather="tool"></i></div>
+                                <div class="item-info">
+                                    <h4>Marteau de charpentier</h4>
+                                    <p>Réf: MR-001 • Fournisseur: OutillagePro</p>
+                                </div>
+                                <div class="item-action">
+                                    <span class="stock-count critical">1 rest.</span>
+                                </div>
+                            </li>
+                            <li class="item">
+                                <div class="item-icon"><i data-feather="layers"></i></div>
+                                <div class="item-info">
+                                    <h4>Boîte de clous 50mm</h4>
+                                    <p>Réf: CL-050 • Fournisseur: FixFast</p>
+                                </div>
+                                <div class="item-action">
+                                    <span class="stock-count critical">0 rest.</span>
+                                </div>
+                            </li>
+                            <li class="item">
+                                <div class="item-icon"><i data-feather="pen-tool"></i></div>
+                                <div class="item-info">
+                                    <h4>Perceuse sans fil 18V</h4>
+                                    <p>Réf: PC-18V • Fournisseur: OutillagePro</p>
+                                </div>
+                                <div class="item-action">
+                                    <span class="stock-count warning">3 rest.</span>
+                                </div>
+                            </li>
+                        </ul>
+                        <button class="secondary-btn w-100 mt-3">Générer une commande d'achat</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modèle Produit (Caché par défaut) -->
+    <template id="productsTemplate">
+        <div class="page-top-actions">
+            <div class="search-filters">
+                <input type="text" placeholder="Rechercher un produit..." class="large-input">
+                <select class="filter-select">
+                    <option>Toutes les catégories</option>
+                    <option>Outillage</option>
+                    <option>Quincaillerie</option>
+                    <option>Peinture</option>
+                </select>
+            </div>
+            <button class="primary-btn"><i data-feather="plus"></i> Ajouter un produit</button>
+        </div>
+
+        <div class="card mt-4">
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Référence</th>
+                            <th>Image</th>
+                            <th>Nom & Catégorie</th>
+                            <th>Prix Achat</th>
+                            <th>Prix Vente</th>
+                            <th>Stock</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>MR-001</td>
+                            <td>
+                                <div class="product-img-placeholder"><i data-feather="image"></i></div>
+                            </td>
+                            <td>
+                                <strong>Marteau de charpentier</strong>
+                                <span class="sub-text">Outillage</span>
+                            </td>
+                            <td>12,50 F</td>
+                            <td>24,90 F</td>
+                            <td><span class="status-badge error">1 (Alerte)</span></td>
+                            <td>
+                                <button class="action-btn"><i data-feather="edit-2"></i></button>
+                                <button class="action-btn"><i data-feather="trash-2"></i></button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>PN-010</td>
+                            <td>
+                                <div class="product-img-placeholder"><i data-feather="image"></i></div>
+                            </td>
+                            <td>
+                                <strong>Peinture Acrylique Blanc 5L</strong>
+                                <span class="sub-text">Peinture</span>
+                            </td>
+                            <td>25,00 F</td>
+                            <td>45,00 F</td>
+                            <td><span class="status-badge success">42</span></td>
+                            <td>
+                                <button class="action-btn"><i data-feather="edit-2"></i></button>
+                                <button class="action-btn"><i data-feather="trash-2"></i></button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </template>
+
+    <!-- Modèle Caisse (POS) -->
+    <template id="posTemplate">
+        <div class="card mt-4 p-4 text-center">
+            <i data-feather="shopping-cart" style="width: 48px; height: 48px; color: #3b82f6; margin-bottom: 16px;"></i>
+            <h2>Caisse Rapide (POS)</h2>
+            <p class="text-muted">Scannez un code-barres ou recherchez un produit pour commencer une vente.</p>
+            <div class="search-filters mt-4" style="justify-content: center;">
+                <input type="text" placeholder="Rechercher par nom ou code..." class="large-input" style="width: 400px; max-width: 100%;">
+                <button class="primary-btn">Scanner Produit</button>
+            </div>
+            <div class="table-responsive mt-4">
+                <table class="data-table">
+                    <thead><tr><th>Produit</th><th>Qté</th><th>Prix Unit.</th><th>Total</th><th></th></tr></thead>
+                    <tbody><tr><td colspan="5" class="text-muted" style="text-align: center; padding: 20px;">Panier vide</td></tr></tbody>
+                </table>
+            </div>
+            <div class="mt-4">
+                <button class="primary-btn w-100" style="padding: 15px; font-size: 1.2rem;">Encaisser 0,00 F</button>
+            </div>
+        </div>
+    </template>
+
+    <!-- Modèle Stock -->
+    <template id="stockTemplate">
+        <div class="page-top-actions">
+            <div class="search-filters">
+                <input type="text" placeholder="Rechercher un mouvement..." class="large-input">
+                <select class="filter-select"><option>Entrées</option><option>Sorties</option><option>Tout</option></select>
+            </div>
+            <button class="primary-btn"><i data-feather="plus"></i> Saisir Mouvement</button>
+        </div>
+        <div class="card mt-4">
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead><tr><th>Date</th><th>Produit</th><th>Type</th><th>Quantité</th><th>Motif</th></tr></thead>
+                    <tbody>
+                        <tr><td>Aujourd'hui 09:15</td><td>MR-001 - Marteau</td><td><span class="status-badge error">Sortie</span></td><td>-2</td><td>Vente Caisse</td></tr>
+                        <tr><td>Hier 14:30</td><td>PN-010 - Peinture Acrylique 5L</td><td><span class="status-badge success">Entrée</span></td><td>+10</td><td>Livraison Fournisseur</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </template>
+
+    <!-- Modèle Ventes -->
+    <template id="salesTemplate">
+        <div class="page-top-actions">
+            <div class="search-filters">
+                <input type="text" placeholder="N° de facture ou nom..." class="large-input">
+            </div>
+            <button class="primary-btn"><i data-feather="file-text"></i> Nouvelle Facture</button>
+        </div>
+        <div class="card mt-4 p-4 text-center">
+            <i data-feather="file-text" style="width: 48px; height: 48px; color: #10b981; margin-bottom: 16px;"></i>
+            <h2>Historique des Ventes</h2>
+            <p class="text-muted">Visualisez tout l'historique complet, les factures pro-forma et devis.</p>
+        </div>
+    </template>
+
+    <!-- Modèle Achats -->
+    <template id="purchasesTemplate">
+        <div class="page-top-actions">
+            <button class="primary-btn"><i data-feather="plus"></i> Bon de commande</button>
+        </div>
+        <div class="card mt-4 p-4 text-center">
+            <i data-feather="truck" style="width: 48px; height: 48px; color: #f59e0b; margin-bottom: 16px;"></i>
+            <h2>Dépenses & Achats</h2>
+            <p class="text-muted">Gérez vos commandes fournisseurs et suivez les approvisionnements.</p>
+        </div>
+    </template>
+
+    <!-- Modèle Contacts -->
+    <template id="contactsTemplate">
+        <div class="page-top-actions">
+            <div class="search-filters">
+                <input type="text" placeholder="Recherche de contact..." class="large-input">
+                <select class="filter-select"><option>Tous</option><option>Clients VIP</option><option>Fournisseurs</option></select>
+            </div>
+            <button class="primary-btn"><i data-feather="user-plus"></i> Ajouter Contact</button>
+        </div>
+        <div class="card mt-4 p-4 text-center">
+            <i data-feather="users" style="width: 48px; height: 48px; color: #8b5cf6; margin-bottom: 16px;"></i>
+            <h2>Annuaire de Contacts</h2>
+            <p class="text-muted">Liste de vos clients (en compte ou passagers) et fournisseurs habituels.</p>
+        </div>
+    </template>
+
+    <!-- Modèle Paramètres -->
+    <template id="settingsTemplate">
+        <div class="card mt-4" style="max-width: 600px; margin: 0 auto; padding: 30px;">
+            <h2 style="margin-bottom: 20px;">Paramètres de la Quincaillerie</h2>
+            <form>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Nom du magasin</label>
+                    <input type="text" class="large-input" style="width: 100%;" value="KAméo Shop">
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Devise Principale</label>
+                    <select class="filter-select" style="width: 100%;">
+                        <option>Franc CFA (F)</option>
+                        <option>Euro (€)</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Adresse</label>
+                    <textarea class="large-input" style="width: 100%; min-height: 80px;">123 Rue de la Quincaillerie, Abidjan</textarea>
+                </div>
+                <button type="button" class="primary-btn">Enregistrer les modifications</button>
+            </form>
+        </div>
+    </template>
+
+    <!-- Modèle Abonnement -->
+    <template id="subscriptionTemplate">
+        <div class="card mt-4 p-4 text-center" style="max-width: 500px; margin: 0 auto;">
+            <i data-feather="credit-card" style="width: 48px; height: 48px; color: #ef4444; margin-bottom: 16px;"></i>
+            <h2>Votre Abonnement KAméo</h2>
+            <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left;">
+                <p style="margin-bottom: 10px;"><strong>Plan en cours :</strong> Professionnel (Engagement Mensuel)</p>
+                <p style="margin-bottom: 10px;"><strong>Renouvellement :</strong> 15 Avril 2026</p>
+                <p><strong>Utilisation :</strong> 2/5 Utilisateurs</p>
+            </div>
+            <button class="primary-btn" style="background-color: #ef4444;">Facturation & Paiement</button>
+        </div>
+    </template>
+
+    <script src="app.js"></script>
+    <script>
+        feather.replace();
+    </script>
+</body>
+
+</html>
