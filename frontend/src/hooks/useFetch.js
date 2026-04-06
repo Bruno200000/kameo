@@ -13,7 +13,6 @@ const parseResponseSafely = async (res) => {
   if (!text) return null;
   throw new Error(`Reponse non-JSON recue (${res.status})`);
 };
-
 export const useFetch = (endpoint, initialData) => {
   const [data, setData] = useState(() => {
     const cached = fetchCache.get(endpoint);

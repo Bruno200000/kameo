@@ -201,7 +201,6 @@ app.post('/api/settings', async (req, res) => {
     res.status(500).json({ error: "Erreur sauvegarde des reglages" });
   }
 });
-
 // Modifier les réglages de la plateforme
 app.patch('/api/admin/config', async (req, res) => {
   try {
