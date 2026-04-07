@@ -105,6 +105,7 @@ router.patch('/auth/password', async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Erreur changement' }); }
 });
 
+// Réglages Entreprise
 router.get('/settings', async (req, res) => {
   try {
     const data = await supabaseFetch('companies?select=*&limit=1');
@@ -112,6 +113,18 @@ router.get('/settings', async (req, res) => {
   } catch (err) { res.status(500).json({ error: "Erreur" }); }
 });
 
+router.post('/settings', async (req, res) => {
+  try {
+    const companyId = await getOrCreateCompanyId();
+    await supabaseFetch(`companies?id=eq.${companyId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(req.body)
+    });
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: "Erreur mise à jour" }); }
+});
+
+// Dashboard
 router.get('/dashboard/stats', async (req, res) => {
   try {
     const salesData = await supabaseFetch('sales?select=total_amount,sale_date&status=eq.paid');
@@ -145,6 +158,22 @@ router.get('/dashboard/stats', async (req, res) => {
   } catch (err) { res.status(500).json({ error: "Erreur" }); }
 });
 
+// Finance
+router.get('/finance/summary', async (req, res) => {
+  try {
+    const sales = await supabaseFetch('sales?select=total_amount,sale_date,status&order=sale_date.desc') || [];
+    const purchases = await supabaseFetch('purchases?select=total_amount,purchase_date,status&order=purchase_date.desc') || [];
+    const totalRecettes = sales.filter(s => s.status === 'paid').reduce((sum, s) => sum + Number(s.total_amount), 0);
+    const totalDepenses = purchases.reduce((sum, p) => sum + Number(p.total_amount), 0);
+    const history = [
+      ...sales.map(s => ({ id: s.id, type: 'RECETTE', amount: s.total_amount, date: s.sale_date, label: 'Vente' })),
+      ...purchases.map(p => ({ id: p.id, type: 'DEPENSE', amount: p.total_amount, date: p.purchase_date, label: 'Achat' }))
+    ].sort((a, b) => new Date(b.date) - new Date(a.date));
+    res.json({ totalRecettes, totalDepenses, balance: totalRecettes - totalDepenses, history: history.slice(0, 20) });
+  } catch (err) { res.status(500).json({ error: "Erreur finance" }); }
+});
+
+// Produits
 router.get('/products', async (req, res) => {
   try {
     const data = await supabaseFetch('products?select=*&order=created_at.desc');
@@ -165,40 +194,44 @@ router.post('/products', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+router.patch('/products/:id', async (req, res) => {
+  try {
+    const updated = await supabaseFetch(`products?id=eq.${req.params.id}`, {
+      method: 'PATCH',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify(req.body)
+    });
+    if (updated && updated.length > 0) res.json({ success: true, product: updated[0] });
+    else res.status(404).json({ error: "Produit non trouvé" });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.delete('/products/:id', async (req, res) => {
+  try {
+    await supabaseFetch(`products?id=eq.${req.params.id}`, { method: 'DELETE' });
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Upload
 router.post('/upload', upload.single('image'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "Aucun fichier" });
-
     const fileName = `${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(req.file.originalname)}`;
     const bucketName = 'images';
     const uploadUrl = `${supabaseUrl}/storage/v1/object/${bucketName}/${fileName}`;
-
-    // Upload vers Supabase Storage
     const uploadResponse = await fetch(uploadUrl, {
       method: 'POST',
-      headers: {
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`,
-        'Content-Type': req.file.mimetype,
-        'upsert': 'true'
-      },
+      headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}`, 'Content-Type': req.file.mimetype, 'upsert': 'true' },
       body: req.file.buffer
     });
-
-    if (!uploadResponse.ok) {
-      const errText = await uploadResponse.text();
-      throw new Error(`Upload fail: ${uploadResponse.status} - ${errText}`);
-    }
-
-    // URL Publique de l'image
+    if (!uploadResponse.ok) throw new Error(`Upload fail: ${uploadResponse.status}`);
     const publicUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${fileName}`;
     res.json({ success: true, imageUrl: publicUrl });
-  } catch (err) {
-    console.error("Erreur Upload:", err.message);
-    res.status(500).json({ error: "Erreur téléversement vers Supabase Storage" });
-  }
+  } catch (err) { res.status(500).json({ error: "Erreur upload" }); }
 });
 
+// Ventes
 router.get('/sales', async (req, res) => {
   try {
     const data = await supabaseFetch('sales?select=*&order=sale_date.desc');
@@ -214,11 +247,87 @@ router.post('/sales', async (req, res) => {
       headers: { 'Prefer': 'return=representation' }, 
       body: JSON.stringify({ ...req.body, company_id: companyId })
     });
-    if (saleRes && saleRes.length > 0) res.json({ success: true, sale_id: saleRes[0].id });
-    else res.status(500).json({ error: "Echec insertion" });
+    if (saleRes && saleRes.length > 0) {
+      // Stock update logic simplified for serverless
+      res.json({ success: true, sale_id: saleRes[0].id });
+    } else res.status(500).json({ error: "Echec insertion" });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+router.post('/sales/:id/payment', async (req, res) => {
+  try {
+    const { paymentAmount, newStatus } = req.body;
+    const existing = await supabaseFetch(`sales?id=eq.${req.params.id}&select=paid_amount,total_amount`);
+    if (!existing || existing.length === 0) return res.status(404).json({ error: 'Vente non trouvée' });
+    
+    const newPaid = Number(existing[0].paid_amount) + Number(paymentAmount);
+    const updated = await supabaseFetch(`sales?id=eq.${req.params.id}`, {
+      method: 'PATCH',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({ paid_amount: newPaid, status: newStatus || (newPaid >= existing[0].total_amount ? 'paid' : 'partial') })
+    });
+    res.json({ success: true, sale: updated[0] });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Achats
+router.get('/purchases', async (req, res) => {
+  try {
+    const data = await supabaseFetch('purchases?select=*&order=purchase_date.desc');
+    res.json(data || []);
+  } catch (err) { res.status(500).json({ error: "Erreur" }); }
+});
+
+router.post('/purchases', async (req, res) => {
+  try {
+    const companyId = await getOrCreateCompanyId();
+    const purRes = await supabaseFetch('purchases', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({ ...req.body, company_id: companyId })
+    });
+    res.json({ success: true, purchase: purRes[0] });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.patch('/purchases/:id', async (req, res) => {
+  try {
+    const purRes = await supabaseFetch(`purchases?id=eq.${req.params.id}`, {
+      method: 'PATCH',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify(req.body)
+    });
+    res.json({ success: true, purchase: purRes[0] });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Stocks
+router.get('/stock', async (req, res) => {
+  try {
+    const data = await supabaseFetch('stock_movements?select=*,products:product_id(name,quantity)&order=movement_date.desc');
+    res.json(data || []);
+  } catch (err) { res.status(500).json({ error: "Erreur" }); }
+});
+
+router.post('/stock', async (req, res) => {
+  try {
+    const companyId = await getOrCreateCompanyId();
+    const moveRes = await supabaseFetch('stock_movements', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({ ...req.body, company_id: companyId })
+    });
+    // Update product quantity
+    const prod = await supabaseFetch(`products?id=eq.${req.body.product_id}&select=quantity`);
+    if (prod && prod.length > 0) {
+      const newQty = req.body.movement_type === 'IN' ? prod[0].quantity + req.body.quantity : prod[0].quantity - req.body.quantity;
+      await supabaseFetch(`products?id=eq.${req.body.product_id}`, { method: 'PATCH', body: JSON.stringify({ quantity: Math.max(0, newQty) }) });
+    }
+    res.json({ success: true, movement: moveRes[0] });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Contacts
 router.get('/contacts', async (req, res) => {
   try {
     const customers = await supabaseFetch('customers?select=*&order=created_at.desc');
@@ -227,8 +336,36 @@ router.get('/contacts', async (req, res) => {
   } catch (err) { res.status(500).json({ error: "Erreur" }); }
 });
 
+router.post('/contacts', async (req, res) => {
+  try {
+    const companyId = await getOrCreateCompanyId();
+    const table = req.body.type === 'fournisseur' ? 'suppliers' : 'customers';
+    const cRes = await supabaseFetch(table, {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({ ...req.body, company_id: companyId })
+    });
+    res.json({ success: true, contact: cRes[0] });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Admin
+router.get('/admin/companies', async (req, res) => {
+  try {
+    const data = await supabaseFetch('companies?select=*&order=created_at.desc');
+    res.json(data || []);
+  } catch (err) { res.status(500).json({ error: "Erreur" }); }
+});
+
+router.get('/admin/users', async (req, res) => {
+  try {
+    const data = await supabaseFetch('users?select=*,companies(name)&order=created_at.desc');
+    res.json(data || []);
+  } catch (err) { res.status(500).json({ error: "Erreur" }); }
+});
+
 router.get('/status', (req, res) => {
-  res.json({ status: 'Online', storage: 'Supabase enabled', utf8: 'Active' });
+  res.json({ status: 'Online', storage: 'Supabase enabled', version: '1.2.0-full' });
 });
 
 app.use('/api', router);
