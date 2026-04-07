@@ -1,4 +1,3 @@
-// require('dotenv').config(); // Supprimé pour Vercel - variables injectées automatiquement
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
@@ -8,8 +7,7 @@ const app = express();
 
 // Configuration de Multer pour le stockage en mémoire (Vercel n'a pas d'accès disque persistent)
 const storage = multer.memoryStorage();
-
-const upload = multer({
+const upload = multer({ 
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // Limite de 5MB
   fileFilter: (req, file, cb) => {
@@ -57,11 +55,11 @@ const supabaseFetch = async (path, options = {}) => {
 const getOrCreateCompanyId = async () => {
   const companies = await supabaseFetch('companies?select=id&limit=1');
   if (companies && companies.length > 0) return companies[0].id;
-
+  
   const newCompany = await supabaseFetch('companies', {
     method: 'POST',
     headers: { 'Prefer': 'return=representation' },
-    body: JSON.stringify({
+    body: JSON.stringify({ 
       name: "Ma Quincaillerie Démo",
       email: "contact@quincaillerie.demo"
     })
@@ -73,19 +71,48 @@ const getOrCreateCompanyId = async () => {
 app.use(cors());
 app.use(express.json());
 
-// --- ROUTES DE L'API REST ---
+// --- ROUTES DE L'API REST (Sans préfixe /api car monté sur /api dans Vercel) ---
 
 app.get('/', (req, res) => {
-  res.json({ message: "Bienvenue sur l'API KAméo SaaS connectée à Supabase via requêtes natives" });
+  res.json({ message: "Bienvenue sur l'API KAméo SaaS connectée à Supabase" });
 });
 
-// Déconnexion
-app.post('/api/auth/logout', (req, res) => {
+// Authentification
+app.post('/auth/logout', (req, res) => {
   res.json({ success: true });
 });
 
-// Changement de mot de passe
-app.patch('/api/auth/password', async (req, res) => {
+app.post('/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ error: "Email et mot de passe requis" });
+
+    const users = await supabaseFetch(`users?email=eq.${encodeURIComponent(email)}&password_hash=eq.${encodeURIComponent(password)}&select=*,companies(name)&limit=1`);
+    
+    if (users && users.length > 0) {
+      res.json({ success: true, user: users[0] });
+    } else {
+      res.status(401).json({ error: "Identifiants incorrects" });
+    }
+  } catch (err) {
+    res.status(500).json({ error: "Erreur serveur lors de la connexion" });
+  }
+});
+
+app.get('/auth/me', async (req, res) => {
+  try {
+    const users = await supabaseFetch('users?select=*,companies(name)&limit=1');
+    if (users && users.length > 0) {
+      res.json(users[0]);
+    } else {
+      res.status(404).json({ error: "Utilisateur non trouvé" });
+    }
+  } catch (err) {
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+app.patch('/auth/password', async (req, res) => {
   try {
     const { currentPassword, newPassword, userId } = req.body;
     if (!newPassword) return res.status(400).json({ error: 'Nouveau mot de passe requis' });
@@ -106,40 +133,8 @@ app.patch('/api/auth/password', async (req, res) => {
   }
 });
 
-// Authentification (Login)
-app.post('/api/auth/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ error: "Email et mot de passe requis" });
-
-    const users = await supabaseFetch(`users?email=eq.${email}&password_hash=eq.${password}&select=*,companies(name)&limit=1`);
-
-    if (users && users.length > 0) {
-      res.json({ success: true, user: users[0] });
-    } else {
-      res.status(401).json({ error: "Identifiants incorrects" });
-    }
-  } catch (err) {
-    res.status(500).json({ error: "Erreur serveur lors de la connexion" });
-  }
-});
-
-// Récupérer les infos de l'utilisateur actuel
-app.get('/api/auth/me', async (req, res) => {
-  try {
-    const users = await supabaseFetch('users?select=*,companies(name)&limit=1');
-    if (users && users.length > 0) {
-      res.json(users[0]);
-    } else {
-      res.status(404).json({ error: "Utilisateur non trouvé" });
-    }
-  } catch (err) {
-    res.status(500).json({ error: "Erreur serveur" });
-  }
-});
-
-// Récupérer les réglages de la plateforme
-app.get('/api/admin/config', async (req, res) => {
+// Administration & Config
+app.get('/admin/config', async (req, res) => {
   try {
     const config = await supabaseFetch('platform_settings?select=key,value');
     const settings = {};
@@ -150,59 +145,7 @@ app.get('/api/admin/config', async (req, res) => {
   }
 });
 
-// Reglages entreprise (consommes par le front: /settings)
-app.get('/api/settings', async (req, res) => {
-  try {
-    const rows = await supabaseFetch('platform_settings?select=key,value') || [];
-    const settings = {
-      name: '',
-      email: '',
-      phone: '',
-      address: '',
-      currency: 'XOF'
-    };
-    rows.forEach((row) => {
-      if (row && typeof row.key === 'string' && row.key in settings) {
-        settings[row.key] = row.value ?? settings[row.key];
-      }
-    });
-    res.json(settings);
-  } catch (err) {
-    res.status(500).json({ error: "Erreur chargement des reglages" });
-  }
-});
-
-app.post('/api/settings', async (req, res) => {
-  try {
-    const allowedKeys = ['name', 'email', 'phone', 'address', 'currency'];
-    const payload = req.body || {};
-
-    for (const key of allowedKeys) {
-      if (!(key in payload)) continue;
-      const nextValue = payload[key] == null ? '' : String(payload[key]);
-
-      const updated = await supabaseFetch(`platform_settings?key=eq.${encodeURIComponent(key)}`, {
-        method: 'PATCH',
-        headers: { 'Prefer': 'return=representation' },
-        body: JSON.stringify({ value: nextValue })
-      });
-
-      if (!updated || updated.length === 0) {
-        await supabaseFetch('platform_settings', {
-          method: 'POST',
-          headers: { 'Prefer': 'return=representation' },
-          body: JSON.stringify({ key, value: nextValue })
-        });
-      }
-    }
-
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: "Erreur sauvegarde des reglages" });
-  }
-});
-// Modifier les réglages de la plateforme
-app.patch('/api/admin/config', async (req, res) => {
+app.patch('/admin/config', async (req, res) => {
   try {
     const updates = req.body;
     for (const key in updates) {
@@ -217,8 +160,8 @@ app.patch('/api/admin/config', async (req, res) => {
   }
 });
 
-// Dashboard Stats
-app.get('/api/dashboard/stats', async (req, res) => {
+// Dashboard & Finance
+app.get('/dashboard/stats', async (req, res) => {
   try {
     const salesData = await supabaseFetch('sales?select=total_amount,sale_date&status=eq.paid');
     const productsData = await supabaseFetch('products?select=quantity,selling_price,alert_threshold');
@@ -226,7 +169,7 @@ app.get('/api/dashboard/stats', async (req, res) => {
 
     let sales_total = 0;
     const salesByDay = {};
-
+    
     if (salesData && Array.isArray(salesData)) {
       salesData.forEach(s => {
         const amount = Number(s.total_amount || 0);
@@ -263,20 +206,18 @@ app.get('/api/dashboard/stats', async (req, res) => {
       historical_sales
     });
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
 
-// Finance Summary
-app.get('/api/finance/summary', async (req, res) => {
+app.get('/finance/summary', async (req, res) => {
   try {
     const sales = await supabaseFetch('sales?select=total_amount,sale_date,status&order=sale_date.desc') || [];
     const purchases = await supabaseFetch('purchases?select=total_amount,purchase_date,status&order=purchase_date.desc') || [];
-
+    
     const totalRecettes = sales.filter(s => s.status === 'paid').reduce((sum, s) => sum + Number(s.total_amount), 0);
     const totalDepenses = purchases.reduce((sum, p) => sum + Number(p.total_amount), 0);
-
+    
     const history = [
       ...sales.map(s => ({ id: s.id, type: 'RECETTE', amount: s.total_amount, date: s.sale_date, label: 'Vente' })),
       ...purchases.map(p => ({ id: p.id, type: 'DEPENSE', amount: p.total_amount, date: p.purchase_date, label: 'Achat' }))
@@ -294,7 +235,7 @@ app.get('/api/finance/summary', async (req, res) => {
 });
 
 // Produits
-app.get('/api/products', async (req, res) => {
+app.get('/products', async (req, res) => {
   try {
     const data = await supabaseFetch('products?select=*&order=created_at.desc');
     res.json(data || []);
@@ -303,15 +244,14 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
-// Ajouter un nouveau produit
-app.post('/api/products', async (req, res) => {
+app.post('/products', async (req, res) => {
   try {
     const { name, reference, category, purchase_price, selling_price, quantity, image_url } = req.body;
     const companyId = await getOrCreateCompanyId();
-
+    
     const newProduct = {
       company_id: companyId,
-      name, reference,
+      name, reference, 
       category: category || 'Général',
       purchase_price: Number(purchase_price) || 0,
       selling_price: Number(selling_price) || 0,
@@ -319,25 +259,317 @@ app.post('/api/products', async (req, res) => {
       image_url: image_url || null,
       alert_threshold: 5
     };
-
+    
     const prodRes = await supabaseFetch('products', {
       method: 'POST',
       headers: { 'Prefer': 'return=representation' },
       body: JSON.stringify(newProduct)
     });
 
-    res.status(201).json(prodRes);
+    res.json({ success: true, product: (prodRes && prodRes[0]) || null });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Erreur création produit" });
+    res.status(500).json({ error: "Erreur ajout produit" });
   }
 });
 
-// Health check
-app.get('/api/health', (req, res) => {
+app.patch('/products/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = { ...req.body };
+    const updated = await supabaseFetch(`products?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify(updateData)
+    });
+    res.json({ success: true, product: (updated && updated[0]) || null });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur modification produit" });
+  }
+});
+
+app.delete('/products/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await supabaseFetch(`products?id=eq.${id}`, { method: 'DELETE' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur suppression produit" });
+  }
+});
+
+// Ventes
+app.get('/sales', async (req, res) => {
+  try {
+    const data = await supabaseFetch('sales?select=*&order=sale_date.desc');
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: "Erreur récupération ventes" });
+  }
+});
+
+app.post('/sales', async (req, res) => {
+  try {
+    const { cart, totalAmount, paidAmount, remainingAmount, status, customerId } = req.body;
+    const companyId = await getOrCreateCompanyId();
+
+    const saleData = {
+      company_id: companyId,
+      total_amount: Number(totalAmount) || 0,
+      paid_amount: Number(paidAmount) || 0,
+      remaining_amount: Number(remainingAmount) || 0,
+      status: status || 'paid',
+      customer_id: customerId || null
+    };
+
+    const saleRes = await supabaseFetch('sales', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify(saleData)
+    });
+    
+    if (!saleRes || saleRes.length === 0) throw new Error("Echec insertion vente");
+    const saleId = saleRes[0].id;
+
+    if (cart && cart.length > 0) {
+      const saleItems = cart.map(item => ({
+        sale_id: saleId,
+        product_id: item.id,
+        quantity: item.cartQuantity,
+        unit_price: item.selling_price,
+        total: item.cartQuantity * item.selling_price
+      }));
+      await supabaseFetch('sale_items', { method: 'POST', body: JSON.stringify(saleItems) });
+
+      for (const item of cart) {
+        const prodData = await supabaseFetch(`products?id=eq.${item.id}&select=quantity`);
+        const currentQty = (prodData && prodData[0]) ? prodData[0].quantity : 0;
+        await supabaseFetch(`products?id=eq.${item.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ quantity: currentQty - item.cartQuantity })
+        });
+        await supabaseFetch('stock_movements', {
+          method: 'POST',
+          body: JSON.stringify({
+            company_id: companyId,
+            product_id: item.id,
+            movement_type: 'OUT',
+            quantity: -item.cartQuantity,
+            reason: `Vente #${saleId.split('-')[0]}`
+          })
+        });
+      }
+    }
+    res.json({ success: true, sale_id: saleId });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur enregistrement vente" });
+  }
+});
+
+// Achats
+app.get('/purchases', async (req, res) => {
+  try {
+    const data = await supabaseFetch('purchases?select=*&order=purchase_date.desc');
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: "Erreur récupération achats" });
+  }
+});
+
+app.post('/purchases', async (req, res) => {
+  try {
+    const { totalAmount, reference, supplierName, status } = req.body;
+    const companyId = await getOrCreateCompanyId();
+    const newPurchase = {
+      company_id: companyId,
+      supplier_name: supplierName || null,
+      reference: reference || null,
+      total_amount: Number(totalAmount) || 0,
+      status: status || 'pending'
+    };
+    const purRes = await supabaseFetch('purchases', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify(newPurchase)
+    });
+    res.json({ success: true, purchase: (purRes && purRes[0]) || null });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur ajout achat" });
+  }
+});
+
+// Stock
+app.get('/stock', async (req, res) => {
+  try {
+    const data = await supabaseFetch('stock_movements?select=*,products:product_id(name,quantity)&order=movement_date.desc');
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: "Erreur récupération stock" });
+  }
+});
+
+app.post('/stock', async (req, res) => {
+  try {
+    const { product_id, movement_type, quantity, reason } = req.body;
+    const companyId = await getOrCreateCompanyId();
+    const moveRes = await supabaseFetch('stock_movements', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({ company_id: companyId, product_id, movement_type, quantity, reason })
+    });
+    const prod = await supabaseFetch(`products?id=eq.${product_id}&select=quantity`);
+    if (prod && prod.length > 0) {
+      let newQty = Number(prod[0].quantity) || 0;
+      newQty = (movement_type === 'IN') ? newQty + Number(quantity) : newQty - Number(quantity);
+      await supabaseFetch(`products?id=eq.${product_id}`, { method: 'PATCH', body: JSON.stringify({ quantity: Math.max(0, newQty) }) });
+    }
+    res.json({ success: true, movement: (moveRes && moveRes[0]) || null });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur mouvement stock" });
+  }
+});
+
+// Contacts
+app.get('/contacts', async (req, res) => {
+  try {
+    const customers = await supabaseFetch('customers?select=*&order=created_at.desc');
+    const suppliers = await supabaseFetch('suppliers?select=*&order=created_at.desc');
+    res.json({ customers: customers || [], suppliers: suppliers || [] });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur récupération contacts" });
+  }
+});
+
+app.post('/contacts', async (req, res) => {
+  try {
+    const { type, name, contact_info, current_debt } = req.body;
+    const companyId = await getOrCreateCompanyId();
+    const table = type === 'fournisseur' ? 'suppliers' : 'customers';
+    const cRes = await supabaseFetch(table, {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({ company_id: companyId, name, contact_info, current_debt: Number(current_debt) || 0 })
+    });
+    res.json({ success: true, contact: (cRes && cRes[0]) || null });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur ajout contact" });
+  }
+});
+
+// Paramètres Entreprise
+app.get('/settings', async (req, res) => {
+  try {
+    const data = await supabaseFetch('companies?select=*&limit=1');
+    if (!data || data.length === 0) {
+      const companyId = await getOrCreateCompanyId();
+      const newData = await supabaseFetch(`companies?id=eq.${companyId}&select=*`);
+      return res.json(newData[0]);
+    }
+    res.json(data[0]);
+  } catch (err) {
+    res.status(500).json({ error: "Erreur récupération paramètres" });
+  }
+});
+
+app.post('/settings', async (req, res) => {
+  try {
+    const companyId = await getOrCreateCompanyId();
+    await supabaseFetch(`companies?id=eq.${companyId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(req.body)
+    });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur mise à jour paramètres" });
+  }
+});
+
+// Admin Plateforme
+app.get('/admin/companies', async (req, res) => {
+  try {
+    const data = await supabaseFetch('companies?select=*&order=created_at.desc');
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: "Erreur récupération entreprises" });
+  }
+});
+
+app.post('/admin/companies', async (req, res) => {
+  try {
+    const { name, email, phone, address, plan_id, password } = req.body;
+    const companyData = await supabaseFetch('companies', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({ name, email, phone, address, plan_id: plan_id || 'trial', subscription_status: 'active' })
+    });
+    if (!companyData || companyData.length === 0) throw new Error("Echec création entreprise");
+    await supabaseFetch('users', {
+      method: 'POST',
+      body: JSON.stringify({ company_id: companyData[0].id, first_name: 'Admin', last_name: name, email, password_hash: password || '123456', role: 'admin' })
+    });
+    res.json({ success: true, company: companyData[0] });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur création entreprise" });
+  }
+});
+
+app.get('/admin/users', async (req, res) => {
+  try {
+    const data = await supabaseFetch('users?select=*,companies:company_id(name)');
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: "Erreur récupération utilisateurs" });
+  }
+});
+
+app.post('/admin/users', async (req, res) => {
+  try {
+    const userRes = await supabaseFetch('users', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({ ...req.body, role: req.body.role || 'admin', password_hash: req.body.password })
+    });
+    res.json({ success: true, user: (userRes && userRes[0]) || null });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur création utilisateur" });
+  }
+});
+
+app.delete('/admin/users/:id', async (req, res) => {
+  try {
+    await supabaseFetch(`users?id=eq.${req.params.id}`, { method: 'DELETE' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur suppression utilisateur" });
+  }
+});
+
+app.patch('/admin/users/:id', async (req, res) => {
+  try {
+    await supabaseFetch(`users?id=eq.${req.params.id}`, { method: 'PATCH', body: JSON.stringify(req.body) });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur modification utilisateur" });
+  }
+});
+
+app.get('/admin/stats', async (req, res) => {
+  try {
+    const companies = await supabaseFetch('companies?select=plan_id,created_at') || [];
+    const users = await supabaseFetch('users?select=id') || [];
+    const products = await supabaseFetch('products?select=id') || [];
+    res.json({ total_companies: companies.length, total_users: users.length, total_products: products.length });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur statistiques" });
+  }
+});
+
+app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Export pour Vercel Serverless
-module.exports = app;
+// Upload (Memory storage simulation for Vercel)
+app.post('/upload', upload.single('image'), (req, res) => {
+  res.status(501).json({ error: "Le téléversement local n'est pas supporté sur Vercel. Utilisez un service comme Cloudinary." });
+});
 
+module.exports = app;
