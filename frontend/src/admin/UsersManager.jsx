@@ -3,8 +3,8 @@ import { Trash2, Edit2, UserPlus, X } from 'lucide-react';
 import { useFetch, API_URL } from '../hooks/useFetch';
 
 const UsersManager = () => {
-  const [companies] = useFetch('/admin/companies', []);
-  const [users, setUsers] = useFetch('/admin/users', []);
+  const [companies, companiesLoading] = useFetch('/admin/companies', []);
+  const [users, usersLoading, setUsers] = useFetch('/admin/users', []);
   const [editingUser, setEditingUser] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -68,7 +68,7 @@ const UsersManager = () => {
     });
   };
 
-  if (loading) return <div>Chargement des utilisateurs...</div>;
+  if (usersLoading || companiesLoading) return <div>Chargement des utilisateurs...</div>;
 
   return (
     <>

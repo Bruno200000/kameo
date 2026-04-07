@@ -59,7 +59,7 @@ const AdminPanel = () => {
 };
 
 const SaaSConfig = () => {
-  const [settings, setSettings] = useFetch('/admin/config', {});
+  const [settings, settingsLoading, setSettings] = useFetch('/admin/config', {});
   const [isSaving, setIsSaving] = useState(false);
 
   const handleUpdate = async (key, value) => {
@@ -75,7 +75,7 @@ const SaaSConfig = () => {
     setIsSaving(false);
   };
 
-  if (loading) return <div>Chargement des paramètres...</div>;
+  if (settingsLoading) return <div>Chargement des paramètres...</div>;
 
   return (
     <div className="card" style={{ padding: '30px' }}>

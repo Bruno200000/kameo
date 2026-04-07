@@ -3,7 +3,7 @@ import { Users, Plus, Trash2, Edit2 } from 'lucide-react';
 import { useFetch, API_URL } from '../hooks/useFetch';
 
 const CompaniesManager = () => {
-  const [companies, setCompanies] = useFetch('/admin/companies', []);
+  const [companies, companiesLoading, setCompanies] = useFetch('/admin/companies', []);
   const [showAdd, setShowAdd] = useState(false);
   const [editingCompany, setEditingCompany] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -97,7 +97,7 @@ const CompaniesManager = () => {
     } catch(e) { alert('Erreur rejet'); }
   };
 
-  if (loading) return <div>Chargement...</div>;
+  if (companiesLoading) return <div>Chargement...</div>;
 
   return (
     <>

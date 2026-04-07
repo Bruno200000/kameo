@@ -69,7 +69,7 @@ export const useFetch = (endpoint, initialData) => {
     });
   };
 
-  return { data, loading, setData: setDataAndCache }; 
+  return [ data, loading, setDataAndCache ]; 
 };
 
 export { API_URL };

@@ -330,7 +330,7 @@ const Dashboard = ({ onNavigate }) => {
   // Filtrer les produits en stock critique (<= 5)
   const criticalStockProducts = products.filter(p => p.quantity <= 5).sort((a, b) => a.quantity - b.quantity);
 
-  if (loading) return <div style={{padding: '40px', textAlign: 'center'}}><div className="spinner"></div> Chargement du tableau de bord...</div>;
+  if (statsLoading) return <div style={{padding: '40px', textAlign: 'center'}}><div className="spinner"></div> Chargement du tableau de bord...</div>;
 
   return (
     <>
@@ -2569,7 +2569,7 @@ const SettingsPage = () => {
     }
   };
 
-  if (loading) return <div style={{padding: '40px', textAlign: 'center'}}>Chargement des paramètres...</div>;
+  if (settingsLoading) return <div style={{padding: '40px', textAlign: 'center'}}>Chargement des paramètres...</div>;
 
   const handlePasswordChange = async () => {
     if (!pwdData.current || !pwdData.next || !pwdData.confirm) return;
@@ -3071,7 +3071,7 @@ const FinanceModule = () => {
     setIsSaving(false);
   };
 
-  if (loading) return <div>Chargement de la trésorerie...</div>;
+  if (finLoading) return <div>Chargement de la trésorerie...</div>;
 
   return (
     <div style={{ padding: '0 0 40px 0' }}>
