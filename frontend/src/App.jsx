@@ -46,6 +46,33 @@ export default function App() {
   const [supportNotice, setSupportNotice] = useState('');
   const [companyValidationStatus, setCompanyValidationStatus] = useState('active');
   const [companyNextBilling, setCompanyNextBilling] = useState(null);
+  
+  // Données globales pour les notifications
+  const [productsData] = useFetch('/products', []);
+  const [salesData] = useFetch('/sales', []);
+  
+  // Calcul des alertes en temps réel
+  const stockAlerts = productsData.filter(p => p.quantity <= (p.alert_threshold || 5)).map(p => ({
+    id: `stock-${p.id}`,
+    type: 'STOCK',
+    icon: <AlertTriangle size={16} color="#f59e0b" />,
+    title: 'Stock critique',
+    desc: `${p.name} — ${p.quantity} rest.`,
+    color: '#fffbeb',
+    page: 'products'
+  }));
+
+  const unpaidAlerts = salesData.filter(s => s.status !== 'paid').map(s => ({
+    id: `sale-${s.id}`,
+    type: 'PAYMENT',
+    icon: <DollarSign size={16} color="#3b82f6" />,
+    title: 'Paiement en attente',
+    desc: `Vente #${s.id.slice(0,5)} — Reste: ${s.total_amount - (s.paid_amount || 0)} F`,
+    color: '#eff6ff',
+    page: 'sales'
+  }));
+
+  const allNotifications = [...stockAlerts, ...unpaidAlerts];
 
   useEffect(() => {
     const saved = localStorage.getItem(AUTH_STORAGE_KEY);
@@ -274,7 +301,8 @@ export default function App() {
             <div style={{ position: 'relative' }}>
               {showHeaderActions && (
                 <button className="icon-btn notification-btn" onClick={() => setShowNotifications(v => !v)}>
-                  <Bell size={20} /><span className="badge">3</span>
+                  <Bell size={20} />
+                  {allNotifications.length > 0 && <span className="badge">{allNotifications.length}</span>}
                 </button>
               )}
               {showNotifications && showHeaderActions && (
@@ -287,23 +315,29 @@ export default function App() {
                     <strong style={{ fontSize: '0.9rem', color: '#1e293b' }}>Notifications</strong>
                     <button onClick={() => setShowNotifications(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 0 }}><X size={16} /></button>
                   </div>
-                  {[
-                    { icon: '⚠️', title: 'Stock critique', desc: 'Marteau de charpentier — 1 restant', color: '#fef3c7', time: 'Il y a 5 min' },
-                    { icon: '📦', title: 'Stock faible', desc: 'Clous 50mm — 5 restants', color: '#fff7ed', time: 'Il y a 1h' },
-                    { icon: '💰', title: 'Nouvelle vente', desc: 'Vente enregistrée via la caisse POS', color: '#f0fdf4', time: 'Il y a 2h' },
-                  ].map((n, i) => (
-                    <div key={i} style={{ padding: '12px 16px', background: n.color, borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}
-                      onClick={() => setShowNotifications(false)}>
-                      <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                        <span style={{ fontSize: '1.2rem' }}>{n.icon}</span>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#1e293b' }}>{n.title}</div>
-                          <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{n.desc}</div>
-                          <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '2px' }}>{n.time}</div>
-                        </div>
+                  <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                    {allNotifications.length === 0 ? (
+                      <div style={{ padding: '30px 16px', textAlign: 'center', color: '#94a3b8' }}>
+                        <Bell size={32} style={{ marginBottom: '10px', opacity: 0.3 }} />
+                        <p style={{ margin: 0, fontSize: '0.9rem' }}>Aucune alerte active</p>
                       </div>
-                    </div>
-                  ))}
+                    ) : (
+                      allNotifications.slice(0, 8).map((n) => (
+                        <div key={n.id} style={{ padding: '12px 16px', background: n.color, borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.2s' }}
+                          onClick={() => { setCurrentPage(n.page); setShowNotifications(false); }}
+                          onMouseOver={e => e.currentTarget.style.filter = 'brightness(0.98)'}
+                          onMouseOut={e => e.currentTarget.style.filter = 'none'}>
+                          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                            <div style={{ marginTop: '2px' }}>{n.icon}</div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#1e293b' }}>{n.title}</div>
+                              <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{n.desc}</div>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
                   <div style={{ padding: '10px 16px', textAlign: 'center' }}>
                     <button onClick={() => { setCurrentPage('stock'); setShowNotifications(false); }}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6', fontSize: '0.85rem', fontWeight: 600 }}>
