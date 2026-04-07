@@ -512,7 +512,7 @@ const POS = () => {
 
   return (
     <div className="pos-layout" style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-      <div className="card" style={{ flex: '1 1 300px', padding: '20px' }}>
+      <div className="card" style={{ flex: '1 1 300px', padding: 'var(--pos-padding, 20px)', minWidth: '300px' }}>
         <div className="search-filters" style={{ marginBottom: '20px', position: 'relative' }}>
           <Search size={18} style={{position: 'absolute', left: 12, top: 12, color: '#94a3b8'}} />
           <input type="text" placeholder="Rechercher un produit à ajouter..." className="large-input" style={{ width: '100%', paddingLeft: 40 }} value={search} onChange={e => setSearch(e.target.value)} />
@@ -533,7 +533,7 @@ const POS = () => {
           ))}
         </div>
       </div>
-      <div className="card" style={{ flex: '0 0 340px', padding: '0', display: 'flex', flexDirection: 'column', height: '100%', minHeight: '600px' }}>
+      <div className="card cart-container" style={{ flex: '1 1 340px', maxWidth: '400px', minWidth: '320px', padding: '0', display: 'flex', flexDirection: 'column', minHeight: '600px' }}>
         <div style={{ padding: '20px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc', borderRadius: '8px 8px 0 0' }}>
           <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}><ShoppingCart color="#3b82f6" /> Panier Actuel</h2>
         </div>
