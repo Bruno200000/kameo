@@ -24,12 +24,26 @@ const supabaseHeaders = {
   'Content-Type': 'application/json; charset=utf-8'
 };
 
-const supabaseFetch = async (path, options = {}) => {
-  const url = `${supabaseUrl}/rest/v1/${path}`;
+const supabaseFetch = async (path, options = {}, req = null) => {
+  let url = `${supabaseUrl}/rest/v1/${path}`;
+  
+  // Filtrage par entreprise (Multi-tenancy)
+  const companyId = req?.headers?.['x-company-id'];
+  if (companyId && !path.includes('companies') && !path.includes('users')) {
+    const separator = path.includes('?') ? '&' : '?';
+    url += `${separator}company_id=eq.${companyId}`;
+  }
+
   try {
     const response = await fetch(url, {
       ...options,
-      headers: { ...supabaseHeaders, ...(options.headers || {}) }
+      headers: { 
+        ...supabaseHeaders, 
+        ...(options.headers || {}),
+        // Pour les POST/PATCH, on s'assure d'inclure le company_id si on l'a
+        ...(options.method === 'POST' && companyId ? { 'Prefer': 'return=representation' } : {})
+      },
+      body: options.method === 'POST' && companyId ? JSON.stringify({ ...JSON.parse(options.body || '{}'), company_id: companyId }) : options.body
     });
     if (!response.ok) {
       const errorText = await response.text();
@@ -43,22 +57,6 @@ const supabaseFetch = async (path, options = {}) => {
     console.error(`ECHEC FETCH sur ${url}:`, err.message);
     throw err;
   }
-};
-
-const getOrCreateCompanyId = async () => {
-  const companies = await supabaseFetch('companies?select=id&limit=1');
-  if (companies && companies.length > 0) return companies[0].id;
-  
-  const newCompany = await supabaseFetch('companies', {
-    method: 'POST',
-    headers: { 'Prefer': 'return=representation' },
-    body: JSON.stringify({ 
-      name: "Ma Quincaillerie Démo",
-      email: "contact@quincaillerie.demo"
-    })
-  });
-  if (newCompany && newCompany.length > 0) return newCompany[0].id;
-  throw new Error("Impossible de configurer l'entreprise.");
 };
 
 app.use(cors());
@@ -108,18 +106,18 @@ router.patch('/auth/password', async (req, res) => {
 // Réglages Entreprise
 router.get('/settings', async (req, res) => {
   try {
-    const data = await supabaseFetch('companies?select=*&limit=1');
+    const data = await supabaseFetch('companies?select=*&limit=1', {}, req);
     res.json(data && data.length > 0 ? data[0] : {});
   } catch (err) { res.status(500).json({ error: "Erreur" }); }
 });
 
 router.post('/settings', async (req, res) => {
   try {
-    const companyId = await getOrCreateCompanyId();
+    const companyId = req.headers['x-company-id'];
     await supabaseFetch(`companies?id=eq.${companyId}`, {
       method: 'PATCH',
       body: JSON.stringify(req.body)
-    });
+    }, req);
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: "Erreur mise à jour" }); }
 });
@@ -127,9 +125,9 @@ router.post('/settings', async (req, res) => {
 // Dashboard
 router.get('/dashboard/stats', async (req, res) => {
   try {
-    const salesData = await supabaseFetch('sales?select=total_amount,sale_date&status=eq.paid');
-    const productsData = await supabaseFetch('products?select=quantity,selling_price,alert_threshold');
-    const customersData = await supabaseFetch('customers?select=id');
+    const salesData = await supabaseFetch('sales?select=total_amount,sale_date&status=eq.paid', {}, req);
+    const productsData = await supabaseFetch('products?select=quantity,selling_price,alert_threshold', {}, req);
+    const customersData = await supabaseFetch('customers?select=id', {}, req);
 
     let sales_total = 0;
     const salesByDay = {};
@@ -161,8 +159,8 @@ router.get('/dashboard/stats', async (req, res) => {
 // Finance
 router.get('/finance/summary', async (req, res) => {
   try {
-    const sales = await supabaseFetch('sales?select=total_amount,sale_date,status&order=sale_date.desc') || [];
-    const purchases = await supabaseFetch('purchases?select=total_amount,purchase_date,status&order=purchase_date.desc') || [];
+    const sales = await supabaseFetch('sales?select=total_amount,sale_date,status&order=sale_date.desc', {}, req) || [];
+    const purchases = await supabaseFetch('purchases?select=total_amount,purchase_date,status&order=purchase_date.desc', {}, req) || [];
     const totalRecettes = sales.filter(s => s.status === 'paid').reduce((sum, s) => sum + Number(s.total_amount), 0);
     const totalDepenses = purchases.reduce((sum, p) => sum + Number(p.total_amount), 0);
     const history = [
@@ -176,19 +174,18 @@ router.get('/finance/summary', async (req, res) => {
 // Produits
 router.get('/products', async (req, res) => {
   try {
-    const data = await supabaseFetch('products?select=*&order=created_at.desc');
+    const data = await supabaseFetch('products?select=*&order=created_at.desc', {}, req);
     res.json(data || []);
   } catch (err) { res.status(500).json({ error: "Erreur" }); }
 });
 
 router.post('/products', async (req, res) => {
   try {
-    const companyId = await getOrCreateCompanyId();
     const prodRes = await supabaseFetch('products', {
       method: 'POST',
       headers: { 'Prefer': 'return=representation' },
-      body: JSON.stringify({ ...req.body, company_id: companyId, alert_threshold: 5 })
-    });
+      body: JSON.stringify({ ...req.body, alert_threshold: 5 })
+    }, req);
     if (prodRes && prodRes.length > 0) res.json({ success: true, product: prodRes[0] });
     else res.status(500).json({ error: "Echec insertion" });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -200,7 +197,7 @@ router.patch('/products/:id', async (req, res) => {
       method: 'PATCH',
       headers: { 'Prefer': 'return=representation' },
       body: JSON.stringify(req.body)
-    });
+    }, req);
     if (updated && updated.length > 0) res.json({ success: true, product: updated[0] });
     else res.status(404).json({ error: "Produit non trouvé" });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -208,7 +205,7 @@ router.patch('/products/:id', async (req, res) => {
 
 router.delete('/products/:id', async (req, res) => {
   try {
-    await supabaseFetch(`products?id=eq.${req.params.id}`, { method: 'DELETE' });
+    await supabaseFetch(`products?id=eq.${req.params.id}`, { method: 'DELETE' }, req);
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -234,21 +231,19 @@ router.post('/upload', upload.single('image'), async (req, res) => {
 // Ventes
 router.get('/sales', async (req, res) => {
   try {
-    const data = await supabaseFetch('sales?select=*&order=sale_date.desc');
+    const data = await supabaseFetch('sales?select=*&order=sale_date.desc', {}, req);
     res.json(data || []);
   } catch (err) { res.status(500).json({ error: "Erreur" }); }
 });
 
 router.post('/sales', async (req, res) => {
   try {
-    const companyId = await getOrCreateCompanyId();
     const saleRes = await supabaseFetch('sales', { 
       method: 'POST', 
       headers: { 'Prefer': 'return=representation' }, 
-      body: JSON.stringify({ ...req.body, company_id: companyId })
-    });
+      body: JSON.stringify(req.body)
+    }, req);
     if (saleRes && saleRes.length > 0) {
-      // Stock update logic simplified for serverless
       res.json({ success: true, sale_id: saleRes[0].id });
     } else res.status(500).json({ error: "Echec insertion" });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -257,7 +252,7 @@ router.post('/sales', async (req, res) => {
 router.post('/sales/:id/payment', async (req, res) => {
   try {
     const { paymentAmount, newStatus } = req.body;
-    const existing = await supabaseFetch(`sales?id=eq.${req.params.id}&select=paid_amount,total_amount`);
+    const existing = await supabaseFetch(`sales?id=eq.${req.params.id}&select=paid_amount,total_amount`, {}, req);
     if (!existing || existing.length === 0) return res.status(404).json({ error: 'Vente non trouvée' });
     
     const newPaid = Number(existing[0].paid_amount) + Number(paymentAmount);
@@ -265,7 +260,7 @@ router.post('/sales/:id/payment', async (req, res) => {
       method: 'PATCH',
       headers: { 'Prefer': 'return=representation' },
       body: JSON.stringify({ paid_amount: newPaid, status: newStatus || (newPaid >= existing[0].total_amount ? 'paid' : 'partial') })
-    });
+    }, req);
     res.json({ success: true, sale: updated[0] });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -273,19 +268,18 @@ router.post('/sales/:id/payment', async (req, res) => {
 // Achats
 router.get('/purchases', async (req, res) => {
   try {
-    const data = await supabaseFetch('purchases?select=*&order=purchase_date.desc');
+    const data = await supabaseFetch('purchases?select=*&order=purchase_date.desc', {}, req);
     res.json(data || []);
   } catch (err) { res.status(500).json({ error: "Erreur" }); }
 });
 
 router.post('/purchases', async (req, res) => {
   try {
-    const companyId = await getOrCreateCompanyId();
     const purRes = await supabaseFetch('purchases', {
       method: 'POST',
       headers: { 'Prefer': 'return=representation' },
-      body: JSON.stringify({ ...req.body, company_id: companyId })
-    });
+      body: JSON.stringify(req.body)
+    }, req);
     res.json({ success: true, purchase: purRes[0] });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -296,7 +290,7 @@ router.patch('/purchases/:id', async (req, res) => {
       method: 'PATCH',
       headers: { 'Prefer': 'return=representation' },
       body: JSON.stringify(req.body)
-    });
+    }, req);
     res.json({ success: true, purchase: purRes[0] });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -304,24 +298,24 @@ router.patch('/purchases/:id', async (req, res) => {
 // Stocks
 router.get('/stock', async (req, res) => {
   try {
-    const data = await supabaseFetch('stock_movements?select=*,products:product_id(name,quantity)&order=movement_date.desc');
+    const data = await supabaseFetch('stock_movements?select=*,products:product_id(name,quantity)&order=movement_date.desc', {}, req);
     res.json(data || []);
   } catch (err) { res.status(500).json({ error: "Erreur" }); }
 });
 
 router.post('/stock', async (req, res) => {
   try {
-    const companyId = await getOrCreateCompanyId();
     const moveRes = await supabaseFetch('stock_movements', {
       method: 'POST',
       headers: { 'Prefer': 'return=representation' },
-      body: JSON.stringify({ ...req.body, company_id: companyId })
-    });
-    // Update product quantity
-    const prod = await supabaseFetch(`products?id=eq.${req.body.product_id}&select=quantity`);
+      body: JSON.stringify(req.body)
+    }, req);
+    
+    // Mise à jour de la quantité produit associée
+    const prod = await supabaseFetch(`products?id=eq.${req.body.product_id}&select=quantity`, {}, req);
     if (prod && prod.length > 0) {
       const newQty = req.body.movement_type === 'IN' ? prod[0].quantity + req.body.quantity : prod[0].quantity - req.body.quantity;
-      await supabaseFetch(`products?id=eq.${req.body.product_id}`, { method: 'PATCH', body: JSON.stringify({ quantity: Math.max(0, newQty) }) });
+      await supabaseFetch(`products?id=eq.${req.body.product_id}`, { method: 'PATCH', body: JSON.stringify({ quantity: Math.max(0, newQty) }) }, req);
     }
     res.json({ success: true, movement: moveRes[0] });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -330,21 +324,20 @@ router.post('/stock', async (req, res) => {
 // Contacts
 router.get('/contacts', async (req, res) => {
   try {
-    const customers = await supabaseFetch('customers?select=*&order=created_at.desc');
-    const suppliers = await supabaseFetch('suppliers?select=*&order=created_at.desc');
+    const customers = await supabaseFetch('customers?select=*&order=created_at.desc', {}, req);
+    const suppliers = await supabaseFetch('suppliers?select=*&order=created_at.desc', {}, req);
     res.json({ customers: customers || [], suppliers: suppliers || [] });
   } catch (err) { res.status(500).json({ error: "Erreur" }); }
 });
 
 router.post('/contacts', async (req, res) => {
   try {
-    const companyId = await getOrCreateCompanyId();
     const table = req.body.type === 'fournisseur' ? 'suppliers' : 'customers';
     const cRes = await supabaseFetch(table, {
       method: 'POST',
       headers: { 'Prefer': 'return=representation' },
-      body: JSON.stringify({ ...req.body, company_id: companyId })
-    });
+      body: JSON.stringify(req.body)
+    }, req);
     res.json({ success: true, contact: cRes[0] });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -352,7 +345,7 @@ router.post('/contacts', async (req, res) => {
 // Admin
 router.get('/admin/config', async (req, res) => {
   try {
-    const config = await supabaseFetch('platform_settings?select=key,value');
+    const config = await supabaseFetch('platform_settings?select=key,value', {}, req);
     const settings = {};
     if (config) config.forEach(c => settings[c.key] = c.value);
     res.json(settings);
@@ -362,7 +355,7 @@ router.get('/admin/config', async (req, res) => {
 router.patch('/admin/config', async (req, res) => {
   try {
     for (const key in req.body) {
-      await supabaseFetch(`platform_settings?key=eq.${key}`, { method: 'PATCH', body: JSON.stringify({ value: req.body[key].toString() }) });
+      await supabaseFetch(`platform_settings?key=eq.${key}`, { method: 'PATCH', body: JSON.stringify({ value: req.body[key].toString() }) }, req);
     }
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: "Erreur MAJ config" }); }
@@ -370,51 +363,51 @@ router.patch('/admin/config', async (req, res) => {
 
 router.get('/admin/companies', async (req, res) => {
   try {
-    const data = await supabaseFetch('companies?select=*&order=created_at.desc');
+    const data = await supabaseFetch('companies?select=*&order=created_at.desc', {}, req);
     res.json(data || []);
   } catch (err) { res.status(500).json({ error: "Erreur" }); }
 });
 
 router.post('/admin/companies', async (req, res) => {
   try {
-    const companyData = await supabaseFetch('companies', { method: 'POST', headers: { 'Prefer': 'return=representation' }, body: JSON.stringify(req.body) });
+    const companyData = await supabaseFetch('companies', { method: 'POST', headers: { 'Prefer': 'return=representation' }, body: JSON.stringify(req.body) }, req);
     res.json({ success: true, company: companyData[0] });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.get('/admin/users', async (req, res) => {
   try {
-    const data = await supabaseFetch('users?select=*,companies(name)&order=created_at.desc');
+    const data = await supabaseFetch('users?select=*,companies(name)&order=created_at.desc', {}, req);
     res.json(data || []);
   } catch (err) { res.status(500).json({ error: "Erreur" }); }
 });
 
 router.post('/admin/users', async (req, res) => {
   try {
-    const userData = await supabaseFetch('users', { method: 'POST', headers: { 'Prefer': 'return=representation' }, body: JSON.stringify(req.body) });
+    const userData = await supabaseFetch('users', { method: 'POST', headers: { 'Prefer': 'return=representation' }, body: JSON.stringify(req.body) }, req);
     res.json({ success: true, user: userData[0] });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.patch('/admin/users/:id', async (req, res) => {
   try {
-    const updated = await supabaseFetch(`users?id=eq.${req.params.id}`, { method: 'PATCH', headers: { 'Prefer': 'return=representation' }, body: JSON.stringify(req.body) });
+    const updated = await supabaseFetch(`users?id=eq.${req.params.id}`, { method: 'PATCH', headers: { 'Prefer': 'return=representation' }, body: JSON.stringify(req.body) }, req);
     res.json({ success: true, user: updated[0] });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.delete('/admin/users/:id', async (req, res) => {
   try {
-    await supabaseFetch(`users?id=eq.${req.params.id}`, { method: 'DELETE' });
+    await supabaseFetch(`users?id=eq.${req.params.id}`, { method: 'DELETE' }, req);
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.get('/admin/stats', async (req, res) => {
   try {
-    const companies = await supabaseFetch('companies?select=id');
-    const users = await supabaseFetch('users?select=id');
-    const sales = await supabaseFetch('sales?select=total_amount');
+    const companies = await supabaseFetch('companies?select=id', {}, req);
+    const users = await supabaseFetch('users?select=id', {}, req);
+    const sales = await supabaseFetch('sales?select=total_amount', {}, req);
     const totalRevenue = (sales || []).reduce((sum, s) => sum + Number(s.total_amount), 0);
     res.json({ totalCompanies: companies?.length || 0, totalUsers: users?.length || 0, totalRevenue });
   } catch (err) { res.status(500).json({ error: "Erreur stats" }); }

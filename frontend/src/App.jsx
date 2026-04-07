@@ -62,7 +62,9 @@ export default function App() {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const res = await fetch(`${API_URL}/settings`);
+        const res = await fetch(`${API_URL}/settings`, {
+          headers: { 'X-Company-Id': currentUser?.company_id || '' }
+        });
         if (!res.ok) return;
         const contentType = res.headers.get('content-type') || '';
         if (!contentType.includes('application/json')) {
@@ -97,7 +99,8 @@ export default function App() {
     const normalizedUser = {
       id: user.id || null,
       name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
-      role: user.role || 'cashier'
+      role: user.role || 'cashier',
+      company_id: user.company_id || null
     };
     setCurrentUser(normalizedUser);
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(normalizedUser));
@@ -145,6 +148,11 @@ export default function App() {
     return titles[currentPage] || "KAméo";
   };
 
+  const getHeaders = (extra = {}) => ({
+    'X-Company-Id': currentUser?.company_id || '',
+    ...extra
+  });
+
   const showHeaderActions = ['dashboard', 'pos'].includes(currentPage);
 
   const searchablePages = {
@@ -177,7 +185,10 @@ export default function App() {
 
   const handleLogout = async () => {
     try {
-      await fetch(`${API_URL}/auth/logout`, { method: 'POST' });
+      await fetch(`${API_URL}/auth/logout`, { 
+        method: 'POST',
+        headers: { 'X-Company-Id': currentUser?.company_id || '' }
+      });
     } catch (err) {
       console.error("Logout error:", err);
     } finally {
@@ -486,7 +497,10 @@ const POS = () => {
     try {
       const response = await fetch(`${API_URL}/sales`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Company-Id': currentUser?.company_id || ''
+        },
         body: JSON.stringify({ 
           cart, 
           totalAmount: total, 
@@ -757,6 +771,7 @@ const Products = () => {
     try {
       const res = await fetch(`${API_URL}/upload`, {
         method: 'POST',
+        headers: getHeaders(),
         body: uploadFormData,
       });
       const data = await res.json();
@@ -787,7 +802,7 @@ const Products = () => {
     try {
       const res = await fetch(`${API_URL}/products`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(formData)
       });
       const resData = await res.json();
@@ -833,7 +848,7 @@ const Products = () => {
     try {
       const res = await fetch(`${API_URL}/products/${editingProductId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(formData)
       });
       const resData = await res.json();
@@ -855,7 +870,10 @@ const Products = () => {
     const ok = window.confirm(`Supprimer le produit "${product.name}" ?`);
     if (!ok) return;
     try {
-      const res = await fetch(`${API_URL}/products/${product.id}`, { method: 'DELETE' });
+      const res = await fetch(`${API_URL}/products/${product.id}`, { 
+        method: 'DELETE',
+        headers: getHeaders()
+      });
       const d = await res.json();
       if (d.success) {
         setProducts(products.filter(p => p.id !== product.id));
@@ -1153,7 +1171,7 @@ const Stock = () => {
     try {
       const res = await fetch(`${API_URL}/stock`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           product_id: formData.productId,
           movement_type: formData.type,
@@ -1354,7 +1372,7 @@ const Sales = () => {
     try {
       const res = await fetch(`${API_URL}/sales/${sale.id}/payment`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           paymentAmount: amount,
           newRemainingAmount: remainingAmount - amount,
@@ -1430,7 +1448,7 @@ const Sales = () => {
     try {
       const res = await fetch(`${API_URL}/sales`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           cart: [],
           totalAmount: total,
@@ -2200,7 +2218,7 @@ const Purchases = () => {
       
       const res = await fetch(url, {
         method: method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(formData)
       });
       const resData = await res.json();
@@ -2375,7 +2393,7 @@ const Contacts = () => {
     try {
       const res = await fetch(`${API_URL}/contacts`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(formData)
       });
       const resData = await res.json();
@@ -2526,7 +2544,7 @@ const SettingsPage = () => {
     try {
       const res = await fetch(`${API_URL}/settings`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(settings)
       });
       const d = await res.json();
@@ -2552,6 +2570,7 @@ const SettingsPage = () => {
     try {
       const res = await fetch(`${API_URL}/upload`, {
         method: 'POST',
+        headers: getHeaders(),
         body: uploadFormData
       });
       const data = await res.json();
@@ -2581,7 +2600,7 @@ const SettingsPage = () => {
       const userId = savedUser ? JSON.parse(savedUser).id : null;
       const res = await fetch(`${API_URL}/auth/password`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ currentPassword: pwdData.current, newPassword: pwdData.next, userId })
       });
       const d = await res.json();
@@ -2838,7 +2857,7 @@ const Subscription = () => {
     try {
       const res = await fetch(`${API_URL}/subscription/request`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ plan_id: selectedPlan === 'Pro' ? 'pro' : 'trial' })
       });
       const data = await res.json();
@@ -3023,7 +3042,9 @@ const FinanceModule = () => {
   );
 
   const refreshData = async () => {
-    const res = await fetch(`${API_URL}/finance/summary`);
+    const res = await fetch(`${API_URL}/finance/summary`, {
+      headers: getHeaders()
+    });
     const d = await res.json();
     setData(d);
   };
@@ -3053,7 +3074,7 @@ const FinanceModule = () => {
 
       const res = await fetch(`${API_URL}${endpoint}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(body)
       });
       

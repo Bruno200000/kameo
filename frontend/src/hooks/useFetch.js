@@ -33,7 +33,10 @@ export const useFetch = (endpoint, initialData) => {
     const controller = new AbortController();
     setLoading(true);
 
-    fetch(`${API_URL}${endpoint}`, { signal: controller.signal })
+    const user = JSON.parse(localStorage.getItem('kameo_current_user') || '{}');
+    const headers = { 'X-Company-Id': user.company_id || '' };
+
+    fetch(`${API_URL}${endpoint}`, { signal: controller.signal, headers })
       .then(async (res) => {
         if (res.status === 404) {
           window.dispatchEvent(new CustomEvent('kameo_api_404', { detail: { endpoint } }));
