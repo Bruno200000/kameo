@@ -350,11 +350,36 @@ router.post('/contacts', async (req, res) => {
 });
 
 // Admin
+router.get('/admin/config', async (req, res) => {
+  try {
+    const config = await supabaseFetch('platform_settings?select=key,value');
+    const settings = {};
+    if (config) config.forEach(c => settings[c.key] = c.value);
+    res.json(settings);
+  } catch (err) { res.status(500).json({ error: "Erreur config" }); }
+});
+
+router.patch('/admin/config', async (req, res) => {
+  try {
+    for (const key in req.body) {
+      await supabaseFetch(`platform_settings?key=eq.${key}`, { method: 'PATCH', body: JSON.stringify({ value: req.body[key].toString() }) });
+    }
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: "Erreur MAJ config" }); }
+});
+
 router.get('/admin/companies', async (req, res) => {
   try {
     const data = await supabaseFetch('companies?select=*&order=created_at.desc');
     res.json(data || []);
   } catch (err) { res.status(500).json({ error: "Erreur" }); }
+});
+
+router.post('/admin/companies', async (req, res) => {
+  try {
+    const companyData = await supabaseFetch('companies', { method: 'POST', headers: { 'Prefer': 'return=representation' }, body: JSON.stringify(req.body) });
+    res.json({ success: true, company: companyData[0] });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.get('/admin/users', async (req, res) => {
@@ -364,8 +389,39 @@ router.get('/admin/users', async (req, res) => {
   } catch (err) { res.status(500).json({ error: "Erreur" }); }
 });
 
+router.post('/admin/users', async (req, res) => {
+  try {
+    const userData = await supabaseFetch('users', { method: 'POST', headers: { 'Prefer': 'return=representation' }, body: JSON.stringify(req.body) });
+    res.json({ success: true, user: userData[0] });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.patch('/admin/users/:id', async (req, res) => {
+  try {
+    const updated = await supabaseFetch(`users?id=eq.${req.params.id}`, { method: 'PATCH', headers: { 'Prefer': 'return=representation' }, body: JSON.stringify(req.body) });
+    res.json({ success: true, user: updated[0] });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.delete('/admin/users/:id', async (req, res) => {
+  try {
+    await supabaseFetch(`users?id=eq.${req.params.id}`, { method: 'DELETE' });
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.get('/admin/stats', async (req, res) => {
+  try {
+    const companies = await supabaseFetch('companies?select=id');
+    const users = await supabaseFetch('users?select=id');
+    const sales = await supabaseFetch('sales?select=total_amount');
+    const totalRevenue = (sales || []).reduce((sum, s) => sum + Number(s.total_amount), 0);
+    res.json({ totalCompanies: companies?.length || 0, totalUsers: users?.length || 0, totalRevenue });
+  } catch (err) { res.status(500).json({ error: "Erreur stats" }); }
+});
+
 router.get('/status', (req, res) => {
-  res.json({ status: 'Online', storage: 'Supabase enabled', version: '1.2.0-full' });
+  res.json({ status: 'Online', storage: 'Supabase enabled', version: '1.2.5-full' });
 });
 
 app.use('/api', router);
