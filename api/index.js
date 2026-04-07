@@ -191,6 +191,14 @@ router.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+router.get('/status', (req, res) => {
+  res.json({ 
+    status: 'Alive', 
+    env: process.env.NODE_ENV,
+    routes: ['/auth/login', '/settings', '/health', '/status']
+  });
+});
+
 // Admin config
 router.get('/admin/config', async (req, res) => {
   try {

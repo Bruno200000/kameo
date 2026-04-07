@@ -1,12 +1,18 @@
 {
   "version": 2,
-  "buildCommand": "node vercel-build.js",
-  "outputDirectory": "frontend/dist",
-  "functions": {
-    "api/**/*.js": {
-      "runtime": "nodejs20.x"
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "frontend/dist"
+      }
+    },
+    {
+      "src": "api/index.js",
+      "use": "@vercel/node"
     }
-  },
+  ],
   "rewrites": [
     {
       "source": "/api/(.*)",
