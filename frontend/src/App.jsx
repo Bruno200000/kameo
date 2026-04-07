@@ -940,7 +940,6 @@ const Products = () => {
                   >
                     <ImageIcon size={18} /> {isUploading ? 'Téléversement...' : 'Choisir une image'}
                   </label>
-                  {formData.image_url && <p style={{fontSize: '0.75rem', color: '#64748b', marginTop: '5px', wordBreak: 'break-all'}}>{formData.image_url}</p>}
                 </div>
                 {formData.image_url && (
                   <div style={{width: '60px', height: '60px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0', flexShrink: 0}}>
@@ -1021,7 +1020,6 @@ const Products = () => {
                   >
                     <ImageIcon size={18} /> {isUploading ? 'Téléversement...' : 'Changer l\'image'}
                   </label>
-                  {formData.image_url && <p style={{fontSize: '0.75rem', color: '#92400e', marginTop: '5px', wordBreak: 'break-all'}}>{formData.image_url}</p>}
                 </div>
                 {formData.image_url && (
                   <div style={{width: '60px', height: '60px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #fde68a', flexShrink: 0}}>
