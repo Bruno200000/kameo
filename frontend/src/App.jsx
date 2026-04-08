@@ -812,7 +812,8 @@ const Products = () => {
       if (data.success) {
         setFormData(prev => ({ ...prev, image_url: data.imageUrl }));
       } else {
-        alert("Erreur lors du téléversement : " + data.error);
+        console.error("Erreur upload API:", data.error);
+        alert("Erreur lors du téléversement : " + (data.error || "Une erreur inconnue est survenue"));
       }
     } catch (err) {
       alert("Erreur de connexion au serveur pour le téléversement");

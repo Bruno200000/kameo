@@ -214,18 +214,36 @@ router.delete('/products/:id', async (req, res) => {
 router.post('/upload', upload.single('image'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "Aucun fichier" });
+    
+    if (!supabaseUrl || !supabaseKey) {
+      console.error("ERREUR CRITIQUE: Configuration Supabase manquante");
+      return res.status(500).json({ error: "Configuration serveur incomplète (Supabase URL/Key manquante)" });
+    }
+
     const fileName = `${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(req.file.originalname)}`;
     const bucketName = 'images';
     const uploadUrl = `${supabaseUrl}/storage/v1/object/${bucketName}/${fileName}`;
+    
+    console.log(`Tentative d'upload vers Supabase: ${uploadUrl}`);
+    
     const uploadResponse = await fetch(uploadUrl, {
       method: 'POST',
       headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}`, 'Content-Type': req.file.mimetype, 'upsert': 'true' },
       body: req.file.buffer
     });
-    if (!uploadResponse.ok) throw new Error(`Upload fail: ${uploadResponse.status}`);
+    
+    if (!uploadResponse.ok) {
+      const errorData = await uploadResponse.text();
+      console.error(`Echec upload Supabase (Status: ${uploadResponse.status}):`, errorData);
+      throw new Error(`Supabase Storage error: ${uploadResponse.status} - ${errorData}`);
+    }
+    
     const publicUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${fileName}`;
     res.json({ success: true, imageUrl: publicUrl });
-  } catch (err) { res.status(500).json({ error: "Erreur upload" }); }
+  } catch (err) { 
+    console.error("Détail erreur upload:", err);
+    res.status(500).json({ error: "Erreur upload: " + err.message }); 
+  }
 });
 
 // Ventes
