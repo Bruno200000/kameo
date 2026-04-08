@@ -579,7 +579,7 @@ const POS = () => {
             <div key={p.id} style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '15px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s', backgroundColor: '#fff' }} onClick={() => addToCart(p)}>
               <div style={{ backgroundColor: '#f1f5f9', width: '100px', height: '100px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px', overflow: 'hidden' }}>
                 {getCleanImageUrl(p.image_url) ? (
-                  <img src={getCleanImageUrl(p.image_url)} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.onerror = null; e.target.src = 'https://via.placeholder.com/100?text=?'; }} />
+                  <img src={getCleanImageUrl(p.image_url)} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/100?text=?'; }} />
                 ) : (
                   <Package size={32} color="#64748b" />
                 )}
@@ -1157,7 +1157,7 @@ const Products = () => {
                   <td>
                     <div style={{ width: '40px', height: '40px', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#f1f5f9', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {getCleanImageUrl(p.image_url) ? (
-                        <img src={getCleanImageUrl(p.image_url)} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.onerror = null; e.target.src = 'https://via.placeholder.com/40?text=?'; }} />
+                        <img src={getCleanImageUrl(p.image_url)} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/40?text=?'; }} />
                       ) : (
                         <ImageIcon size={18} color="#94a3b8"/>
                       )}
