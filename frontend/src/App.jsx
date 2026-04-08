@@ -799,7 +799,7 @@ const POS = () => {
 };
 
 const Products = () => {
-  const [products, setProducts] = useFetch('/products', []);
+  const [products, , setProducts] = useFetch('/products', []);
   const [showAdd, setShowAdd] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
@@ -1203,7 +1203,7 @@ const Products = () => {
 };
 
 const Stock = () => {
-  const [stock, setStock] = useFetch('/stock', []);
+  const [stock, , setStock] = useFetch('/stock', []);
   const [products] = useFetch('/products', []);
   const [showAdd, setShowAdd] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -1385,7 +1385,7 @@ const Stock = () => {
 };
 
 const Sales = () => {
-  const [sales, setSales] = useFetch('/sales', []);
+  const [sales, , setSales] = useFetch('/sales', []);
   const [companySettings] = useFetch('/settings', { name: 'Mon entreprise', phone: '', address: '', currency: 'XOF' });
   const [showAdd, setShowAdd] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -2250,7 +2250,7 @@ const Sales = () => {
 };
 
 const Purchases = () => {
-  const [purchases, setPurchases] = useFetch('/purchases', []);
+  const [purchases, , setPurchases] = useFetch('/purchases', []);
   const [showAdd, setShowAdd] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -2431,7 +2431,7 @@ const Purchases = () => {
 };
 
 const Contacts = () => {
-  const [contacts, setContacts] = useFetch('/contacts', { customers: [], suppliers: [] });
+  const [contacts, , setContacts] = useFetch('/contacts', { customers: [], suppliers: [] });
   const [showAdd, setShowAdd] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
