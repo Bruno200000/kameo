@@ -24,6 +24,19 @@ const getCleanImageUrl = (url) => {
   return url;
 };
 
+const getHeaders = (extra = {}) => {
+  try {
+    const storedUser = localStorage.getItem('KameoUser');
+    const user = storedUser ? JSON.parse(storedUser) : null;
+    return {
+      'X-Company-Id': user?.company_id || '',
+      ...extra
+    };
+  } catch (e) {
+    return { ...extra };
+  }
+};
+
 const AppLoader = () => (
   <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(circle at top, #1e40af 0%, #0f172a 55%)' }}>
     <div style={{ textAlign: 'center', color: 'white' }}>
@@ -183,11 +196,6 @@ export default function App() {
     const titles = { dashboard: "Tableau de bord", pos: "Caisse (POS)", products: "Catalogue Produits", stock: "Mouvements de stock", sales: "Ventes & Factures", purchases: "Achats Fournisseurs", finance: "Finance & Trésorerie", contacts: "Annuaire Contacts", settings: "Paramètres", subscription: "Mon Abonnement", users: "Gestion Utilisateurs", admin: "Administration Plateforme" };
     return titles[currentPage] || "KAméo";
   };
-
-  const getHeaders = (extra = {}) => ({
-    'X-Company-Id': currentUser?.company_id || '',
-    ...extra
-  });
 
   const showHeaderActions = ['dashboard', 'pos'].includes(currentPage);
 
