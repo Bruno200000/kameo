@@ -15,6 +15,15 @@ import LoginPage from './pages/LoginPage';
 
 const INVOICE_PREFS_KEY = 'kameo_invoice_preferences';
 
+const getCleanImageUrl = (url) => {
+  if (!url) return null;
+  // Si l'URL contient localhost alors qu'on est en ligne, on l'invalide pour afficher l'icône de secours
+  if (url.includes('localhost') && window.location.hostname !== 'localhost') {
+    return null;
+  }
+  return url;
+};
+
 const AppLoader = () => (
   <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(circle at top, #1e40af 0%, #0f172a 55%)' }}>
     <div style={{ textAlign: 'center', color: 'white' }}>
@@ -436,8 +445,8 @@ const Dashboard = ({ onNavigate }) => {
               criticalStockProducts.slice(0, 5).map(product => (
                 <li key={product.id} className="item" style={{ cursor: 'pointer' }} onClick={() => onNavigate('products')}>
                   <div className="item-icon" style={{color: 'white', backgroundColor: product.quantity <= 1 ? '#ef4444' : '#f59e0b', padding: '0', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {product.image_url ? (
-                      <img src={product.image_url} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; e.target.parentElement.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>'; }} />
+                    {getCleanImageUrl(product.image_url) ? (
+                      <img src={getCleanImageUrl(product.image_url)} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; e.target.parentElement.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>'; }} />
                     ) : (
                       <Package size={20} />
                     )}
@@ -569,8 +578,8 @@ const POS = () => {
           {filteredProducts.map(p => (
             <div key={p.id} style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '15px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s', backgroundColor: '#fff' }} onClick={() => addToCart(p)}>
               <div style={{ backgroundColor: '#f1f5f9', width: '100px', height: '100px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px', overflow: 'hidden' }}>
-                {p.image_url ? (
-                  <img src={p.image_url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.onerror = null; e.target.src = 'https://via.placeholder.com/100?text=?'; }} />
+                {getCleanImageUrl(p.image_url) ? (
+                  <img src={getCleanImageUrl(p.image_url)} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.onerror = null; e.target.src = 'https://via.placeholder.com/100?text=?'; }} />
                 ) : (
                   <Package size={32} color="#64748b" />
                 )}
@@ -593,8 +602,8 @@ const POS = () => {
               {cart.map(item => (
                 <div key={item.id} style={{ display: 'flex', gap: '10px', alignItems: 'center', borderBottom: '1px dashed #e2e8f0', paddingBottom: '10px' }}>
                   <div style={{ width: '40px', height: '40px', borderRadius: '4px', overflow: 'hidden', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    {item.image_url ? (
-                      <img src={item.image_url} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    {getCleanImageUrl(item.image_url) ? (
+                      <img src={getCleanImageUrl(item.image_url)} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
                       <Package size={16} color="#64748b" />
                     )}
@@ -995,9 +1004,9 @@ const Products = () => {
                     <ImageIcon size={18} /> {isUploading ? 'Téléversement...' : 'Choisir une image'}
                   </label>
                 </div>
-                {formData.image_url && (
+                {getCleanImageUrl(formData.image_url) && (
                   <div style={{width: '60px', height: '60px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0', flexShrink: 0}}>
-                    <img src={formData.image_url} alt="Aperçu" style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                    <img src={getCleanImageUrl(formData.image_url)} alt="Aperçu" style={{width: '100%', height: '100%', objectFit: 'cover'}} />
                   </div>
                 )}
               </div>
@@ -1075,9 +1084,9 @@ const Products = () => {
                     <ImageIcon size={18} /> {isUploading ? 'Téléversement...' : 'Changer l\'image'}
                   </label>
                 </div>
-                {formData.image_url && (
+                {getCleanImageUrl(formData.image_url) && (
                   <div style={{width: '60px', height: '60px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #fde68a', flexShrink: 0}}>
-                    <img src={formData.image_url} alt="Aperçu" style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                    <img src={getCleanImageUrl(formData.image_url)} alt="Aperçu" style={{width: '100%', height: '100%', objectFit: 'cover'}} />
                   </div>
                 )}
               </div>
@@ -1098,8 +1107,8 @@ const Products = () => {
             <button style={{position: 'absolute', top: 15, right: 15, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b'}} onClick={() => setShowDetail(false)}><X size={24}/></button>
             <div style={{display: 'flex', gap: '30px', flexWrap: 'wrap'}}>
               <div style={{flex: '0 0 200px', height: '200px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                {selectedProduct.image_url ? (
-                  <img src={selectedProduct.image_url} alt={selectedProduct.name} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                {getCleanImageUrl(selectedProduct.image_url) ? (
+                  <img src={getCleanImageUrl(selectedProduct.image_url)} alt={selectedProduct.name} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
                 ) : (
                   <ImageIcon size={64} color="#cbd5e1" />
                 )}
@@ -1147,8 +1156,8 @@ const Products = () => {
                 <tr key={p.id} className="table-row-hover">
                   <td>
                     <div style={{ width: '40px', height: '40px', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#f1f5f9', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {p.image_url ? (
-                        <img src={p.image_url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.onerror = null; e.target.src = 'https://via.placeholder.com/40?text=?'; }} />
+                      {getCleanImageUrl(p.image_url) ? (
+                        <img src={getCleanImageUrl(p.image_url)} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.onerror = null; e.target.src = 'https://via.placeholder.com/40?text=?'; }} />
                       ) : (
                         <ImageIcon size={18} color="#94a3b8"/>
                       )}
