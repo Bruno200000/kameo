@@ -867,7 +867,10 @@ const Products = () => {
       } else {
         alert('Erreur: ' + resData.error);
       }
-    } catch(err) { alert('Erreur de connexion au serveur'); }
+    } catch(err) { 
+      console.error("Erreur Save Product:", err);
+      alert('Erreur de connexion au serveur : ' + err.message); 
+    }
     setIsSaving(false);
   };
 
@@ -914,7 +917,8 @@ const Products = () => {
         alert('Erreur: ' + resData.error);
       }
     } catch (err) {
-      alert('Erreur de connexion au serveur');
+      console.error("Erreur Edit Product:", err);
+      alert('Erreur de connexion au serveur : ' + err.message);
     }
     setIsSaving(false);
   };
