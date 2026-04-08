@@ -816,7 +816,8 @@ const Products = () => {
         alert("Erreur lors du téléversement : " + (data.error || "Une erreur inconnue est survenue"));
       }
     } catch (err) {
-      alert("Erreur de connexion au serveur pour le téléversement");
+      console.error("Erreur réseau/connexion:", err);
+      alert("Erreur de connexion au serveur pour le téléversement : " + err.message + "\n(Vérifiez que le serveur est bien lancé et accessible)");
     } finally {
       setIsUploading(false);
     }
