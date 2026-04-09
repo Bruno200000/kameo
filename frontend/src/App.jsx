@@ -26,10 +26,11 @@ const getCleanImageUrl = (url) => {
 
 const getHeaders = (extra = {}) => {
   try {
-    const storedUser = localStorage.getItem('KameoUser');
+    const storedUser = localStorage.getItem('kameo_current_user');
     const user = storedUser ? JSON.parse(storedUser) : null;
     return {
       'X-Company-Id': user?.company_id || '',
+      'X-User-Data': JSON.stringify(user || {}),
       ...extra
     };
   } catch (e) {
@@ -548,10 +549,8 @@ const POS = () => {
     try {
       const response = await fetch(`${API_URL}/sales`, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'X-Company-Id': currentUser?.company_id || ''
-        },
+        credentials: 'include',
+        headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ 
           cart, 
           totalAmount: total, 
@@ -2012,12 +2011,19 @@ const Sales = () => {
         <div className="card mt-4">
           <div className="table-responsive">
             <table className="data-table">
-              <thead><tr><th>Date</th><th>Référence Facture</th><th>Montant de Vente</th><th>Statut</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Date</th><th>Référence Facture</th><th>Client</th><th>Vendeur</th><th>Montant de Vente</th><th>Statut</th><th>Actions</th></tr></thead>
               <tbody>
                 {filteredSales.map(s => (
                   <tr key={s.id} className="table-row-hover">
                     <td>{new Date(s.sale_date).toLocaleString()}</td>
-                    <td style={{color: '#3b82f6', cursor: 'pointer', fontWeight: 500}}>FAC-{s.id.substring(0,8).toUpperCase()}</td>
+                    <td 
+                      style={{color: '#3b82f6', cursor: 'pointer', fontWeight: 600, textDecoration: 'underline'}}
+                      onClick={() => setSelectedSale(s)}
+                    >
+                      FAC-{s.id.substring(0,8).toUpperCase()}
+                    </td>
+                    <td>{s.customers?.name || 'Client de passage'}</td>
+                    <td style={{fontSize: '0.85rem', color: '#64748b'}}>{s.created_by_name || 'Système'}</td>
                     <td style={{fontWeight: 'bold', color: '#10b981'}}>+ {s.total_amount} F</td>
                     <td>
                       <span className={s.status === 'paid' ? "status-badge success" : "status-badge warning"} style={{display:'inline-flex', alignItems:'center', gap:4}}>
@@ -2028,63 +2034,27 @@ const Sales = () => {
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         <button
                           onClick={() => printInvoice(s)}
-                          style={{
-                            border: '1px solid #bfdbfe',
-                            background: 'linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%)',
-                            color: '#1d4ed8',
-                            padding: '6px 10px',
-                            fontSize: '0.78rem',
-                            fontWeight: 600,
-                            borderRadius: '8px',
-                            cursor: 'pointer'
-                          }}
+                          style={{ border: '1px solid #bfdbfe', background: 'linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%)', color: '#1d4ed8', padding: '6px 10px', fontSize: '0.78rem', fontWeight: 600, borderRadius: '8px', cursor: 'pointer' }}
                         >
-                          Imprimer PDF
+                          PDF
                         </button>
                         <button
                           onClick={() => setSelectedSale(s)}
-                          style={{
-                            border: '1px solid #cbd5e1',
-                            backgroundColor: '#f8fafc',
-                            color: '#334155',
-                            padding: '6px 10px',
-                            fontSize: '0.78rem',
-                            fontWeight: 600,
-                            borderRadius: '8px',
-                            cursor: 'pointer'
-                          }}
+                          style={{ border: '1px solid #cbd5e1', backgroundColor: '#f8fafc', color: '#334155', padding: '6px 10px', fontSize: '0.78rem', fontWeight: 600, borderRadius: '8px', cursor: 'pointer' }}
                         >
                           Details
                         </button>
                         {(s.status === 'partial' || s.status === 'pending') && (
                           <button
                             onClick={() => openPaymentDialog(s)}
-                            style={{
-                              border: '1px solid #fbbf24',
-                              background: 'linear-gradient(180deg, #fef3c7 0%, #fde68a 100%)',
-                              color: '#92400e',
-                              padding: '6px 10px',
-                              fontSize: '0.78rem',
-                              fontWeight: 600,
-                              borderRadius: '8px',
-                              cursor: 'pointer'
-                            }}
+                            style={{ border: '1px solid #fbbf24', background: 'linear-gradient(180deg, #fef3c7 0%, #fde68a 100%)', color: '#92400e', padding: '6px 10px', fontSize: '0.78rem', fontWeight: 600, borderRadius: '8px', cursor: 'pointer' }}
                           >
-                            💰 Règlement
+                            Règlement
                           </button>
                         )}
                         <button
                           onClick={() => duplicateSale(s)}
-                          style={{
-                            border: '1px solid #ddd6fe',
-                            background: 'linear-gradient(180deg, #f5f3ff 0%, #ede9fe 100%)',
-                            color: '#6d28d9',
-                            padding: '6px 10px',
-                            fontSize: '0.78rem',
-                            fontWeight: 600,
-                            borderRadius: '8px',
-                            cursor: 'pointer'
-                          }}
+                          style={{ border: '1px solid #ddd6fe', background: 'linear-gradient(180deg, #f5f3ff 0%, #ede9fe 100%)', color: '#6d28d9', padding: '6px 10px', fontSize: '0.78rem', fontWeight: 600, borderRadius: '8px', cursor: 'pointer' }}
                         >
                           Dupliquer
                         </button>
@@ -2097,13 +2067,19 @@ const Sales = () => {
           </div>
         </div>
       ) : null}
+
       {selectedSale && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-          <div className="card" style={{ width: '90%', maxWidth: '520px', padding: '24px' }}>
-            <h3 style={{ marginTop: 0 }}>Details de la vente</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+          <div className="card" style={{ width: '90%', maxWidth: '600px', padding: '24px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0 }}>Details de la vente</h3>
+              <button onClick={() => setSelectedSale(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px', backgroundColor: '#f8fafc', padding: '15px', borderRadius: '10px' }}>
               <div><strong>Reference:</strong> FAC-{String(selectedSale.id).substring(0,8).toUpperCase()}</div>
               <div><strong>Date:</strong> {new Date(selectedSale.sale_date).toLocaleString()}</div>
+              <div><strong>Client:</strong> {selectedSale.customers?.name || 'Client de passage'}</div>
+              <div><strong>Vendeur:</strong> {selectedSale.created_by_name || 'Système'}</div>
               <div><strong>Montant Total:</strong> {selectedSale.total_amount} F</div>
               <div><strong>Montant Payé:</strong> {(selectedSale.paid_amount || 0)} F</div>
               <div><strong>Reste à Payer:</strong> {(selectedSale.remaining_amount || 0)} F</div>
@@ -2113,69 +2089,30 @@ const Sales = () => {
                 </span>
               </div>
             </div>
+
+            <h4 style={{ borderBottom: '1px solid #eee', paddingBottom: '8px' }}>Articles vendus</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+              {selectedSale.sale_items?.map((item, idx) => (
+                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                  <div style={{ width: '40px', height: '40px', backgroundColor: '#f1f5f9', borderRadius: '6px', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {getCleanImageUrl(item.products?.image_url) ? (
+                      <img src={getCleanImageUrl(item.products?.image_url)} alt={item.products?.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <Package size={24} color="#94a3b8" />
+                    )}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600 }}>{item.products?.name || 'Produit inconnu'}</div>
+                    <div style={{ fontSize: '0.85rem', color: '#64748b' }}>{item.quantity} x {item.unit_price} F</div>
+                  </div>
+                  <div style={{ fontWeight: 700 }}>{item.quantity * item.unit_price} F</div>
+                </div>
+              ))}
+            </div>
+
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '6px' }}>
-              {(selectedSale.status === 'partial' || selectedSale.status === 'pending') && (
-                <button
-                  onClick={() => {
-                    openPaymentDialog(selectedSale);
-                    setSelectedSale(null);
-                  }}
-                  style={{
-                    border: '1px solid #fbbf24',
-                    background: 'linear-gradient(180deg, #fef3c7 0%, #fde68a 100%)',
-                    color: '#92400e',
-                    padding: '9px 14px',
-                    borderRadius: '8px',
-                    fontWeight: 700,
-                    cursor: 'pointer'
-                  }}
-                >
-                  💰 Règlement
-                </button>
-              )}
-              <button
-                onClick={() => printInvoice(selectedSale)}
-                style={{
-                  border: '1px solid #bfdbfe',
-                  background: 'linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%)',
-                  color: '#1d4ed8',
-                  padding: '9px 14px',
-                  borderRadius: '8px',
-                  fontWeight: 700,
-                  cursor: 'pointer'
-                }}
-              >
-                Imprimer
-              </button>
-              <button
-                onClick={() => duplicateSale(selectedSale)}
-                style={{
-                  border: '1px solid #ddd6fe',
-                  background: 'linear-gradient(180deg, #f5f3ff 0%, #ede9fe 100%)',
-                  color: '#6d28d9',
-                  padding: '9px 14px',
-                  borderRadius: '8px',
-                  fontWeight: 700,
-                  cursor: 'pointer'
-                }}
-              >
-                Dupliquer
-              </button>
-              <button
-                onClick={() => setSelectedSale(null)}
-                style={{
-                  border: '1px solid #e2e8f0',
-                  background: '#f8fafc',
-                  color: '#64748b',
-                  padding: '9px 14px',
-                  borderRadius: '8px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  boxShadow: '0 6px 14px rgba(59, 130, 246, 0.35)'
-                }}
-              >
-                Fermer
-              </button>
+              <button onClick={() => printInvoice(selectedSale)} style={{ border: '1px solid #bfdbfe', background: 'linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%)', color: '#1d4ed8', padding: '9px 14px', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}>Imprimer</button>
+              <button onClick={() => setSelectedSale(null)} style={{ border: '1px solid #e2e8f0', background: '#f8fafc', color: '#64748b', padding: '9px 14px', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}>Fermer</button>
             </div>
           </div>
         </div>

@@ -59,7 +59,12 @@ const supabaseFetch = async (path, options = {}, req = null) => {
   }
 };
 
-app.use(cors());
+app.use(cors({
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Company-Id']
+}));
 app.use(express.json());
 
 // --- ROUTES DU ROUTER ---
@@ -249,17 +254,22 @@ router.post('/upload', upload.single('image'), async (req, res) => {
 // Ventes
 router.get('/sales', async (req, res) => {
   try {
-    const data = await supabaseFetch('sales?select=*&order=sale_date.desc', {}, req);
+    const data = await supabaseFetch('sales?select=*,customers(name),sale_items(product_id,quantity,unit_price,products(name,image_url))&order=sale_date.desc', {}, req);
     res.json(data || []);
   } catch (err) { res.status(500).json({ error: "Erreur" }); }
 });
 
 router.post('/sales', async (req, res) => {
   try {
+    const user = JSON.parse(req.headers['x-user-data'] || '{}');
+    const saleData = {
+      ...req.body,
+      created_by: user.id || null
+    };
     const saleRes = await supabaseFetch('sales', { 
       method: 'POST', 
       headers: { 'Prefer': 'return=representation' }, 
-      body: JSON.stringify(req.body)
+      body: JSON.stringify(saleData)
     }, req);
     if (saleRes && saleRes.length > 0) {
       res.json({ success: true, sale_id: saleRes[0].id });
