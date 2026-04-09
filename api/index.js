@@ -262,19 +262,48 @@ router.get('/sales', async (req, res) => {
 router.post('/sales', async (req, res) => {
   try {
     const user = JSON.parse(req.headers['x-user-data'] || '{}');
-    const saleData = {
-      ...req.body,
+    const { cart, ...saleData } = req.body;
+    
+    // Créer la vente sans le cart
+    const saleToCreate = {
+      ...saleData,
       created_by: user.id || null
     };
+    
     const saleRes = await supabaseFetch('sales', { 
       method: 'POST', 
       headers: { 'Prefer': 'return=representation' }, 
-      body: JSON.stringify(saleData)
+      body: JSON.stringify(saleToCreate)
     }, req);
+    
     if (saleRes && saleRes.length > 0) {
-      res.json({ success: true, sale_id: saleRes[0].id });
-    } else res.status(500).json({ error: "Echec insertion" });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+      const saleId = saleRes[0].id;
+      
+      // Créer les sale_items si cart est présent
+      if (cart && Array.isArray(cart) && cart.length > 0) {
+        const saleItems = cart.map(item => ({
+          sale_id: saleId,
+          product_id: item.id,
+          quantity: item.cartQuantity || 1,
+          unit_price: item.selling_price || item.price
+        }));
+        
+        // Créer tous les sale_items en une requête
+        await supabaseFetch('sale_items', {
+          method: 'POST',
+          headers: { 'Prefer': 'return=minimal' },
+          body: JSON.stringify(saleItems)
+        }, req);
+      }
+      
+      res.json({ success: true, sale_id: saleId });
+    } else {
+      res.status(500).json({ error: "Echec insertion" });
+    }
+  } catch (err) { 
+    console.error("Erreur création vente:", err);
+    res.status(500).json({ error: err.message }); 
+  }
 });
 
 router.post('/sales/:id/payment', async (req, res) => {
