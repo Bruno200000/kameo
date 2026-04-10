@@ -271,7 +271,7 @@ button:focus-visible,
 }
 .search-bar input {
   width: 100%;
-  max-width: 320px;
+  max-width: 100%;
   padding: 10px 14px;
   border: 1px solid #dbe3ee;
   border-radius: 12px;
@@ -295,7 +295,8 @@ button:focus-visible,
   padding: 10px 14px;
   border: 1px solid #dbe3ee;
   border-radius: 12px;
-  width: 300px;
+  width: 100%;
+  max-width: 100%;
   background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
   color: var(--text-main);
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
@@ -343,10 +344,31 @@ button:focus-visible,
 
 @media (max-width: 1024px) {
   .dashboard-grid { grid-template-columns: 1fr; }
-  .sidebar { position: fixed; z-index: 50; height: 100vh; transform: translateX(-100%); width: 260px; }
+  .sidebar { position: fixed; z-index: 50; height: 100vh; transform: translateX(-100%); width: 260px; box-shadow: var(--shadow-md); transition: transform 0.3s ease; }
   .sidebar.open { transform: translateX(0); }
   .mobile-toggle { display: block; }
   .mobile-toggle-btn { display: block; }
+  .page-wrapper { padding: 16px; }
+  .topbar { padding: 0 16px; gap: 10px; }
+  .topbar-right { gap: 10px; }
+}
+
+@media (max-width: 768px) {
+  .dashboard-stats { grid-template-columns: 1fr; gap: 16px; }
+  .stat-card { padding: 16px; }
+  .topbar-right .search-bar { display: none; }
+  .page-title { display: none; }
+  .card-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .card-header h2 { font-size: 15px; }
+  .page-top-actions { flex-direction: column; align-items: stretch; gap: 12px; }
+  .search-filters { flex-direction: column; width: 100%; }
+  .search-filters input, .search-filters select { width: 100%; }
+  .data-table th, .data-table td { padding: 10px 12px; font-size: 13px; }
+  .item { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .item-action { align-self: flex-end; }
+  .toast-container { right: 16px; left: 16px; top: 16px; }
+  .toast { width: auto; max-width: 100%; }
+  .pos-layout { flex-direction: column; }
 }
 
 /* System Notifications (Toasts) */
