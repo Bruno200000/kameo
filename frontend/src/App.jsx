@@ -121,11 +121,11 @@ export default function App() {
   const [companyValidationStatus, setCompanyValidationStatus] = useState('active');
   const [companyNextBilling, setCompanyNextBilling] = useState(null);
 
-  // DonnÃ©es globales pour les notifications
+  // Données globales pour les notifications
   const [productsData] = useFetch('/products', []);
   const [salesData] = useFetch('/sales', []);
 
-  // Calcul des alertes en temps rÃ©el
+  // Calcul des alertes en temps réel
   const stockAlerts = productsData.filter(p => p.quantity <= (p.alert_threshold || 5)).map(p => ({
     id: `stock-${p.id}`,
     type: 'STOCK',
@@ -231,7 +231,7 @@ export default function App() {
   const renderContent = () => {
     // Protection de la route Admin
     if (currentPage === 'admin' && currentUser.role !== 'superadmin') {
-      return <div style={{ padding: '40px', textAlign: 'center' }}><h2>AccÃ¨s RefusÃ©</h2><p>Vous n'avez pas les droits pour accÃ©der Ã  cette section.</p></div>;
+      return <div style={{ padding: '40px', textAlign: 'center' }}><h2>Accès Refusé</h2><p>Vous n'avez pas les droits pour accéder à cette section.</p></div>;
     }
 
     switch (currentPage) {
@@ -253,7 +253,7 @@ export default function App() {
 
   const getPageTitle = () => {
     const titles = { dashboard: "Tableau de bord", pos: "Caisse (POS)", products: "Catalogue Produits", stock: "Mouvements de stock", sales: "Ventes & Factures", purchases: "Achats Fournisseurs", finance: "Finance & Trésorerie", contacts: "Annuaire Contacts", settings: "Paramètres", subscription: "Mon Abonnement", users: "Gestion Utilisateurs", admin: "Administration Plateforme" };
-    return titles[currentPage] || "KAmÃ©o";
+    return titles[currentPage] || "KAméo";
   };
 
   const showHeaderActions = ['dashboard', 'pos'].includes(currentPage);
@@ -530,7 +530,7 @@ const SuperAdminDashboard = () => {
       </div>
 
       <div className="card" style={{ padding: '20px' }}>
-        <h3 style={{ marginTop: 0, color: '#1e293b' }}>DerniÃ¨res entreprises inscrites</h3>
+        <h3 style={{ marginTop: 0, color: '#1e293b' }}>Dernières entreprises inscrites</h3>
         {recentCompanies.length === 0 ? <p style={{ color: '#94a3b8' }}>Aucune entreprise.</p> : (
           <div className="table-responsive">
             <table className="data-table">
@@ -569,8 +569,8 @@ const InvoicePreview = ({ model, settings, prefs }) => {
       ]
     },
     company: {
-      name: settings.name || "KAmÃ©o SaaS",
-      address: settings.address || "Quartier Commerce, BouakÃ©",
+      name: settings.name || "KAméo SaaS",
+      address: settings.address || "Quartier Commerce, Bouaké",
       phone: settings.phone || "+225 07 00 00 00",
       email: settings.email || "contact@kameo.com",
       logoUrl: prefs.logoUrl
@@ -637,7 +637,7 @@ const InvoicePreview = ({ model, settings, prefs }) => {
               <div style={{ border: '2px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '24px' }}>QSS</div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontWeight: 'bold', fontSize: '16px' }}>{dummyData.company.name}</div>
-                <div style={{ fontSize: '10px' }}>QUINCAILLERIE GÃ‰NÃ‰RALE - TOUT POUR LE BÃ‚TIMENT</div>
+                <div style={{ fontSize: '10px' }}>QUINCAILLERIE GÉNÉRALE - TOUT POUR LE BÂTIMENT</div>
                 <div style={{ fontSize: '9px' }}>Contact: {dummyData.company.phone}</div>
               </div>
             </div>
@@ -717,7 +717,7 @@ const InvoicePreview = ({ model, settings, prefs }) => {
   return (
     <div className="preview-container">
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', color: '#64748b', fontSize: '0.85rem', fontWeight: 600 }}>
-        <ImageIcon size={16} /> AperÃ§u en temps rÃ©el
+        <ImageIcon size={16} /> Aperçu en temps réel
       </div>
       <div style={{ transform: 'scale(0.85)', transformOrigin: 'top center', boxShadow: '0 8px 30px rgba(0,0,0,0.1)' }}>
         {renderModel()}
@@ -761,7 +761,7 @@ const Dashboard = ({ onNavigate }) => {
         <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <h3 style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '10px' }}>Performance Hebdomadaire</h3>
           <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#10b981' }}>+18.4%</div>
-          <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '5px 0' }}>Par rapport Ã  la semaine derniÃ¨re</p>
+          <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '5px 0' }}>Par rapport à la semaine dernière</p>
           <div style={{ marginTop: '15px', height: '8px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' }}>
             <div style={{ width: '70%', height: '100%', background: '#10b981' }}></div>
           </div>
@@ -771,18 +771,18 @@ const Dashboard = ({ onNavigate }) => {
       <div className="dashboard-grid">
         <div className="card">
           <div className="card-header">
-            <h2>DerniÃ¨res Ventes</h2><button type="button" className="card-link" style={{ background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => onNavigate('sales')}>Voir tout</button>
+            <h2>Dernières Ventes</h2><button type="button" className="card-link" style={{ background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => onNavigate('sales')}>Voir tout</button>
           </div>
           <div className="table-responsive">
             <table className="data-table">
               <thead><tr><th>Date</th><th>Montant</th><th>Statut</th></tr></thead>
               <tbody>
-                {sales.length === 0 ? <tr><td colSpan="3" style={{ textAlign: 'center', padding: '20px', color: '#94a3b8' }}>Aucune vente rÃ©cente</td></tr> : null}
+                {sales.length === 0 ? <tr><td colSpan="3" style={{ textAlign: 'center', padding: '20px', color: '#94a3b8' }}>Aucune vente récente</td></tr> : null}
                 {sales.slice(0, 5).map(s => (
                   <tr key={s.id}>
                     <td>{new Date(s.sale_date).toLocaleString()}</td>
                     <td style={{ fontWeight: 600 }}>{s.total_amount} F</td>
-                    <td><span className="status-badge success">PayÃ©</span></td>
+                    <td><span className="status-badge success">Payé</span></td>
                   </tr>
                 ))}
               </tbody>
@@ -792,7 +792,7 @@ const Dashboard = ({ onNavigate }) => {
 
         <div className="card">
           <div className="card-header">
-            <h2>Alertes Stock</h2><button type="button" className="card-link" style={{ background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => onNavigate('stock')}>GÃ©rer</button>
+            <h2>Alertes Stock</h2><button type="button" className="card-link" style={{ background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => onNavigate('stock')}>Gérer</button>
           </div>
           <ul className="item-list">
             {criticalStockProducts.length === 0 ? (
@@ -812,7 +812,7 @@ const Dashboard = ({ onNavigate }) => {
                   </div>
                   <div className="item-info">
                     <h4>{product.name}</h4>
-                    <p>RÃ©f: {product.reference || 'Non dÃ©finie'}</p>
+                    <p>Réf: {product.reference || 'Non définie'}</p>
                   </div>
                   <div className="item-action">
                     <span className={`stock-count ${product.quantity <= 1 ? 'critical' : 'warning'}`}>
@@ -838,7 +838,7 @@ const Dashboard = ({ onNavigate }) => {
 
 
 
-// Composant POS existant conservÃ© identique
+// Composant POS existant conservé identique
 const POS = () => {
   const [products] = useFetch('/products', []);
   const [contacts] = useFetch('/contacts', { customers: [], suppliers: [] });
@@ -880,7 +880,7 @@ const POS = () => {
     const item = cart.find(item => item.id === id);
 
     if (item && numPrice < (item.purchase_price || 0)) {
-      addToast('Erreur', `Le prix de vente (${numPrice} F) ne peut pas Ãªtre infÃ©rieur au prix d'achat (${item.purchase_price} F).`, 'error');
+      addToast('Erreur', `Le prix de vente (${numPrice} F) ne peut pas être inférieur au prix d'achat (${item.purchase_price} F).`, 'error');
       return;
     }
 
@@ -912,9 +912,9 @@ const POS = () => {
       });
       const data = await response.json();
       if (data.success) {
-        addToast('SuccÃ¨s', paymentStatus === 'paid'
-          ? 'Vente enregistrÃ©e avec succÃ¨s !'
-          : `Vente enregistrÃ©e ! Acompte: ${paidAmount} F, Reste: ${remainingAmount} F`, 'success');
+        addToast('Succès', paymentStatus === 'paid'
+          ? 'Vente enregistrée avec succès !'
+          : `Vente enregistrée ! Acompte: ${paidAmount} F, Reste: ${remainingAmount} F`, 'success');
         setCart([]);
         setPaidAmount('');
       } else {
@@ -929,7 +929,7 @@ const POS = () => {
       <div className="card" style={{ flex: '1 1 300px', padding: 'var(--pos-padding, 20px)', minWidth: '300px' }}>
         <div className="search-filters" style={{ marginBottom: '20px', position: 'relative' }}>
           <Search size={18} style={{ position: 'absolute', left: 12, top: 12, color: '#94a3b8' }} />
-          <input type="text" placeholder="Rechercher un produit Ã  ajouter..." className="large-input" style={{ width: '100%', paddingLeft: 40 }} value={search} onChange={e => setSearch(e.target.value)} />
+          <input type="text" placeholder="Rechercher un produit à ajouter..." className="large-input" style={{ width: '100%', paddingLeft: 40 }} value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '15px', maxHeight: '600px', overflowY: 'auto' }}>
           {filteredProducts.map(p => (
@@ -1090,14 +1090,14 @@ const POS = () => {
                 fontSize: '0.9rem'
               }}
             >
-              CrÃ©dit
+              Crédit
             </button>
           </div>
 
           {/* Champ d'acompte visible uniquement pour paiement partiel */}
           {paymentMode === 'partiel' && (
             <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.85rem', color: '#64748b', fontWeight: 600 }}>Montant payÃ© (acompte)</label>
+              <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.85rem', color: '#64748b', fontWeight: 600 }}>Montant payé (acompte)</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <input
                   type="number"
@@ -1112,7 +1112,7 @@ const POS = () => {
               {Number(paidAmount || 0) > 0 && (
                 <div style={{ marginTop: '8px', padding: '8px 12px', backgroundColor: '#fffbeb', borderRadius: '6px', border: '1px solid #fde68a' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
-                    <span style={{ color: '#92400e' }}>Reste Ã  payer:</span>
+                    <span style={{ color: '#92400e' }}>Reste à payer:</span>
                     <span style={{ fontWeight: 'bold', color: '#92400e' }}>
                       {Math.max(0, total - Number(paidAmount || 0))} F
                     </span>
@@ -1122,11 +1122,11 @@ const POS = () => {
             </div>
           )}
 
-          {/* Message pour crÃ©dit */}
+          {/* Message pour crédit */}
           {paymentMode === 'credit' && (
             <div style={{ marginBottom: '15px', padding: '10px 12px', backgroundColor: '#f3e8ff', borderRadius: '6px', border: '1px solid #e9d5ff' }}>
               <p style={{ margin: 0, fontSize: '0.9rem', color: '#6d28d9', fontWeight: '500' }}>
-                Vente en crÃ©dit - Le montant total ({total} F) sera ajoutÃ© Ã  la dette du client
+                Vente en crédit - Le montant total ({total} F) sera ajouté à la dette du client
               </p>
             </div>
           )}
@@ -1138,7 +1138,7 @@ const POS = () => {
                 ? `Payer ${total} F`
                 : (paymentMode === 'partiel'
                   ? `Acompte ${Number(paidAmount || 0) > 0 ? paidAmount : 0} F`
-                  : `Vente crÃ©dit ${total} F`))
+                  : `Vente crédit ${total} F`))
             }
           </button>
         </div>
@@ -1179,11 +1179,11 @@ const Products = () => {
         setFormData(prev => ({ ...prev, image_url: data.imageUrl }));
       } else {
         console.error("Erreur upload API:", data.error);
-        addToast('Erreur', 'Erreur lors du tÃ©lÃ©versement : ' + (data.error || "Une erreur inconnue est survenue"), 'error');
+        addToast('Erreur', 'Erreur lors du téléversement : ' + (data.error || "Une erreur inconnue est survenue"), 'error');
       }
     } catch (err) {
-      console.error("Erreur rÃ©seau/connexion:", err);
-      addToast('Erreur', 'Erreur de connexion au serveur pour le tÃ©lÃ©versement : ' + err.message, 'error');
+      console.error("Erreur réseau/connexion:", err);
+      addToast('Erreur', 'Erreur de connexion au serveur pour le téléversement : ' + err.message, 'error');
     } finally {
       setIsUploading(false);
     }
@@ -1192,7 +1192,7 @@ const Products = () => {
   const filteredProducts = products.filter((p) => {
     const text = `${p.name || ''} ${p.reference || ''}`.toLowerCase();
     const matchesSearch = text.includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || (p.category || 'GÃ©nÃ©ral') === categoryFilter;
+    const matchesCategory = categoryFilter === 'all' || (p.category || 'Général') === categoryFilter;
     return matchesSearch && matchesCategory;
   });
 
@@ -1209,12 +1209,12 @@ const Products = () => {
       });
       const data = await res.json();
       if (data.success) {
-        addToast('SuccÃ¨s', 'Produit ajoutÃ© avec succÃ¨s !', 'success');
+        addToast('Succès', 'Produit ajouté avec succès !', 'success');
         setProducts([data.product, ...products]);
         setShowAdd(false);
         setFormData({ name: '', reference: '', selling_price: '', purchase_price: '', quantity: '', category: 'Outillage', image_url: '' });
       } else {
-        addToast('Erreur', data.error || 'L\'insertion du produit a Ã©chouÃ©', 'error');
+        addToast('Erreur', data.error || 'L\'insertion du produit a échoué', 'error');
       }
     } catch (err) {
       addToast('Erreur', 'Erreur de connexion au serveur : ' + err.message, 'error');
@@ -1257,13 +1257,13 @@ const Products = () => {
       });
       const resData = await res.json();
       if (resData.success) {
-        addToast('SuccÃ¨s', 'Produit mis Ã  jour !', 'success');
+        addToast('Succès', 'Produit mis à jour !', 'success');
         setProducts(products.map(p => (p.id === editingProductId ? resData.product : p)));
         setShowEdit(false);
         setEditingProductId(null);
         setFormData({ name: '', reference: '', selling_price: '', purchase_price: '', quantity: '', category: 'Outillage', image_url: '' });
       } else {
-        addToast('Erreur', resData.error || 'Mise Ã  jour Ã©chouÃ©e', 'error');
+        addToast('Erreur', resData.error || 'Mise à jour échouée', 'error');
       }
     } catch (err) {
       addToast('Erreur', 'Erreur de connexion au serveur : ' + err.message, 'error');
@@ -1281,7 +1281,7 @@ const Products = () => {
       });
       const d = await res.json();
       if (d.success) {
-        addToast('SuccÃ¨s', 'Produit supprimÃ©', 'success');
+        addToast('Succès', 'Produit supprimé', 'success');
         setProducts(products.filter(p => p.id !== product.id));
       } else {
         addToast('Erreur', d.error || 'Suppression impossible', 'error');
@@ -1297,7 +1297,7 @@ const Products = () => {
         <div className="search-filters">
           <Search size={16} style={{ position: 'absolute', left: 15, top: 12, color: '#94a3b8' }} />
           <input type="text" placeholder="Rechercher un produit..." className="large-input" style={{ paddingLeft: 40 }} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-          <select className="filter-select" value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}><option value="all">Toutes les catÃ©gories</option><option value="Outillage">Outillage</option><option value="Quincaillerie">Quincaillerie</option><option value="Peinture">Peinture</option><option value="GÃ©nÃ©ral">GÃ©nÃ©ral</option></select>
+          <select className="filter-select" value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}><option value="all">Toutes les catégories</option><option value="Outillage">Outillage</option><option value="Quincaillerie">Quincaillerie</option><option value="Peinture">Peinture</option><option value="Général">Général</option></select>
         </div>
         <button className="primary-btn" onClick={() => setShowAdd(!showAdd)}><Plus size={16} /> Nouveau Produit</button>
       </div>
@@ -1305,7 +1305,7 @@ const Products = () => {
       {showAdd && (
         <div className="card mt-4" style={{ borderLeft: '4px solid #3b82f6', backgroundColor: '#f8fafc', padding: '25px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h3 style={{ margin: 0, color: '#1e293b' }}>CrÃ©er un nouveau produit</h3>
+            <h3 style={{ margin: 0, color: '#1e293b' }}>Créer un nouveau produit</h3>
             <button style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8' }} onClick={() => setShowAdd(false)}><X size={20} /></button>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '25px' }}>
@@ -1314,13 +1314,13 @@ const Products = () => {
               <input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="Ex: Perceuse..." className="large-input" style={{ width: '100%', borderColor: '#cbd5e1' }} />
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#475569', fontWeight: 600 }}>RÃ©fÃ©rence</label>
+              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#475569', fontWeight: 600 }}>Référence</label>
               <input type="text" name="reference" value={formData.reference} onChange={handleChange} placeholder="Ex: PC-18V" className="large-input" style={{ width: '100%', borderColor: '#cbd5e1' }} />
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#475569', fontWeight: 600 }}>CatÃ©gorie</label>
+              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#475569', fontWeight: 600 }}>Catégorie</label>
               <select name="category" value={formData.category} onChange={handleChange} className="filter-select" style={{ width: '100%', borderColor: '#cbd5e1' }}>
-                <option>Outillage</option><option>Quincaillerie</option><option>Peinture</option><option>GÃ©nÃ©ral</option>
+                <option>Outillage</option><option>Quincaillerie</option><option>Peinture</option><option>Général</option>
               </select>
             </div>
             <div>
@@ -1362,12 +1362,12 @@ const Products = () => {
                       border: '1px solid #e2e8f0'
                     }}
                   >
-                    <ImageIcon size={18} /> {isUploading ? 'TÃ©lÃ©versement...' : 'Choisir une image'}
+                    <ImageIcon size={18} /> {isUploading ? 'Téléversement...' : 'Choisir une image'}
                   </label>
                 </div>
                 {getCleanImageUrl(formData.image_url) && (
                   <div style={{ width: '60px', height: '60px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0', flexShrink: 0 }}>
-                    <img src={getCleanImageUrl(formData.image_url)} alt="AperÃ§u" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={getCleanImageUrl(formData.image_url)} alt="Aperçu" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
                 )}
               </div>
@@ -1394,13 +1394,13 @@ const Products = () => {
               <input type="text" name="name" value={formData.name} onChange={handleChange} className="large-input" style={{ width: '100%', borderColor: '#fcd34d' }} />
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#475569', fontWeight: 600 }}>RÃ©fÃ©rence</label>
+              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#475569', fontWeight: 600 }}>Référence</label>
               <input type="text" name="reference" value={formData.reference} onChange={handleChange} className="large-input" style={{ width: '100%', borderColor: '#fcd34d' }} />
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#475569', fontWeight: 600 }}>CatÃ©gorie</label>
+              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#475569', fontWeight: 600 }}>Catégorie</label>
               <select name="category" value={formData.category} onChange={handleChange} className="filter-select" style={{ width: '100%', borderColor: '#fcd34d' }}>
-                <option>Outillage</option><option>Quincaillerie</option><option>Peinture</option><option>GÃ©nÃ©ral</option>
+                <option>Outillage</option><option>Quincaillerie</option><option>Peinture</option><option>Général</option>
               </select>
             </div>
             <div>
@@ -1442,12 +1442,12 @@ const Products = () => {
                       border: '1px solid #fde68a'
                     }}
                   >
-                    <ImageIcon size={18} /> {isUploading ? 'TÃ©lÃ©versement...' : 'Changer l\'image'}
+                    <ImageIcon size={18} /> {isUploading ? 'Téléversement...' : 'Changer l\'image'}
                   </label>
                 </div>
                 {getCleanImageUrl(formData.image_url) && (
                   <div style={{ width: '60px', height: '60px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #fde68a', flexShrink: 0 }}>
-                    <img src={getCleanImageUrl(formData.image_url)} alt="AperÃ§u" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={getCleanImageUrl(formData.image_url)} alt="Aperçu" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
                 )}
               </div>
@@ -1456,7 +1456,7 @@ const Products = () => {
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px', borderTop: '1px solid #fde68a', paddingTop: '20px' }}>
             <button className="secondary-btn" onClick={() => setShowEdit(false)}>Annuler</button>
             <button className="primary-btn" onClick={handleEditSave} disabled={isSaving} style={{ backgroundColor: '#f59e0b', borderColor: '#f59e0b' }}>
-              {isSaving ? 'Mise Ã  jour...' : 'Mettre Ã  jour'}
+              {isSaving ? 'Mise à jour...' : 'Mettre à jour'}
             </button>
           </div>
         </div>
@@ -1475,9 +1475,9 @@ const Products = () => {
                 )}
               </div>
               <div style={{ flex: '1' }}>
-                <span style={{ backgroundColor: '#e2e8f0', padding: '4px 10px', borderRadius: '20px', fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>{selectedProduct.category || 'GÃ©nÃ©ral'}</span>
+                <span style={{ backgroundColor: '#e2e8f0', padding: '4px 10px', borderRadius: '20px', fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>{selectedProduct.category || 'Général'}</span>
                 <h2 style={{ margin: '10px 0 5px', color: '#1e293b' }}>{selectedProduct.name}</h2>
-                <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '20px' }}>RÃ©f: {selectedProduct.reference || 'Non renseignÃ©e'}</p>
+                <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '20px' }}>Réf: {selectedProduct.reference || 'Non renseignée'}</p>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                   <div>
@@ -1490,7 +1490,7 @@ const Products = () => {
                   </div>
                   <div>
                     <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '2px' }}>Stock actuel</p>
-                    <p style={{ fontSize: '1.2rem', fontWeight: 700, color: selectedProduct.quantity <= (selectedProduct.alert_threshold || 5) ? '#ef4444' : '#10b981' }}>{selectedProduct.quantity} unitÃ©s</p>
+                    <p style={{ fontSize: '1.2rem', fontWeight: 700, color: selectedProduct.quantity <= (selectedProduct.alert_threshold || 5) ? '#ef4444' : '#10b981' }}>{selectedProduct.quantity} unités</p>
                   </div>
                   <div>
                     <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '2px' }}>Marge brute</p>
@@ -1510,7 +1510,7 @@ const Products = () => {
       <div className="card mt-4">
         <div className="table-responsive">
           <table className="data-table">
-            <thead><tr><th>Image</th><th>RÃ©fÃ©rence & Nom</th><th>CatÃ©gorie</th><th>Prix Achat</th><th>Prix Vente</th><th>Stock</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Image</th><th>Référence & Nom</th><th>Catégorie</th><th>Prix Achat</th><th>Prix Vente</th><th>Stock</th><th>Actions</th></tr></thead>
             <tbody>
               {filteredProducts.length === 0 ? <tr><td colSpan="7" style={{ textAlign: 'center', padding: '40px' }}><Package size={48} color="#cbd5e1" style={{ opacity: 0.5, margin: '0 auto 10px' }} /><p style={{ color: '#94a3b8' }}>Aucun produit correspondant</p></td></tr> : ""}
               {filteredProducts.map(p => (
@@ -1525,7 +1525,7 @@ const Products = () => {
                     </div>
                   </td>
                   <td><strong>{p.name}</strong><br /><span className="sub-text" style={{ fontSize: '0.8rem', color: '#64748b' }}>{p.reference || 'N/A'}</span></td>
-                  <td><span style={{ backgroundColor: '#e2e8f0', padding: '4px 8px', borderRadius: '4px', fontSize: '0.85rem', color: '#475569' }}>{p.category || 'GÃ©nÃ©ral'}</span></td>
+                  <td><span style={{ backgroundColor: '#e2e8f0', padding: '4px 8px', borderRadius: '4px', fontSize: '0.85rem', color: '#475569' }}>{p.category || 'Général'}</span></td>
                   <td style={{ color: '#64748b' }}>{p.purchase_price || 0} F</td>
                   <td style={{ fontWeight: 600, color: '#3b82f6' }}>{p.selling_price} F</td>
                   <td>
@@ -1536,7 +1536,7 @@ const Products = () => {
                   </td>
                   <td>
                     <div style={{ display: 'flex', gap: 5 }}>
-                      <button className="secondary-btn" style={{ padding: '4px 8px', fontSize: '0.75rem' }} onClick={() => handleShowDetail(p)}>DÃ©tails</button>
+                      <button className="secondary-btn" style={{ padding: '4px 8px', fontSize: '0.75rem' }} onClick={() => handleShowDetail(p)}>Détails</button>
                       <button className="icon-btn" title="Modifier" onClick={() => handleEditOpen(p)}><Edit2 size={16} /></button>
                       <button className="icon-btn" title="Supprimer" style={{ color: '#ef4444' }} onClick={() => handleDelete(p)}><Trash2 size={16} /></button>
                     </div>
@@ -1568,18 +1568,18 @@ const Stock = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Supprimer ce mouvement ? Le stock du produit sera automatiquement ajustÃ© pour revenir Ã  son Ã©tat prÃ©cÃ©dent.")) return;
+    if (!window.confirm("Supprimer ce mouvement ? Le stock du produit sera automatiquement ajusté pour revenir à son état précédent.")) return;
     try {
       const res = await fetch(`${API_URL}/stock/${id}`, { method: 'DELETE', headers: getHeaders() });
       if (res.ok) {
         setStock(stock.filter(s => s.id !== id));
-        addToast('SuccÃ¨s', 'Mouvement supprimÃ© et stock synchronisÃ©', 'success');
+        addToast('Succès', 'Mouvement supprimé et stock synchronisé', 'success');
       }
     } catch (e) { addToast('Erreur', 'Erreur lors de la suppression', 'error'); }
   };
 
 
-  // RÃ©cupÃ©rer currentUser depuis le contexte global
+  // Récupérer currentUser depuis le contexte global
   const currentUser = JSON.parse(localStorage.getItem('kameo_auth') || '{}');
   console.log('currentUser dans Stock:', currentUser);
   const productNamesById = products.reduce((acc, p) => ({ ...acc, [p.id]: p.name }), {});
@@ -1591,7 +1591,7 @@ const Stock = () => {
   });
 
   const handleSave = async () => {
-    if (!formData.productId || !formData.quantity) return addToast('Attention', "Veuillez sÃ©lectionner un produit et prÃ©ciser la quantitÃ©.", 'warning');
+    if (!formData.productId || !formData.quantity) return addToast('Attention', "Veuillez sélectionner un produit et préciser la quantité.", 'warning');
     setIsSaving(true);
     try {
       const url = editingMovement ? `${API_URL}/stock/${editingMovement.id}` : `${API_URL}/stock`;
@@ -1609,7 +1609,7 @@ const Stock = () => {
       });
       const resData = await res.json();
       if (resData.success) {
-        addToast('SuccÃ¨s', editingMovement ? 'Mouvement mis Ã  jour !' : 'Mouvement enregistrÃ© !', 'success');
+        addToast('Succès', editingMovement ? 'Mouvement mis à jour !' : 'Mouvement enregistré !', 'success');
         if (editingMovement) {
           setStock(stock.map(s => s.id === editingMovement.id ? resData.movement : s));
         } else {
@@ -1632,35 +1632,35 @@ const Stock = () => {
         <div className="search-filters">
           <Filter size={16} style={{ position: 'absolute', left: 15, top: 12, color: '#94a3b8' }} />
           <input type="text" placeholder="Produit, raison..." className="large-input" style={{ paddingLeft: 40 }} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-          <select className="filter-select" value={typeFilter} onChange={e => setTypeFilter(e.target.value)}><option value="ALL">Tous les types</option><option value="IN">EntrÃ©es</option><option value="OUT">Sorties</option></select>
+          <select className="filter-select" value={typeFilter} onChange={e => setTypeFilter(e.target.value)}><option value="ALL">Tous les types</option><option value="IN">Entrées</option><option value="OUT">Sorties</option></select>
         </div>
-        <button className="primary-btn" onClick={() => setShowAdd(!showAdd)} style={{ backgroundColor: '#8b5cf6', borderColor: '#8b5cf6' }}><Layers size={16} /> DÃ©clarer un mouvement</button>
+        <button className="primary-btn" onClick={() => setShowAdd(!showAdd)} style={{ backgroundColor: '#8b5cf6', borderColor: '#8b5cf6' }}><Layers size={16} /> Déclarer un mouvement</button>
       </div>
 
       {showAdd && (
         <div className="card mt-4" style={{ borderLeft: '4px solid #8b5cf6', backgroundColor: '#f5f3ff', padding: '25px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h3 style={{ margin: 0, color: '#4c1d95' }}>{editingMovement ? 'Modifier le mouvement' : 'DÃ©clarer un mouvement d\'inventaire'}</h3>
+            <h3 style={{ margin: 0, color: '#4c1d95' }}>{editingMovement ? 'Modifier le mouvement' : 'Déclarer un mouvement d\'inventaire'}</h3>
             <button style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6d28d9' }} onClick={() => { setShowAdd(false); setEditingMovement(null); setFormData({ productId: '', type: 'IN', quantity: '', reason: '' }); }}><X size={20} /></button>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '25px' }}>
             <div>
-              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#4c1d95', fontWeight: 600 }}>Produit ciblÃ© *</label>
+              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#4c1d95', fontWeight: 600 }}>Produit ciblé *</label>
               <select value={formData.productId} onChange={e => setFormData({ ...formData, productId: e.target.value })} className="large-input" style={{ width: '100%', borderColor: '#c4b5fd' }}>
-                <option value="">-- SÃ©lectionnez un produit --</option>
-                {products.map(p => <option key={p.id} value={p.id}>{p.name} (BoÃ®te, etc.)</option>)}
+                <option value="">-- Sélectionnez un produit --</option>
+                {products.map(p => <option key={p.id} value={p.id}>{p.name} (Boîte, etc.)</option>)}
               </select>
             </div>
             <div>
               <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#4c1d95', fontWeight: 600 }}>Type</label>
               <select value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })} className="filter-select" style={{ width: '100%', borderColor: '#c4b5fd' }}>
-                <option value="IN">EntrÃ©e (+ Stock)</option>
+                <option value="IN">Entrée (+ Stock)</option>
                 <option value="OUT">Sortie (- Caisse, Perte)</option>
               </select>
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#4c1d95', fontWeight: 600 }}>QuantitÃ© modifiÃ©e *</label>
+              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#4c1d95', fontWeight: 600 }}>Quantité modifiée *</label>
               <input type="number" value={formData.quantity} onChange={e => setFormData({ ...formData, quantity: e.target.value })} placeholder="0" className="large-input" style={{ width: '100%', borderColor: '#c4b5fd' }} />
             </div>
             <div>
@@ -1690,16 +1690,16 @@ const Stock = () => {
           </div>
           <h3 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '10px' }}>Le journal de stock est vide</h3>
           <p style={{ color: '#64748b', maxWidth: '450px', textAlign: 'center', marginBottom: '30px', lineHeight: '1.6' }}>
-            Toutes les entrÃ©es (ex: rÃ©approvisionnements) et les sorties (ex: cas extrÃªmes, pertes) sont enregistrÃ©es ici pour un audit rigoureux de votre inventaire.
+            Toutes les entrées (ex: réapprovisionnements) et les sorties (ex: cas extrêmes, pertes) sont enregistrées ici pour un audit rigoureux de votre inventaire.
           </p>
           <button className="primary-btn" style={{ padding: '12px 24px', fontSize: '1.05rem', boxShadow: '0 4px 10px rgba(139, 92, 246, 0.4)', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#8b5cf6', borderColor: '#8b5cf6' }} onClick={() => setShowAdd(true)}>
-            <Layers size={18} /> DÃ©clarer un mouvement
+            <Layers size={18} /> Déclarer un mouvement
           </button>
         </div>
       ) : filteredStock.length > 0 ? (
         <div className="card mt-4">
           <table className="data-table">
-            <thead><tr><th>Date & Heure</th><th>Type de Mouvement</th><th>Produit</th><th>Stock Actuel</th><th>Justificatif / Raison</th><th>QuantitÃ© ModifiÃ©e</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Date & Heure</th><th>Type de Mouvement</th><th>Produit</th><th>Stock Actuel</th><th>Justificatif / Raison</th><th>Quantité Modifiée</th><th>Actions</th></tr></thead>
             <tbody>
               {filteredStock.map(s => (
                 <tr key={s.id} className="table-row-hover">
@@ -1707,7 +1707,7 @@ const Stock = () => {
                   <td>
                     <span className={s.movement_type === 'OUT' ? "status-badge error" : "status-badge success"} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                       {s.movement_type === 'OUT' ? <ArrowUpRight size={12} /> : <ArrowUpRight size={12} style={{ transform: 'rotate(90deg)' }} />}
-                      {s.movement_type === 'OUT' ? 'Sortie Stock' : 'EntrÃ©e Stock'}
+                      {s.movement_type === 'OUT' ? 'Sortie Stock' : 'Entrée Stock'}
                     </span>
                   </td>
                   <td style={{ fontFamily: 'monospace', color: '#64748b', fontSize: '0.85rem' }}>
@@ -1800,7 +1800,7 @@ const Sales = () => {
       return;
     }
     if (amount > remainingAmount) {
-      setPaymentError(`Le montant ne peut pas dÃ©passer le reste Ã  payer (${remainingAmount} F).`);
+      setPaymentError(`Le montant ne peut pas dépasser le reste à payer (${remainingAmount} F).`);
       return;
     }
 
@@ -1835,9 +1835,9 @@ const Sales = () => {
         setSales(sales.map(s => s.id === sale.id ? data.sale : s));
         setSelectedSale(data.sale);
         closePaymentDialog();
-        addToast('SuccÃ¨s', 'RÃ¨glement enregistrÃ© avec succÃ¨s.', 'success');
+        addToast('Succès', 'Règlement enregistré avec succès.', 'success');
       } else {
-        setPaymentError(data.error || 'Erreur lors du rÃ¨glement');
+        setPaymentError(data.error || 'Erreur lors du règlement');
       }
     } catch (err) {
       setPaymentError(err.message || 'Erreur de connexion au serveur.');
@@ -1871,7 +1871,7 @@ const Sales = () => {
       initialPaid = 0;
       initialRemaining = total;
     } else if (formData.status === 'partial') {
-      // aucun montant payÃ© pour l'instant, on garde un statut partiel
+      // aucun montant payé pour l'instant, on garde un statut partiel
       initialPaid = 0;
       initialRemaining = total;
     }
@@ -1891,8 +1891,8 @@ const Sales = () => {
       });
       const resData = await res.json();
       if (resData.success) {
-        addToast('SuccÃ¨s', 'Vente enregistrÃ©e !', 'success');
-        // Obtenir la nouvelle vente ajoutÃ©e (pour affichage dynamique instantanÃ©)
+        addToast('Succès', 'Vente enregistrée !', 'success');
+        // Obtenir la nouvelle vente ajoutée (pour affichage dynamique instantané)
         const newSale = {
           id: resData.sale_id,
           sale_date: new Date().toISOString(),
@@ -1919,12 +1919,12 @@ const Sales = () => {
     const logoUrl = s.invoice_logo || '';
     const invoiceFormat = s.invoice_format || 'A4';
     const invoiceNumber = `${invoicePrefix}-${String(sale.id || '').substring(0, 8).toUpperCase()}`;
-    const companyName = s.name || 'KAmÃ©o';
+    const companyName = s.name || 'KAméo';
     const companyPhone = s.phone || '-';
     const companyAddress = s.address || '-';
     const currency = s.currency || 'XOF';
     const model = s.invoice_model || 'model1';
-    const conditions = s.invoice_conditions || 'Paiement Ã  la rÃ©ception';
+    const conditions = s.invoice_conditions || 'Paiement à la réception';
     const notes = s.invoice_notes || '';
 
     let html = '';
@@ -1945,7 +1945,7 @@ const Sales = () => {
           <body>
             <div class="center bold">${companyName}</div>
             <div class="center">${companyAddress}</div>
-            <div class="center">TÃ©l: ${companyPhone}</div>
+            <div class="center">Tél: ${companyPhone}</div>
             <div class="divider"></div>
             <div class="bold">FACT NÂ°: ${invoiceNumber}</div>
             <div>Date: ${new Date(sale.sale_date).toLocaleString()}</div>
@@ -2061,7 +2061,7 @@ const Sales = () => {
               <div style="width: 150px; border: 3px solid #000; height: 100px; display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: 900;">QSS</div>
               <div style="flex: 1; text-align: center;">
                 <div style="font-size: 24px; font-weight: 900;">${companyName}</div>
-                <div>TOUT POUR LE BÃ‚TIMENT</div>
+                <div>TOUT POUR LE BÂTIMENT</div>
                 <div>Contact: ${companyPhone}</div>
               </div>
             </div>
@@ -2099,7 +2099,7 @@ const Sales = () => {
         </html>
       `;
     } else {
-      // ModÃ¨le Standard (1, 2, 3) - Template A4 de base
+      // Modèle Standard (1, 2, 3) - Template A4 de base
       html = `
         <html>
           <head>
@@ -2140,8 +2140,8 @@ const Sales = () => {
                 <table class="items-table">
                   <thead>
                     <tr>
-                      <th>DÃ©signation</th>
-                      <th style="text-align: center">QtÃ©</th>
+                      <th>Désignation</th>
+                      <th style="text-align: center">Qté</th>
                       <th style="text-align: right">Total</th>
                     </tr>
                   </thead>
@@ -2184,12 +2184,12 @@ const Sales = () => {
     printDocument.write(html);
     printDocument.close();
 
-    // Attendre que le contenu soit chargÃ© puis imprimer
+    // Attendre que le contenu soit chargé puis imprimer
     setTimeout(() => {
       printFrame.contentWindow.focus();
       printFrame.contentWindow.print();
 
-      // Nettoyer l'iframe aprÃ¨s impression
+      // Nettoyer l'iframe après impression
       setTimeout(() => {
         document.body.removeChild(printFrame);
       }, 1000);
@@ -2215,9 +2215,9 @@ const Sales = () => {
         <div className="search-filters">
           <Search size={16} style={{ position: 'absolute', left: 15, top: 12, color: '#94a3b8' }} />
           <input type="text" placeholder="NÂ° de facture ou date..." className="large-input" style={{ paddingLeft: 40 }} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-          <select className="filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}><option value="all">Tous les statuts</option><option value="paid">PayÃ©</option><option value="pending">En attente</option></select>
+          <select className="filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}><option value="all">Tous les statuts</option><option value="paid">Payé</option><option value="pending">En attente</option></select>
         </div>
-        <button className="primary-btn" onClick={() => setShowAdd(!showAdd)}><FileText size={16} /> CrÃ©er une Facture Manuelle</button>
+        <button className="primary-btn" onClick={() => setShowAdd(!showAdd)}><FileText size={16} /> Créer une Facture Manuelle</button>
       </div>
 
       {showAdd && (
@@ -2234,19 +2234,19 @@ const Sales = () => {
             <div>
               <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#065f46', fontWeight: 600 }}>Statut</label>
               <select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })} className="filter-select" style={{ width: '100%', borderColor: '#6ee7b7' }}>
-                <option value="paid">PayÃ©e</option>
-                <option value="pending">En attente / CrÃ©dit</option>
+                <option value="paid">Payée</option>
+                <option value="pending">En attente / Crédit</option>
               </select>
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#065f46', fontWeight: 600 }}>Montant FacturÃ© (F) *</label>
+              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#065f46', fontWeight: 600 }}>Montant Facturé (F) *</label>
               <input type="number" value={formData.totalAmount} onChange={e => setFormData({ ...formData, totalAmount: e.target.value })} placeholder="0" className="large-input" style={{ width: '100%', borderColor: '#6ee7b7' }} />
             </div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px', borderTop: '1px solid #a7f3d0', paddingTop: '20px' }}>
             <button className="secondary-btn" onClick={() => setShowAdd(false)} style={{ color: '#047857' }}>Annuler</button>
             <button className="primary-btn" onClick={handleSave} disabled={isSaving} style={{ backgroundColor: '#10b981', borderColor: '#10b981', color: 'white' }}>
-              {isSaving ? 'GÃ©nÃ©ration...' : 'Valider la Facture'}
+              {isSaving ? 'Génération...' : 'Valider la Facture'}
             </button>
           </div>
         </div>
@@ -2263,19 +2263,19 @@ const Sales = () => {
           }}>
             <FileText size={36} color="#10b981" />
           </div>
-          <h3 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '10px' }}>Aucune vente rÃ©alisÃ©e</h3>
+          <h3 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '10px' }}>Aucune vente réalisée</h3>
           <p style={{ color: '#64748b', maxWidth: '450px', textAlign: 'center', marginBottom: '30px', lineHeight: '1.6' }}>
-            Que ce soit par la Caisse (POS) ou gÃ©nÃ©rÃ©es manuellement, toutes vos factures apparaÃ®tront ici pour faciliter votre suivi comptable complet.
+            Que ce soit par la Caisse (POS) ou générées manuellement, toutes vos factures apparaîtront ici pour faciliter votre suivi comptable complet.
           </p>
           <button className="primary-btn" style={{ padding: '12px 24px', fontSize: '1.05rem', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.4)', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={() => setShowAdd(true)}>
-            <FileText size={18} /> CrÃ©er une Facture Manuelle
+            <FileText size={18} /> Créer une Facture Manuelle
           </button>
         </div>
       ) : filteredSales.length > 0 ? (
         <div className="card mt-4">
           <div className="table-responsive">
             <table className="data-table">
-              <thead><tr><th>Date</th><th>RÃ©fÃ©rence Facture</th><th>Client</th><th>Vendeur</th><th>Montant de Vente</th><th>Statut</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Date</th><th>Référence Facture</th><th>Client</th><th>Vendeur</th><th>Montant de Vente</th><th>Statut</th><th>Actions</th></tr></thead>
               <tbody>
                 {filteredSales.map(s => (
                   <tr key={s.id} className="table-row-hover">
@@ -2287,11 +2287,11 @@ const Sales = () => {
                       FAC-{s.id.substring(0, 8).toUpperCase()}
                     </td>
                     <td>{s.customers?.name || 'Client de passage'}</td>
-                    <td style={{ fontSize: '0.85rem', color: '#64748b' }}>{s.created_by_name || 'SystÃ¨me'}</td>
+                    <td style={{ fontSize: '0.85rem', color: '#64748b' }}>{s.created_by_name || 'Système'}</td>
                     <td style={{ fontWeight: 'bold', color: '#10b981' }}>+ {s.total_amount} F</td>
                     <td>
                       <span className={s.status === 'paid' ? "status-badge success" : "status-badge warning"} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <CheckCircle size={12} /> {s.status === 'paid' ? 'PayÃ©' : 'En attente'}
+                        <CheckCircle size={12} /> {s.status === 'paid' ? 'Payé' : 'En attente'}
                       </span>
                     </td>
                     <td>
@@ -2313,7 +2313,7 @@ const Sales = () => {
                             onClick={() => openPaymentDialog(s)}
                             style={{ border: '1px solid #fbbf24', background: 'linear-gradient(180deg, #fef3c7 0%, #fde68a 100%)', color: '#92400e', padding: '6px 10px', fontSize: '0.78rem', fontWeight: 600, borderRadius: '8px', cursor: 'pointer' }}
                           >
-                            RÃ¨glement
+                            Règlement
                           </button>
                         )}
                         <button
@@ -2343,13 +2343,13 @@ const Sales = () => {
               <div><strong>Reference:</strong> FAC-{String(selectedSale.id).substring(0, 8).toUpperCase()}</div>
               <div><strong>Date:</strong> {new Date(selectedSale.sale_date).toLocaleString()}</div>
               <div><strong>Client:</strong> {selectedSale.customers?.name || 'Client de passage'}</div>
-              <div><strong>Vendeur:</strong> {selectedSale.created_by_name || 'SystÃ¨me'}</div>
+              <div><strong>Vendeur:</strong> {selectedSale.created_by_name || 'Système'}</div>
               <div><strong>Montant Total:</strong> {selectedSale.total_amount} F</div>
-              <div><strong>Montant PayÃ©:</strong> {(selectedSale.paid_amount || 0)} F</div>
-              <div><strong>Reste Ã  Payer:</strong> {(selectedSale.remaining_amount || 0)} F</div>
+              <div><strong>Montant Payé:</strong> {(selectedSale.paid_amount || 0)} F</div>
+              <div><strong>Reste à Payer:</strong> {(selectedSale.remaining_amount || 0)} F</div>
               <div><strong>Statut:</strong>
                 <span className={selectedSale.status === 'paid' ? "status-badge success" : selectedSale.status === 'partial' ? "status-badge warning" : "status-badge error"} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  {selectedSale.status === 'paid' ? 'âœ… PayÃ©' : selectedSale.status === 'partial' ? 'â³ Partiel' : 'âŒ En attente'}
+                  {selectedSale.status === 'paid' ? 'âœ… Payé' : selectedSale.status === 'partial' ? 'â³ Partiel' : 'âŒ En attente'}
                 </span>
               </div>
             </div>
@@ -2386,7 +2386,7 @@ const Sales = () => {
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10010, padding: '12px' }}>
           <div style={{ width: '100%', maxWidth: '520px', background: '#ffffff', borderRadius: '14px', boxShadow: '0 20px 40px rgba(15, 23, 42, 0.25)', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
             <div style={{ background: 'linear-gradient(90deg, #2563eb, #0ea5e9)', color: '#ffffff', padding: '18px 20px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>RÃ¨glement Partiel - Facture</h3>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>Règlement Partiel - Facture</h3>
               <p style={{ margin: '8px 0 0', color: '#dbeafe', fontSize: '0.9rem' }}>Evitez le popup natif, utilisez une interface claire et professionnelle.</p>
             </div>
             <div style={{ padding: '20px' }}>
@@ -2400,11 +2400,11 @@ const Sales = () => {
                   <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a' }}>{Number(paymentDialog.sale.total_amount || 0).toLocaleString()} F</div>
                 </div>
                 <div style={{ backgroundColor: '#f8fafc', borderRadius: '8px', padding: '12px' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Reste Ã  payer</div>
+                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Reste à payer</div>
                   <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#dc2626' }}>{Number(paymentDialog.sale.remaining_amount ?? (Number(paymentDialog.sale.total_amount || 0) - Number(paymentDialog.sale.paid_amount || 0))).toLocaleString()} F</div>
                 </div>
               </div>
-              <label style={{ display: 'block', marginBottom: '6px', color: '#334155', fontWeight: 600 }}>Somme Ã  rÃ©gler</label>
+              <label style={{ display: 'block', marginBottom: '6px', color: '#334155', fontWeight: 600 }}>Somme à régler</label>
               <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
                 <input
                   type="number"
@@ -2505,7 +2505,7 @@ const Purchases = () => {
       });
       const resData = await res.json();
       if (resData.success) {
-        setToastMessage({ type: 'success', text: editingId ? 'Achat modifiÃ© avec succÃ¨s !' : 'Achat enregistrÃ© avec succÃ¨s !' });
+        setToastMessage({ type: 'success', text: editingId ? 'Achat modifié avec succès !' : 'Achat enregistré avec succès !' });
         setTimeout(() => setToastMessage(null), 3000);
         if (editingId) {
           setPurchases(purchases.map(p => p.id === editingId ? resData.purchase : p));
@@ -2540,7 +2540,7 @@ const Purchases = () => {
         <div className="search-filters">
           <Search size={16} style={{ position: 'absolute', left: 15, top: 12, color: '#94a3b8' }} />
           <input type="text" placeholder="Rechercher un bon de commande..." className="large-input" style={{ paddingLeft: 40 }} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-          <select className="filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}><option value="all">Tous les statuts</option><option value="pending">En attente</option><option value="received">ReÃ§us</option></select>
+          <select className="filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}><option value="all">Tous les statuts</option><option value="pending">En attente</option><option value="received">Reçus</option></select>
         </div>
         <button className="primary-btn" onClick={() => setShowAdd(!showAdd)}><Plus size={16} /> Nouveau Bon de Commande</button>
       </div>
@@ -2579,7 +2579,7 @@ const Purchases = () => {
                 className="large-input"
                 style={{ width: '100%' }}
               >
-                <option value="">-- SÃ©lectionner un fournisseur --</option>
+                <option value="">-- Sélectionner un fournisseur --</option>
                 {contacts.suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
               <input
@@ -2599,27 +2599,27 @@ const Purchases = () => {
                 className="large-input"
                 style={{ width: '100%' }}
               >
-                <option value="">-- SÃ©lectionner un article --</option>
+                <option value="">-- Sélectionner un article --</option>
                 {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: 6, fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>QuantitÃ©</label>
+              <label style={{ display: 'block', marginBottom: 6, fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>Quantité</label>
               <input type="number" value={formData.quantity} onChange={e => setFormData({ ...formData, quantity: e.target.value })} placeholder="Ex: 50" className="large-input" style={{ width: '100%' }} />
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: 6, fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>RÃ©fÃ©rence BC (Optionnel)</label>
+              <label style={{ display: 'block', marginBottom: 6, fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>Référence BC (Optionnel)</label>
               <input type="text" value={formData.reference} onChange={e => setFormData({ ...formData, reference: e.target.value })} placeholder="Ex: BC-2024-001" className="large-input" style={{ width: '100%' }} />
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: 6, fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>CoÃ»t Total (F) *</label>
+              <label style={{ display: 'block', marginBottom: 6, fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>Coût Total (F) *</label>
               <input type="number" value={formData.totalAmount} onChange={e => setFormData({ ...formData, totalAmount: e.target.value })} placeholder="Ex: 150000" className="large-input" style={{ width: '100%' }} />
             </div>
             <div>
               <label style={{ display: 'block', marginBottom: 6, fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>Statut de l'Achat</label>
               <select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })} className="large-input" style={{ width: '100%' }}>
-                <option value="pending">En attente de rÃ©ception</option>
-                <option value="received">RÃ©ceptionnÃ©</option>
+                <option value="pending">En attente de réception</option>
+                <option value="received">Réceptionné</option>
               </select>
             </div>
           </div>
@@ -2643,19 +2643,19 @@ const Purchases = () => {
           }}>
             <Truck size={36} color="#4f46e5" />
           </div>
-          <h3 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '10px' }}>Suivez vos dÃ©penses fournisseurs</h3>
+          <h3 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '10px' }}>Suivez vos dépenses fournisseurs</h3>
           <p style={{ color: '#64748b', maxWidth: '450px', textAlign: 'center', marginBottom: '30px', lineHeight: '1.6' }}>
-            GÃ©rez l'historique de vos achats pour avoir une visibilitÃ© parfaite sur vos dÃ©caissements et piloter intelligemment vos futurs rÃ©approvisionnements.
+            Gérez l'historique de vos achats pour avoir une visibilité parfaite sur vos décaissements et piloter intelligemment vos futurs réapprovisionnements.
           </p>
           <button className="primary-btn" style={{ padding: '12px 24px', fontSize: '1.05rem', boxShadow: '0 4px 10px rgba(59, 130, 246, 0.4)', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={() => setShowAdd(true)}>
-            <Plus size={18} /> CrÃ©er votre premier achat
+            <Plus size={18} /> Créer votre premier achat
           </button>
         </div>
       ) : filteredPurchases.length > 0 ? (
         <div className="card mt-4">
           <div className="table-responsive">
             <table className="data-table">
-              <thead><tr><th>Date</th><th>RÃ©fÃ©rence BC</th><th>Fournisseur</th><th>Articles</th><th>Montant de l'Achat</th><th>Statut</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Date</th><th>Référence BC</th><th>Fournisseur</th><th>Articles</th><th>Montant de l'Achat</th><th>Statut</th><th>Actions</th></tr></thead>
               <tbody>
                 {filteredPurchases.map(p => (
                   <tr key={p.id} className="table-row-hover">
@@ -2666,14 +2666,14 @@ const Purchases = () => {
                     >
                       {p.reference || `BC-${p.id.substring(0, 8).toUpperCase()}`}
                     </td>
-                    <td>{p.supplier_name || 'Non spÃ©cifiÃ©'}</td>
+                    <td>{p.supplier_name || 'Non spécifié'}</td>
                     <td style={{ fontSize: '0.85rem', color: '#64748b' }}>
                       {p.purchase_items && p.purchase_items.length > 0
                         ? p.purchase_items.map(item => `${item.quantity}x ${item.products?.name}`).join(', ')
-                        : 'Aucun article spÃ©cifiÃ©'}
+                        : 'Aucun article spécifié'}
                     </td>
                     <td style={{ fontWeight: 'bold', color: '#ef4444' }}> - {p.total_amount} F</td>
-                    <td><span className={p.status === 'received' ? "status-badge success" : "status-badge warning"} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><CheckCircle size={12} /> {p.status === 'received' ? 'ReÃ§u' : 'En attente'}</span></td>
+                    <td><span className={p.status === 'received' ? "status-badge success" : "status-badge warning"} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><CheckCircle size={12} /> {p.status === 'received' ? 'Reçu' : 'En attente'}</span></td>
                     <td>
                       <div style={{ display: 'flex', gap: '5px' }}>
                         <button
@@ -2723,7 +2723,7 @@ const Purchases = () => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '25px', backgroundColor: '#fffbeb', padding: '15px', borderRadius: '10px' }}>
                 <div>
                   <div style={{ fontSize: '0.8rem', color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Fournisseur</div>
-                  <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>{selectedPurchase.supplier_name || 'Non spÃ©cifiÃ©'}</div>
+                  <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>{selectedPurchase.supplier_name || 'Non spécifié'}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: '0.8rem', color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Date de commande</div>
@@ -2731,13 +2731,13 @@ const Purchases = () => {
                 </div>
               </div>
 
-              <h4 style={{ borderBottom: '2px solid #fde68a', paddingBottom: '10px', marginBottom: '15px', color: '#92400e' }}>Articles CommandÃ©s</h4>
+              <h4 style={{ borderBottom: '2px solid #fde68a', paddingBottom: '10px', marginBottom: '15px', color: '#92400e' }}>Articles Commandés</h4>
               <div className="table-responsive" style={{ marginBottom: '20px' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead style={{ backgroundColor: '#f8fafc' }}>
                     <tr>
                       <th style={{ textAlign: 'left', padding: '10px', fontSize: '0.85rem' }}>Article</th>
-                      <th style={{ textAlign: 'center', padding: '10px', fontSize: '0.85rem' }}>QtÃ©</th>
+                      <th style={{ textAlign: 'center', padding: '10px', fontSize: '0.85rem' }}>Qté</th>
                       <th style={{ textAlign: 'right', padding: '10px', fontSize: '0.85rem' }}>P.U</th>
                       <th style={{ textAlign: 'right', padding: '10px', fontSize: '0.85rem' }}>Sous-total</th>
                     </tr>
@@ -2754,7 +2754,7 @@ const Purchases = () => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="4" style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>Aucun article dÃ©taillÃ© pour cet achat global.</td>
+                        <td colSpan="4" style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>Aucun article détaillé pour cet achat global.</td>
                       </tr>
                     )}
                   </tbody>
@@ -2763,7 +2763,7 @@ const Purchases = () => {
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '20px', borderTop: '2px solid #f1f5f9', paddingTop: '20px' }}>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '0.9rem', color: '#64748b' }}>TOTAL GÃ‰NÃ‰RAL</div>
+                  <div style={{ fontSize: '0.9rem', color: '#64748b' }}>TOTAL GÉNÉRAL</div>
                   <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#ef4444' }}>{Number(selectedPurchase.total_amount).toLocaleString()} F</div>
                 </div>
               </div>
@@ -2771,7 +2771,7 @@ const Purchases = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '30px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: selectedPurchase.status === 'received' ? '#059669' : '#d97706', fontWeight: 600 }}>
                   {selectedPurchase.status === 'received' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
-                  Statut : {selectedPurchase.status === 'received' ? 'Marchandise ReÃ§ue' : 'En attente de livraison'}
+                  Statut : {selectedPurchase.status === 'received' ? 'Marchandise Reçue' : 'En attente de livraison'}
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <button className="secondary-btn" onClick={() => window.print()} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><Printer size={16} /> Imprimer BC</button>
@@ -2811,7 +2811,7 @@ const Contacts = () => {
       });
       const resData = await res.json();
       if (resData.success) {
-        addToast('SuccÃ¨s', 'Contact ajoutÃ© !', 'success');
+        addToast('Succès', 'Contact ajouté !', 'success');
         if (formData.type === 'client') {
           setContacts({ ...contacts, customers: [resData.contact, ...contacts.customers] });
         } else {
@@ -2831,7 +2831,7 @@ const Contacts = () => {
       <div className="page-top-actions">
         <div className="search-filters">
           <Search size={16} style={{ position: 'absolute', left: 15, top: 12, color: '#94a3b8' }} />
-          <input type="text" placeholder="Rechercher par nom, tÃ©lÃ©phone..." className="large-input" style={{ paddingLeft: 40 }} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+          <input type="text" placeholder="Rechercher par nom, téléphone..." className="large-input" style={{ paddingLeft: 40 }} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
         </div>
         <button className="primary-btn" onClick={() => setShowAdd(!showAdd)} style={{ backgroundColor: '#eab308', borderColor: '#eab308', color: '#fff' }}><UserPlus size={16} /> Ajouter Client / Fournisseur</button>
       </div>
@@ -2855,7 +2855,7 @@ const Contacts = () => {
               <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Ex: Jean Dupont" className="large-input" style={{ width: '100%', borderColor: '#fde047' }} />
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#854d0e', fontWeight: 600 }}>TÃ©lÃ©phone / Email</label>
+              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#854d0e', fontWeight: 600 }}>Téléphone / Email</label>
               <input type="text" value={formData.contact_info} onChange={e => setFormData({ ...formData, contact_info: e.target.value })} placeholder="Ex: +221 77..." className="large-input" style={{ width: '100%', borderColor: '#fde047' }} />
             </div>
             <div>
@@ -2877,7 +2877,7 @@ const Contacts = () => {
         <div style={{ flex: '1 1 300px' }}>
           <h3 style={{ marginBottom: '15px', color: '#475569', display: 'flex', alignItems: 'center', gap: '8px' }}><Users size={20} /> Vos Clients VIP ({filteredCustomers.length})</h3>
           {filteredCustomers.length === 0 ? (
-            <div className="card text-center" style={{ padding: '30px', color: '#94a3b8' }}>Aucun client enregistrÃ© en BDD.</div>
+            <div className="card text-center" style={{ padding: '30px', color: '#94a3b8' }}>Aucun client enregistré en BDD.</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
               {filteredCustomers.map(c => (
@@ -2900,7 +2900,7 @@ const Contacts = () => {
         <div style={{ flex: '1 1 300px' }}>
           <h3 style={{ marginBottom: '15px', color: '#475569', display: 'flex', alignItems: 'center', gap: '8px' }}><Truck size={20} /> Vos Fournisseurs ({filteredSuppliers.length})</h3>
           {filteredSuppliers.length === 0 ? (
-            <div className="card text-center" style={{ padding: '30px', color: '#94a3b8' }}>Aucun fournisseur enregistrÃ© en BDD.</div>
+            <div className="card text-center" style={{ padding: '30px', color: '#94a3b8' }}>Aucun fournisseur enregistré en BDD.</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
               {filteredSuppliers.map(s => (
@@ -2936,7 +2936,7 @@ const SettingsPage = ({ currentUser }) => {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [pwdData, setPwdData] = useState({ current: '', next: '', confirm: '' });
 
-  // On n'utilise plus d'Ã©tat local invoicePrefs pour Ã©viter tout dÃ©calage avec la BDD
+  // On n'utilise plus d'état local invoicePrefs pour éviter tout décalage avec la BDD
 
 
   const handleSave = async (e) => {
@@ -3285,20 +3285,20 @@ const SettingsPage = ({ currentUser }) => {
                 <div style={{ fontSize: '0.85rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #f1f5f9' }}>
                   <div>
                     <strong>Windows 10 â€¢ Chrome</strong>
-                    <div>Dakar, SÃ©nÃ©gal (Actuel)</div>
+                    <div>Dakar, Sénégal (Actuel)</div>
                   </div>
                   <span style={{ color: '#059669', fontWeight: 600 }}>En ligne</span>
                 </div>
-                <button type="button" style={{ marginTop: '15px', background: 'transparent', border: 'none', color: '#ef4444', fontSize: '0.85rem', cursor: 'pointer', padding: 0 }}>DÃ©connecter tous les autres appareils</button>
+                <button type="button" style={{ marginTop: '15px', background: 'transparent', border: 'none', color: '#ef4444', fontSize: '0.85rem', cursor: 'pointer', padding: 0 }}>Déconnecter tous les autres appareils</button>
               </div>
 
               <div style={{ padding: '20px', backgroundColor: '#fff5f5', borderRadius: '12px', border: '1px solid #feb2b2' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <div style={{ fontWeight: 'bold', color: '#c53030' }}>Zone de danger</div>
-                    <div style={{ fontSize: '0.85rem', color: '#c53030' }}>Suppression dÃ©finitive du compte et des donnÃ©es</div>
+                    <div style={{ fontSize: '0.85rem', color: '#c53030' }}>Suppression définitive du compte et des données</div>
                   </div>
-                  <button type="button" style={{ padding: '8px 15px', borderRadius: '6px', border: '1px solid #c53030', color: '#c53030', backgroundColor: 'transparent', cursor: 'not-allowed', opacity: 0.7 }} disabled>Supprimer (bientÃ´t)</button>
+                  <button type="button" style={{ padding: '8px 15px', borderRadius: '6px', border: '1px solid #c53030', color: '#c53030', backgroundColor: 'transparent', cursor: 'not-allowed', opacity: 0.7 }} disabled>Supprimer (bientôt)</button>
                 </div>
               </div>
             </div>
@@ -3382,12 +3382,12 @@ const Subscription = () => {
       });
       const data = await res.json();
       if (data.success) {
-        setSubscribeMessage(`Demande envoyÃ©e au superadmin. Statut: en attente de validation`);
+        setSubscribeMessage(`Demande envoyée au superadmin. Statut: en attente de validation`);
       } else {
         setSubscribeMessage(`Erreur de demande d'abonnement: ${data.error || 'erreur serveur'}`);
       }
     } catch (err) {
-      setSubscribeMessage(`Erreur rÃ©seau lors de la demande d'abonnement.`);
+      setSubscribeMessage(`Erreur réseau lors de la demande d'abonnement.`);
     }
   };
 
@@ -3398,25 +3398,25 @@ const Subscription = () => {
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
       <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-        <h2 style={{ fontSize: '2.5rem', color: '#0f172a', fontWeight: '800', marginBottom: '15px' }}>Votre Plan KAmÃ©o</h2>
-        <p style={{ color: '#64748b', fontSize: '1.1rem', maxWidth: '600px', margin: '0 auto' }}>Ã‰voluez Ã  votre rythme. Choisissez la puissance dont votre quincaillerie a besoin pour se dÃ©velopper sans limites.</p>
+        <h2 style={{ fontSize: '2.5rem', color: '#0f172a', fontWeight: '800', marginBottom: '15px' }}>Votre Plan KAméo</h2>
+        <p style={{ color: '#64748b', fontSize: '1.1rem', maxWidth: '600px', margin: '0 auto' }}>Évoluez à votre rythme. Choisissez la puissance dont votre quincaillerie a besoin pour se développer sans limites.</p>
 
         {subscriptionInfo.status === 'active' ? (
           <div style={{ marginTop: '25px', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px 20px', borderRadius: '12px', border: '1px solid #a5b4fc', backgroundColor: '#eef2ff', color: '#3730a3' }}>
             <div style={{ fontWeight: 700 }}>Abonnement actif : {subscriptionInfo.plan}</div>
-            <div>DÃ©but : {subscriptionInfo.startDate ? new Date(subscriptionInfo.startDate).toLocaleDateString() : '-'}</div>
+            <div>Début : {subscriptionInfo.startDate ? new Date(subscriptionInfo.startDate).toLocaleDateString() : '-'}</div>
             <div>Expiration : {subscriptionInfo.expiryDate ? new Date(subscriptionInfo.expiryDate).toLocaleDateString() : '-'}</div>
             {isExpired ? (
-              <div style={{ color: '#dc2626', fontWeight: 700 }}>Votre abonnement est expirÃ©. Renouvelez maintenant.</div>
+              <div style={{ color: '#dc2626', fontWeight: 700 }}>Votre abonnement est expiré. Renouvelez maintenant.</div>
             ) : (
               <div style={{ color: isExpiringSoon ? '#b45309' : '#16a34a', fontWeight: 700 }}>
-                {daysLeft} jour{daysLeft === 1 ? '' : 's'} restants {isExpiringSoon ? '(fin bientÃ´t!)' : ''}
+                {daysLeft} jour{daysLeft === 1 ? '' : 's'} restants {isExpiringSoon ? '(fin bientôt!)' : ''}
               </div>
             )}
           </div>
         ) : (
           <div style={{ marginTop: '25px', display: 'inline-flex', padding: '16px 20px', borderRadius: '12px', border: '1px dashed #cbd5e1', backgroundColor: '#f8fafc', color: '#64748b' }}>
-            Vous Ãªtes en pÃ©riode d'essai. Passez en plan Pro pour dÃ©bloquer toutes les fonctionnalitÃ©s.
+            Vous êtes en période d'essai. Passez en plan Pro pour débloquer toutes les fonctionnalités.
           </div>
         )}
 
@@ -3439,8 +3439,8 @@ const Subscription = () => {
       <div style={{ display: 'flex', gap: '30px', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
         {/* Basic */}
         <div className="card" style={{ flex: '1 1 320px', maxWidth: '350px', padding: '40px 30px', border: '1px solid #e2e8f0', borderTop: '5px solid #94a3b8', borderRadius: '16px', backgroundColor: '#f8fafc', transition: 'transform 0.3s', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-          <h3 style={{ fontSize: '1.5rem', color: '#475569', margin: '0 0 10px' }}>DÃ©couverte</h3>
-          <p style={{ color: '#64748b', fontSize: '0.95rem', minHeight: '40px' }}>Pour tester KAmÃ©o et se familiariser avec l'outil.</p>
+          <h3 style={{ fontSize: '1.5rem', color: '#475569', margin: '0 0 10px' }}>Découverte</h3>
+          <p style={{ color: '#64748b', fontSize: '0.95rem', minHeight: '40px' }}>Pour tester KAméo et se familiariser avec l'outil.</p>
           <p style={{ fontSize: '2.5rem', fontWeight: '800', margin: '20px 0', color: '#1e293b' }}>0 F <span style={{ fontSize: '1rem', color: '#94a3b8', fontWeight: 'normal' }}>/ 14 jrs</span></p>
           {subscriptionInfo.plan === 'Essai' ? (
             <button className="secondary-btn w-100" style={{ padding: '12px', fontSize: '1.05rem', marginBottom: '30px', borderRadius: '8px', backgroundColor: '#e2e8f0', color: '#475569', border: 'none' }} disabled>Plan Actuel</button>
@@ -3449,7 +3449,7 @@ const Subscription = () => {
           )}
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, color: '#475569', display: 'flex', flexDirection: 'column', gap: '15px' }}>
             <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#10b981" /> 1 Utilisateur</li>
-            <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#10b981" /> Jusqu'Ã  50 produits</li>
+            <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#10b981" /> Jusqu'à 50 produits</li>
             <li style={{ display: 'flex', gap: '10px', alignItems: 'center', color: '#94a3b8' }}><X size={18} color="#cbd5e1" /> Facturation exportable</li>
             <li style={{ display: 'flex', gap: '10px', alignItems: 'center', color: '#94a3b8' }}><X size={18} color="#cbd5e1" /> Support prioritaire</li>
           </ul>
@@ -3457,37 +3457,37 @@ const Subscription = () => {
 
         {/* Pro */}
         <div className="card" style={{ flex: '1 1 320px', maxWidth: '380px', padding: '40px 30px', border: '2px solid #3b82f6', borderRadius: '16px', position: 'relative', boxShadow: '0 20px 40px -10px rgba(59, 130, 246, 0.25)', zIndex: 10, transform: 'scale(1.05)' }}>
-          <div style={{ display: 'inline-block', background: 'linear-gradient(90deg, #2563eb, #8b5cf6)', color: 'white', padding: '6px 16px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: '900', letterSpacing: '1px', marginBottom: '15px' }}>â­ RECOMMANDÃ‰</div>
+          <div style={{ display: 'inline-block', background: 'linear-gradient(90deg, #2563eb, #8b5cf6)', color: 'white', padding: '6px 16px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: '900', letterSpacing: '1px', marginBottom: '15px' }}>â­ RECOMMANDÉ</div>
           <h3 style={{ fontSize: '1.5rem', color: '#2563eb', margin: '0 0 10px' }}>Professionnel</h3>
-          <p style={{ color: '#64748b', fontSize: '0.95rem', minHeight: '40px' }}>L'outil complet pour gÃ©rer et scaler votre commerce au quotidien.</p>
+          <p style={{ color: '#64748b', fontSize: '0.95rem', minHeight: '40px' }}>L'outil complet pour gérer et scaler votre commerce au quotidien.</p>
           <p style={{ fontSize: '2.5rem', fontWeight: '800', margin: '20px 0', color: '#0f172a' }}>
             {isAnnual ? '28 000 F' : '35 000 F'} <span style={{ fontSize: '1rem', color: '#94a3b8', fontWeight: 'normal' }}>/ mois</span>
           </p>
           {subscriptionInfo.plan === 'Pro' ? (
             <button className="primary-btn w-100" style={{ padding: '14px', fontSize: '1.1rem', marginBottom: '30px', borderRadius: '8px', backgroundColor: '#6d28d9', border: 'none', boxShadow: '0 4px 10px rgba(107, 40, 217, 0.4)', color: '#fff' }} disabled>Plan Actuel</button>
           ) : (
-            <button className="primary-btn w-100" style={{ padding: '14px', fontSize: '1.1rem', marginBottom: '30px', borderRadius: '8px', background: 'linear-gradient(90deg, #2563eb, #3b82f6)', border: 'none', boxShadow: '0 4px 14px rgba(37, 99, 235, 0.4)' }} onClick={() => setShowPayment(true)}>Mettre Ã  niveau</button>
+            <button className="primary-btn w-100" style={{ padding: '14px', fontSize: '1.1rem', marginBottom: '30px', borderRadius: '8px', background: 'linear-gradient(90deg, #2563eb, #3b82f6)', border: 'none', boxShadow: '0 4px 14px rgba(37, 99, 235, 0.4)' }} onClick={() => setShowPayment(true)}>Mettre à niveau</button>
           )}
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, color: '#1e293b', display: 'flex', flexDirection: 'column', gap: '15px', fontWeight: '500' }}>
-            <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#2563eb" /> 5 Utilisateurs simultanÃ©s</li>
-            <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#2563eb" /> Produits & Stocks illimitÃ©s</li>
+            <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#2563eb" /> 5 Utilisateurs simultanés</li>
+            <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#2563eb" /> Produits & Stocks illimités</li>
             <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#2563eb" /> Code-barres & POS rapide</li>
             <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#2563eb" /> Facturation PDF & Rapports</li>
-            <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#2563eb" /> Support dÃ©diÃ© 7/7</li>
+            <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#2563eb" /> Support dédié 7/7</li>
           </ul>
         </div>
 
         {/* Enterprise */}
         <div className="card" style={{ flex: '1 1 320px', maxWidth: '350px', padding: '40px 30px', border: '1px solid #1e293b', borderTop: '5px solid #a855f7', borderRadius: '16px', backgroundColor: '#0f172a', transition: 'transform 0.3s', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
           <h3 style={{ fontSize: '1.5rem', color: '#f8fafc', margin: '0 0 10px' }}>Entreprise</h3>
-          <p style={{ color: '#94a3b8', fontSize: '0.95rem', minHeight: '40px' }}>La puissance absolue pour les rÃ©seaux de franchises.</p>
+          <p style={{ color: '#94a3b8', fontSize: '0.95rem', minHeight: '40px' }}>La puissance absolue pour les réseaux de franchises.</p>
           <p style={{ fontSize: '2.5rem', fontWeight: '800', margin: '20px 0', color: '#ffffff' }}>Sur devis</p>
           <button className="primary-btn w-100" style={{ padding: '12px', fontSize: '1.05rem', marginBottom: '30px', borderRadius: '8px', backgroundColor: 'transparent', color: '#d8b4fe', border: '2px solid #a855f7' }} onClick={() => setShowContact(true)}>Contacter un expert</button>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, color: '#f1f5f9', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#a855f7" /> Utilisateurs illimitÃ©s</li>
-            <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#a855f7" /> Multi-boutiques / DÃ©pÃ´ts</li>
+            <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#a855f7" /> Utilisateurs illimités</li>
+            <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#a855f7" /> Multi-boutiques / Dépôts</li>
             <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#a855f7" /> VIP & Formation sur site</li>
-            <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#a855f7" /> API ouverte intÃ©grÃ©e</li>
+            <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#a855f7" /> API ouverte intégrée</li>
           </ul>
         </div>
       </div>
@@ -3497,16 +3497,16 @@ const Subscription = () => {
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
           <div className="card" style={{ width: '90%', maxWidth: '450px', padding: '30px', position: 'relative' }}>
             <button style={{ position: 'absolute', top: 15, right: 15, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }} onClick={() => setShowPayment(false)}><X size={20} /></button>
-            <h3 style={{ marginTop: 0, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '10px' }}><CreditCard size={24} color="#3b82f6" /> Mettre Ã  niveau</h3>
-            <p style={{ color: '#64748b', marginBottom: '20px' }}>Saisie sÃ©curisÃ©e pour le plan Professionnel - {isAnnual ? 'Facturation Annuelle' : 'Facturation Mensuelle'}</p>
+            <h3 style={{ marginTop: 0, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '10px' }}><CreditCard size={24} color="#3b82f6" /> Mettre à niveau</h3>
+            <p style={{ color: '#64748b', marginBottom: '20px' }}>Saisie sécurisée pour le plan Professionnel - {isAnnual ? 'Facturation Annuelle' : 'Facturation Mensuelle'}</p>
 
             <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '15px', marginBottom: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', color: '#64748b' }}><span>Abonnement Pro</span><span>{isAnnual ? (35000 * 12).toLocaleString() + ' F' : '35 000 F'}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', color: '#10b981', fontWeight: 'bold' }}><span>{isAnnual ? 'RÃ©duction Annuelle (-20%)' : 'Remises'}</span><span>{isAnnual ? '- ' + (7000 * 12).toLocaleString() + ' F' : '- 0 F'}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.2rem', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #e2e8f0', color: '#1e293b' }}><span>Total Ã  rÃ©gler</span><span>{isAnnual ? (28000 * 12).toLocaleString() + ' F' : '35 000 F'}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', color: '#10b981', fontWeight: 'bold' }}><span>{isAnnual ? 'Réduction Annuelle (-20%)' : 'Remises'}</span><span>{isAnnual ? '- ' + (7000 * 12).toLocaleString() + ' F' : '- 0 F'}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.2rem', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #e2e8f0', color: '#1e293b' }}><span>Total à régler</span><span>{isAnnual ? (28000 * 12).toLocaleString() + ' F' : '35 000 F'}</span></div>
             </div>
 
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#475569', fontSize: '0.9rem' }}>MÃ©thode de paiement</label>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#475569', fontSize: '0.9rem' }}>Méthode de paiement</label>
             <select className="large-input" style={{ width: '100%', marginBottom: '20px', backgroundColor: '#f8fafc' }} value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}>
               <option value="mobile_money">Mobile Money (Wave, Orange, Free, MTN...)</option>
               <option value="card">Carte Bancaire (Visa, MasterCard)</option>
@@ -3514,7 +3514,7 @@ const Subscription = () => {
 
             <button className="primary-btn w-100" style={{ padding: '14px', fontSize: '1.1rem', backgroundColor: '#3b82f6', border: 'none', boxShadow: '0 4px 10px rgba(59, 130, 246, 0.3)' }} onClick={() => {
               makeSubscription('Pro');
-              setSubscribeMessage(`Paiement validÃ© via ${paymentMethod === 'card' ? 'Carte' : 'Mobile Money'} : plan Professionnel activÃ©.`);
+              setSubscribeMessage(`Paiement validé via ${paymentMethod === 'card' ? 'Carte' : 'Mobile Money'} : plan Professionnel activé.`);
               setShowPayment(false);
             }}>
               Payer {isAnnual ? (28000 * 12).toLocaleString() + ' F' : '35 000 F'}
@@ -3528,8 +3528,8 @@ const Subscription = () => {
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
           <div className="card" style={{ width: '90%', maxWidth: '450px', padding: '30px', position: 'relative' }}>
             <button style={{ position: 'absolute', top: 15, right: 15, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }} onClick={() => setShowContact(false)}><X size={20} /></button>
-            <h3 style={{ marginTop: 0, color: '#1e293b' }}>Contacter l'Ã©quipe VIP</h3>
-            <p style={{ color: '#64748b', marginBottom: '20px' }}>Laissez-nous vos coordonnÃ©es, un expert KAmÃ©o vous rappellera sous 24h pour discuter d'un dÃ©ploiement multi-boutiques.</p>
+            <h3 style={{ marginTop: 0, color: '#1e293b' }}>Contacter l'équipe VIP</h3>
+            <p style={{ color: '#64748b', marginBottom: '20px' }}>Laissez-nous vos coordonnées, un expert KAméo vous rappellera sous 24h pour discuter d'un déploiement multi-boutiques.</p>
 
             <input type="text" placeholder="Nom de votre franchise" className="large-input" style={{ width: '100%', marginBottom: '15px' }} value={contactForm.company} onChange={e => setContactForm({ ...contactForm, company: e.target.value })} />
             <input type="text" placeholder="Numero de telephone" className="large-input" style={{ width: '100%', marginBottom: '15px' }} value={contactForm.phone} onChange={e => setContactForm({ ...contactForm, phone: e.target.value })} />
@@ -3600,7 +3600,7 @@ const FinanceModule = () => {
 
       const resData = await res.json();
       if (resData.success) {
-        addToast('SuccÃ¨s', 'OpÃ©ration enregistrÃ©e !', 'success');
+        addToast('Succès', 'Opération enregistrée !', 'success');
         await refreshData();
         setShowModal(false);
         setFormData({ amount: '', label: '' });
@@ -3611,7 +3611,7 @@ const FinanceModule = () => {
     setIsSaving(false);
   };
 
-  if (finLoading) return <div>Chargement de la trÃ©sorerie...</div>;
+  if (finLoading) return <div>Chargement de la trésorerie...</div>;
 
   return (
     <div style={{ padding: '0 0 40px 0' }}>
@@ -3620,7 +3620,7 @@ const FinanceModule = () => {
           <PlusCircle size={18} /> Nouvelle Recette
         </button>
         <button className="primary-btn" onClick={() => { setModalType('DEPENSE'); setShowModal(true); }} style={{ backgroundColor: '#ef4444', borderColor: '#ef4444', color: 'white' }}>
-          <PlusCircle size={18} /> Nouvelle DÃ©pense
+          <PlusCircle size={18} /> Nouvelle Dépense
         </button>
       </div>
 
@@ -3640,7 +3640,7 @@ const FinanceModule = () => {
             <TrendingDown color="#ef4444" />
           </div>
           <div>
-            <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '5px' }}>Total DÃ©penses</p>
+            <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '5px' }}>Total Dépenses</p>
             <h2 style={{ margin: 0, fontSize: '1.8rem', color: '#1e293b' }}>{(fin.totalDepenses || 0).toLocaleString()} F</h2>
           </div>
         </div>
@@ -3650,7 +3650,7 @@ const FinanceModule = () => {
             <Wallet color="#3b82f6" />
           </div>
           <div>
-            <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '5px' }}>Solde Net (BÃ©nÃ©fice)</p>
+            <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '5px' }}>Solde Net (Bénéfice)</p>
             <h2 style={{ margin: 0, fontSize: '1.8rem', color: (fin.balance || 0) >= 0 ? '#3b82f6' : '#ef4444' }}>{(fin.balance || 0).toLocaleString()} F</h2>
           </div>
         </div>
@@ -3659,7 +3659,7 @@ const FinanceModule = () => {
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', alignItems: 'start' }}>
         <div className="card">
           <div style={{ padding: '20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ margin: 0, color: '#1e293b' }}>Flux de TrÃ©sorerie RÃ©cents</h3>
+            <h3 style={{ margin: 0, color: '#1e293b' }}>Flux de Trésorerie Récents</h3>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
               <input type="text" className="large-input" style={{ padding: '8px 10px', width: '220px' }} placeholder="Filtrer les flux..." value={financeSearch} onChange={e => setFinanceSearch(e.target.value)} />
               <button className="secondary-btn" style={{ fontSize: '0.8rem' }} onClick={handleExport}>Exporter CSV</button>
@@ -3677,7 +3677,7 @@ const FinanceModule = () => {
               </thead>
               <tbody>
                 {filteredHistory.length === 0 ? (
-                  <tr><td colSpan="4" style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>Aucun flux enregistrÃ©</td></tr>
+                  <tr><td colSpan="4" style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>Aucun flux enregistré</td></tr>
                 ) : (
                   filteredHistory.map((tx, idx) => (
                     <tr key={idx} className="table-row-hover">
@@ -3700,7 +3700,7 @@ const FinanceModule = () => {
         </div>
 
         <div className="card" style={{ padding: '25px' }}>
-          <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#1e293b' }}>RÃ©partition Globale</h3>
+          <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#1e293b' }}>Répartition Globale</h3>
           <div style={{ marginBottom: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.9rem' }}>
               <span style={{ color: '#64748b' }}>Recettes</span>
@@ -3715,7 +3715,7 @@ const FinanceModule = () => {
           </div>
           <div style={{ marginBottom: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.9rem' }}>
-              <span style={{ color: '#64748b' }}>DÃ©penses</span>
+              <span style={{ color: '#64748b' }}>Dépenses</span>
               <span style={{ fontWeight: 'bold', color: '#ef4444' }}>{(fin.totalDepenses || 0).toLocaleString()} F</span>
             </div>
             <div style={{ width: '100%', height: '10px', backgroundColor: '#e2e8f0', borderRadius: '5px', overflow: 'hidden' }}>
@@ -3728,7 +3728,7 @@ const FinanceModule = () => {
           <div style={{ marginTop: '30px', padding: '15px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
             <p style={{ margin: 1, fontSize: '0.85rem', color: '#64748b', textAlign: 'center' }}>
               <Shield size={14} style={{ verticalAlign: 'middle', marginRight: 5 }} />
-              DonnÃ©es synchronisÃ©es en temps rÃ©el avec Supabase
+              Données synchronisées en temps réel avec Supabase
             </p>
           </div>
         </div>
@@ -3738,7 +3738,7 @@ const FinanceModule = () => {
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
           <div className="card" style={{ width: '90%', maxWidth: '400px', padding: '30px' }}>
             <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#1e293b' }}>
-              {modalType === 'RECETTE' ? 'âž• Enregistrer une Recette' : 'âž– Enregistrer une DÃ©pense'}
+              {modalType === 'RECETTE' ? 'âž• Enregistrer une Recette' : 'âž– Enregistrer une Dépense'}
             </h3>
 
             <div style={{ marginBottom: '15px' }}>
@@ -3754,7 +3754,7 @@ const FinanceModule = () => {
             </div>
 
             <div style={{ marginBottom: '25px' }}>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 500 }}>LibellÃ© / Note</label>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 500 }}>Libellé / Note</label>
               <input
                 type="text"
                 value={formData.label}
