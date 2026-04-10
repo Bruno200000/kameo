@@ -2449,6 +2449,7 @@ const Purchases = () => {
     status: 'pending'
   });
   const [editingId, setEditingId] = useState(null);
+  const [toastMessage, setToastMessage] = useState(null);
   const filteredPurchases = purchases.filter((p) => {
     const ref = `${p.reference || ''} ${p.id || ''}`.toLowerCase();
     const supplier = `${p.supplier_name || ''}`.toLowerCase();
@@ -2458,7 +2459,10 @@ const Purchases = () => {
   });
 
   const handleSave = async () => {
-    if (!formData.totalAmount) return alert("Le montant total est requis.");
+    if (!formData.totalAmount) {
+      setToastMessage({ type: 'warning', text: 'Le montant total est requis.' });
+      return setTimeout(() => setToastMessage(null), 3000);
+    }
     setIsSaving(true);
     try {
       const url = editingId ? `${API_URL}/purchases/${editingId}` : `${API_URL}/purchases`;
@@ -2481,7 +2485,8 @@ const Purchases = () => {
       });
       const resData = await res.json();
       if (resData.success) {
-        alert('Achat enregistré !');
+        setToastMessage({ type: 'success', text: editingId ? 'Achat modifié avec succès !' : 'Achat enregistré avec succès !' });
+        setTimeout(() => setToastMessage(null), 3000);
         if (editingId) {
           setPurchases(purchases.map(p => p.id === editingId ? resData.purchase : p));
         } else {
@@ -2499,9 +2504,13 @@ const Purchases = () => {
         });
         setEditingId(null);
       } else {
-        alert(resData.error || 'Erreur lors de l\'enregistrement');
+        setToastMessage({ type: 'error', text: resData.error || 'Erreur d\'enregistrement' });
+        setTimeout(() => setToastMessage(null), 4000);
       }
-    } catch (err) { alert('Erreur serveur: ' + err.message); }
+    } catch (err) { 
+        setToastMessage({ type: 'error', text: 'Erreur serveur: ' + err.message });
+        setTimeout(() => setToastMessage(null), 4000);
+    }
     setIsSaving(false);
   };
 
@@ -2515,6 +2524,20 @@ const Purchases = () => {
         </div>
         <button className="primary-btn" onClick={() => setShowAdd(!showAdd)}><Plus size={16} /> Nouveau Bon de Commande</button>
       </div>
+
+      {toastMessage && (
+        <div style={{
+          position: 'fixed', top: '20px', right: '20px', zIndex: 9999,
+          background: toastMessage.type === 'success' ? '#10b981' : toastMessage.type === 'warning' ? '#f59e0b' : '#ef4444',
+          color: 'white', padding: '12px 24px', borderRadius: '8px',
+          boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
+          display: 'flex', alignItems: 'center', gap: '10px',
+          animation: 'slideIn 0.3s ease-out'
+        }}>
+          {toastMessage.type === 'success' ? <CheckCircle size={20} /> : <AlertTriangle size={20} />}
+          <span style={{ fontWeight: 500 }}>{toastMessage.text}</span>
+        </div>
+      )}
 
       {showAdd && (
         <div className="card mt-4" style={{ border: '1px solid #e2e8f0', backgroundColor: '#ffffff', padding: '30px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
