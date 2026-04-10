@@ -969,37 +969,44 @@ app.delete('/api/admin/companies/:id', async (req, res) => {
 // Statistiques Globales (Données Structurées pour le Dashboard SuperAdmin)
 app.get('/api/admin/stats', async (req, res) => {
   try {
-    const companies = await supabaseFetch('companies?select=id,name,plan_id,subscription_status,created_at&order=created_at.asc') || [];
-    const users = await supabaseFetch('users?select=id') || [];
-    const products = await supabaseFetch('products?select=id') || [];
+    // Utilisation de select=* pour éviter les erreurs de colonnes manquantes
+    const [companies, users, products] = await Promise.all([
+      supabaseFetch('companies?select=*&order=created_at.asc').then(d => d || []),
+      supabaseFetch('users?select=*').then(d => d || []),
+      supabaseFetch('products?select=*').then(d => d || [])
+    ]);
     
     // Grille tarifaire mensuelle en FCFA
     const PRICING = { pro: 15000, enterprise: 50000, trial: 0, free: 0 };
     
-    // Calcul du MRR (somme des abonnements actifs payants)
-    const mrr = companies.reduce((acc, c) => {
-      if (c.subscription_status === 'active' && c.plan_id !== 'trial') {
-        return acc + (PRICING[c.plan_id] || 0);
+    // Calcul sécurisé du MRR (somme des abonnements actifs payants)
+    let mrr = 0;
+    companies.forEach(c => {
+      if (c && c.subscription_status === 'active' && c.plan_id && c.plan_id !== 'trial') {
+        mrr += (PRICING[c.plan_id] || 0);
       }
-      return acc;
-    }, 0);
+    });
 
-    // Calcul de la tendance de croissance (6 derniers mois)
+    // Initialisation sécurisée de la tendance (6 derniers mois)
     const months = [];
     for (let i = 5; i >= 0; i--) {
       const d = new Date();
       d.setMonth(d.getMonth() - i);
-      const monthKey = d.toLocaleString('fr-FR', { month: 'short', year: 'numeric' });
+      const yearMonth = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
       months.push({ 
         label: d.toLocaleString('fr-FR', { month: 'short' }), 
-        yearKey: d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'),
+        yearKey: yearMonth,
         companies: 0, 
         mrr: 0 
       });
     }
 
+    // Remplissage sécurisé de la tendance
     companies.forEach(c => {
+      if (!c || !c.created_at) return;
       const date = new Date(c.created_at);
+      if (isNaN(date.getTime())) return;
+      
       const yearMonth = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
       const monthData = months.find(m => m.yearKey === yearMonth);
       if (monthData) {
@@ -1010,34 +1017,35 @@ app.get('/api/admin/stats', async (req, res) => {
       }
     });
 
-    // Nettoyage de keys techniques avant envoi
     const growthTrend = months.map(({ label, companies, mrr }) => ({ label, companies, mrr }));
 
     // Distribution des plans
     const planCounts = companies.reduce((acc, c) => {
-      const p = c.plan_id || 'trial';
+      const p = c?.plan_id || 'trial';
       acc[p] = (acc[p] || 0) + 1;
       return acc;
     }, {});
 
     // Statuts d'abonnement
     const statusCounts = companies.reduce((acc, c) => {
-      const s = c.subscription_status || 'active';
+      const s = c?.subscription_status || 'active';
       acc[s] = (acc[s] || 0) + 1;
       return acc;
     }, {});
 
-    const activeSubscriptions = companies.filter(c => c.subscription_status === 'active' && c.plan_id && c.plan_id !== 'trial').length;
-    const unpaidCompanies = companies.filter(c => c.subscription_status === 'pending' || c.subscription_status === 'rejected');
+    const activeSubscriptions = companies.filter(c => c && c.subscription_status === 'active' && c.plan_id && c.plan_id !== 'trial').length;
+    const unpaidCompanies = companies.filter(c => c && (c.subscription_status === 'pending' || c.subscription_status === 'rejected'));
 
     const recentCompanies = [...companies]
-      .sort((a,b) => new Date(b.created_at) - new Date(a.created_at))
+      .sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
       .slice(0, 6)
       .map(c => ({ 
         id: c.id, 
-        name: c.name, 
-        plan_id: c.plan_id, 
-        subscription_status: c.subscription_status, 
+        name: c.name || 'Inconnu', 
+        email: c.email || '',
+        phone: c.phone || '',
+        plan_id: c.plan_id || 'trial', 
+        subscription_status: c.subscription_status || 'pending', 
         created_at: c.created_at 
       }));
 
@@ -1064,8 +1072,13 @@ app.get('/api/admin/stats', async (req, res) => {
       recentCompanies
     });
   } catch (err) {
-    console.error("Dashboard Stats Error:", err);
-    res.status(500).json({ error: "Erreur statistiques globales" });
+    console.error("CRITICAL Dashboard Stats Error:", err.message);
+    res.status(500).json({ 
+      error: "Erreur statistiques globales", 
+      details: err.message,
+      totalCompanies: 0,
+      unpaidCompanies: [] 
+    });
   }
 });
 

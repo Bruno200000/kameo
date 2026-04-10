@@ -702,18 +702,20 @@ router.delete('/admin/users/:id', async (req, res) => {
 
 router.get('/admin/stats', async (req, res) => {
   try {
-    const companies = await supabaseFetch('companies?select=id,name,plan_id,subscription_status,created_at&order=created_at.asc', {}, req) || [];
-    const users = await supabaseFetch('users?select=id', {}, req) || [];
-    const products = await supabaseFetch('products?select=id', {}, req) || [];
+    const [companies, users, products] = await Promise.all([
+      supabaseFetch('companies?select=*&order=created_at.asc', {}, req).then(d => d || []),
+      supabaseFetch('users?select=*', {}, req).then(d => d || []),
+      supabaseFetch('products?select=*', {}, req).then(d => d || [])
+    ]);
 
     const PRICING = { pro: 15000, enterprise: 50000, trial: 0, free: 0 };
 
-    const mrr = companies.reduce((acc, c) => {
-      if (c.subscription_status === 'active' && c.plan_id !== 'trial') {
-        return acc + (PRICING[c.plan_id] || 0);
+    let mrr = 0;
+    companies.forEach(c => {
+      if (c && c.subscription_status === 'active' && c.plan_id !== 'trial') {
+        mrr += (PRICING[c.plan_id] || 0);
       }
-      return acc;
-    }, 0);
+    });
 
     const months = [];
     for (let i = 5; i >= 0; i--) {
@@ -724,7 +726,9 @@ router.get('/admin/stats', async (req, res) => {
     }
 
     companies.forEach(c => {
+      if (!c || !c.created_at) return;
       const date = new Date(c.created_at);
+      if (isNaN(date.getTime())) return;
       const yearMonth = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
       const monthData = months.find(m => m.yearKey === yearMonth);
       if (monthData) {
@@ -734,18 +738,25 @@ router.get('/admin/stats', async (req, res) => {
     });
 
     const growthTrend = months.map(({ label, companies, mrr }) => ({ label, companies, mrr }));
-    const unpaidCompanies = companies.filter(c => c.subscription_status === 'pending' || c.subscription_status === 'rejected');
+    const unpaidCompanies = companies.filter(c => c && (c.subscription_status === 'pending' || c.subscription_status === 'rejected'));
 
     res.json({
       totalCompanies: companies.length,
       totalUsers: users.length,
-      activeSubscriptions: companies.filter(c => c.subscription_status === 'active' && c.plan_id && c.plan_id !== 'trial').length,
+      activeSubscriptions: companies.filter(c => c && c.subscription_status === 'active' && c.plan_id && c.plan_id !== 'trial').length,
       mrr,
       unpaidCount: unpaidCompanies.length,
       unpaidCompanies,
       growthTrend
     });
-  } catch (err) { res.status(500).json({ error: "Erreur stats: " + err.message }); }
+  } catch (err) { 
+    console.error("Vercel Stats Error:", err.message);
+    res.status(500).json({ 
+      error: "Erreur stats: " + err.message,
+      totalCompanies: 0,
+      unpaidCompanies: []
+    }); 
+  }
 });
 
 router.get('/status', (req, res) => {
