@@ -39,13 +39,16 @@ const supabaseFetch = async (path, options = {}, req = null) => {
      } catch(e) {}
   }
 
-  if (filterCompanyId && !path.includes('companies') && !path.includes('users')) {
+  const isExcluded = path.includes('sale_items') || path.includes('purchase_items') || path.includes('companies') || path.includes('platform_settings');
+  const isUserPath = path.includes('users');
+
+  if (filterCompanyId && !isExcluded && !isUserPath) {
     const separator = path.includes('?') ? '&' : '?';
     url += `${separator}company_id=eq.${filterCompanyId}`;
   }
 
   let finalBody = options.body;
-  if ((options.method === 'POST' || options.method === 'PATCH') && companyId && options.body) {
+  if ((options.method === 'POST' || options.method === 'PATCH') && companyId && options.body && !isExcluded) {
     try {
       const parsedBody = JSON.parse(options.body);
       if (Array.isArray(parsedBody)) {
