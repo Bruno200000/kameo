@@ -546,16 +546,16 @@ app.get('/api/purchases', async (req, res) => {
 // Enregistrer un achat
 app.post('/api/purchases', async (req, res) => {
   try {
-    const { totalAmount, reference, supplierName, status } = req.body;
+    const { totalAmount, reference, supplierName, status, supplierId, productId, quantity } = req.body;
     const companyId = await getOrCreateCompanyId();
     
-    // Le supplier_id n'est pas strict d'après la table schema, et on a l'ID de la compagnie.
     const newPurchase = {
       company_id: companyId,
+      supplier_id: supplierId || null,
       supplier_name: supplierName || null,
       reference: reference || null,
       total_amount: Number(totalAmount) || 0,
-      status: status || 'pending' // ou 'received'
+      status: status || 'pending'
     };
     
     const purRes = await supabaseFetch('purchases', {
@@ -565,6 +565,45 @@ app.post('/api/purchases', async (req, res) => {
     });
 
     if (!purRes || purRes.length === 0) return res.status(500).json({ error: "Echec insertion achat" });
+    const purchaseId = purRes[0].id;
+
+    // Si un produit est spécifié, on crée l'item et on gère le stock
+    if (productId && quantity) {
+      const qty = Number(quantity);
+      const unitPrice = qty > 0 ? (Number(totalAmount) / qty) : 0;
+
+      await supabaseFetch('purchase_items', {
+        method: 'POST',
+        body: JSON.stringify({
+          purchase_id: purchaseId,
+          product_id: productId,
+          quantity: qty,
+          unit_price: unitPrice,
+          total: Number(totalAmount)
+        })
+      });
+
+      if (status === 'received') {
+        const prodData = await supabaseFetch(`products?id=eq.${productId}&select=quantity`);
+        const currentQty = (prodData && prodData[0]) ? prodData[0].quantity : 0;
+        
+        await supabaseFetch(`products?id=eq.${productId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ quantity: currentQty + qty })
+        });
+
+        await supabaseFetch('stock_movements', {
+          method: 'POST',
+          body: JSON.stringify({
+            company_id: companyId,
+            product_id: productId,
+            movement_type: 'IN',
+            quantity: qty,
+            reason: `Achat #${purchaseId.split('-')[0]} (${reference || 'Sans ref'})`
+          })
+        });
+      }
+    }
     
     res.json({ success: true, purchase: purRes[0] });
   } catch (err) {
@@ -580,13 +619,14 @@ app.patch('/api/purchases/:id', async (req, res) => {
     console.log('req.body:', req.body);
     
     const { id } = req.params;
-    const { totalAmount, status, reference, supplierName } = req.body;
+    const { totalAmount, status, reference, supplierName, supplierId } = req.body;
     
     const updateData = {};
     if (totalAmount !== undefined) updateData.total_amount = Number(totalAmount) || 0;
     if (status !== undefined) updateData.status = status;
     if (reference !== undefined) updateData.reference = reference;
     if (supplierName !== undefined) updateData.supplier_name = supplierName;
+    if (supplierId !== undefined) updateData.supplier_id = supplierId;
     
     console.log('updateData:', updateData);
     

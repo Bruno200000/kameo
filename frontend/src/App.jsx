@@ -2391,12 +2391,22 @@ const Sales = () => {
 
 const Purchases = () => {
   const [purchases, , setPurchases] = useFetch('/purchases', []);
+  const [contacts] = useFetch('/contacts', { customers: [], suppliers: [] });
+  const [products] = useFetch('/products', []);
   const [showAdd, setShowAdd] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedPurchase, setSelectedPurchase] = useState(null);
-  const [formData, setFormData] = useState({ totalAmount: '', reference: '', supplierName: '', status: 'pending' });
+  const [formData, setFormData] = useState({ 
+    totalAmount: '', 
+    reference: '', 
+    supplierName: '', 
+    supplierId: '',
+    productId: '',
+    quantity: '',
+    status: 'pending' 
+  });
   const [editingId, setEditingId] = useState(null);
   const filteredPurchases = purchases.filter((p) => {
     const ref = `${p.reference || ''} ${p.id || ''}`.toLowerCase();
@@ -2413,11 +2423,13 @@ const Purchases = () => {
       const url = editingId ? `${API_URL}/purchases/${editingId}` : `${API_URL}/purchases`;
       const method = editingId ? 'PATCH' : 'POST';
 
-      // Map frontend naming to DB naming
       const dbPayload = {
-        total_amount: formData.totalAmount,
+        totalAmount: formData.totalAmount,
         reference: formData.reference,
-        supplier_name: formData.supplierName,
+        supplierName: formData.supplierName,
+        supplierId: formData.supplierId,
+        productId: formData.productId,
+        quantity: formData.quantity,
         status: formData.status
       };
 
@@ -2429,19 +2441,25 @@ const Purchases = () => {
       const resData = await res.json();
       if (resData.success) {
         if (editingId) {
-          // Mode modification : mettre à jour l'achat existant
-          setPurchases(purchases.map(p => p.id === editingId ? { ...p, ...formData } : p));
+          setPurchases(purchases.map(p => p.id === editingId ? resData.purchase : p));
         } else {
-          // Mode création : ajouter nouvel achat
           setPurchases([resData.purchase, ...purchases]);
         }
         setShowAdd(false);
-        setFormData({ totalAmount: '', reference: '', supplierName: '', status: 'pending' });
+        setFormData({ 
+          totalAmount: '', 
+          reference: '', 
+          supplierName: '', 
+          supplierId: '', 
+          productId: '', 
+          quantity: '', 
+          status: 'pending' 
+        });
         setEditingId(null);
       } else {
         alert('Erreur: ' + resData.error);
       }
-    } catch (err) { alert('Erreur serveur'); }
+    } catch (err) { alert('Erreur serveur: ' + err.message); }
     setIsSaving(false);
   };
 
@@ -2465,7 +2483,42 @@ const Purchases = () => {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '25px' }}>
             <div>
               <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#92400e', fontWeight: 600 }}>Fournisseur</label>
-              <input type="text" value={formData.supplierName} onChange={e => setFormData({ ...formData, supplierName: e.target.value })} placeholder="Ex: Cimenterie SA" className="large-input" style={{ width: '100%', borderColor: '#fcd34d' }} />
+              <select 
+                value={formData.supplierId} 
+                onChange={e => {
+                  const s = contacts.suppliers.find(sup => sup.id === e.target.value);
+                  setFormData({ ...formData, supplierId: e.target.value, supplierName: s ? s.name : '' });
+                }} 
+                className="large-input" 
+                style={{ width: '100%', borderColor: '#fcd34d' }}
+              >
+                <option value="">-- Sélectionner un fournisseur --</option>
+                {contacts.suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+              <input 
+                type="text" 
+                value={formData.supplierName} 
+                onChange={e => setFormData({ ...formData, supplierName: e.target.value })} 
+                placeholder="Ou saisir un nom manuel" 
+                className="large-input" 
+                style={{ width: '100%', borderColor: '#fcd34d', marginTop: '8px' }} 
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#92400e', fontWeight: 600 }}>Article / Produit</label>
+              <select 
+                value={formData.productId} 
+                onChange={e => setFormData({ ...formData, productId: e.target.value })} 
+                className="large-input" 
+                style={{ width: '100%', borderColor: '#fcd34d' }}
+              >
+                <option value="">-- Sélectionner un article --</option>
+                {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#92400e', fontWeight: 600 }}>Quantité</label>
+              <input type="number" value={formData.quantity} onChange={e => setFormData({ ...formData, quantity: e.target.value })} placeholder="0" className="large-input" style={{ width: '100%', borderColor: '#fcd34d' }} />
             </div>
             <div>
               <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#92400e', fontWeight: 600 }}>Référence BC (Optionnel)</label>
@@ -2551,6 +2604,9 @@ const Purchases = () => {
                               totalAmount: p.total_amount,
                               reference: p.reference || '',
                               supplierName: p.supplier_name || '',
+                              supplierId: p.supplier_id || '',
+                              productId: p.purchase_items?.[0]?.product_id || '',
+                              quantity: p.purchase_items?.[0]?.quantity || '',
                               status: p.status || 'pending'
                             });
                             setEditingId(p.id);
