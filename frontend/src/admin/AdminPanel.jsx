@@ -99,6 +99,18 @@ const SaaSConfig = () => {
             checked={settings.allow_new_signups === 'true'} 
             onChange={(val) => handleUpdate('allow_new_signups', val)}
           />
+          <ConfigToggle 
+            title="Notifications d'impayés" 
+            desc="Alerter l'admin en temps réel des impayés" 
+            checked={settings.notify_unpaid === 'true'} 
+            onChange={(val) => handleUpdate('notify_unpaid', val)}
+          />
+          <ConfigToggle 
+            title="Suspension Automatique" 
+            desc="Bloquer les comptes à la fin de leur abonnement" 
+            checked={settings.auto_suspend === 'true'} 
+            onChange={(val) => handleUpdate('auto_suspend', val)}
+          />
         </div>
 
         <hr style={{ border: 'none', borderTop: '1px solid #f1f5f9' }} />
@@ -120,9 +132,20 @@ const SaaSConfig = () => {
             value={settings.version || ''} 
             onBlur={(val) => handleUpdate('version', val)}
           />
+          <ConfigInput 
+            label="Devise par défaut (ex: FCFA)" 
+            value={settings.default_currency || 'FCFA'} 
+            onBlur={(val) => handleUpdate('default_currency', val)}
+          />
+          <ConfigInput 
+            label="Durée période d'essai (Jours)" 
+            value={settings.trial_days || '14'} 
+            type="number"
+            onBlur={(val) => handleUpdate('trial_days', val)}
+          />
           <div style={{ padding: '15px', background: '#f8fafc', borderRadius: '8px' }}>
              <label style={{ fontSize: '13px', fontWeight: 600, color: '#64748b', display: 'block', marginBottom: '8px' }}>Dernière mise à jour</label>
-             <div style={{ fontSize: '14px' }}>{new Date().toLocaleDateString()}</div>
+             <div style={{ fontSize: '14px' }}>{new Date().toLocaleDateString('fr-FR', { dateStyle: 'long' })}</div>
           </div>
         </div>
       </div>
@@ -145,7 +168,7 @@ const ConfigToggle = ({ title, desc, checked, onChange }) => (
   </div>
 );
 
-const ConfigInput = ({ label, value, onBlur }) => {
+const ConfigInput = ({ label, value, type = "text", onBlur }) => {
   const [val, setVal] = useState(value);
   React.useEffect(() => setVal(value), [value]);
   
@@ -153,7 +176,7 @@ const ConfigInput = ({ label, value, onBlur }) => {
     <div style={{ padding: '15px', background: '#f8fafc', borderRadius: '8px' }}>
       <label style={{ fontSize: '13px', fontWeight: 600, color: '#64748b', display: 'block', marginBottom: '8px' }}>{label}</label>
       <input 
-        type="text" 
+        type={type}
         className="large-input" 
         style={{ width: '100%', padding: '8px', border: '1px solid #e2e8f0', borderRadius: '4px' }}
         value={val}

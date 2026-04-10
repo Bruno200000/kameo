@@ -1,48 +1,57 @@
 import React from 'react';
 import { useFetch } from '../hooks/useFetch';
 import { StatCard } from '../components/StatCard';
-import TrendChart from '../components/TrendChart';
-import { Users, Building, Package, CreditCard } from 'lucide-react';
+import { Users, Building, AlertTriangle, CheckCircle } from 'lucide-react';
 
 const GlobalStatsView = () => {
-  const [stats, loading] = useFetch('/dashboard/stats', {
-    sales_today: 0,
-    sales_change: "+0%",
-    stock_value: 0,
-    low_stock_items: 0,
-    active_customers: 0,
-    historical_sales: []
+  const [stats, loading] = useFetch('/admin/stats', {
+    total_companies: 0,
+    active_subscriptions: 0,
+    unpaid_count: 0,
+    total_users: 0,
+    unpaid_companies: []
   });
 
-  if (loading) return <div>Chargement des analyses globales...</div>;
+  if (loading) return <div>Chargement des données de la plateforme...</div>;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
       <div className="dashboard-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
-        <StatCard icon={<CreditCard size={24} />} title="Ventes Aujourd'hui" value={`${stats.sales_today} F`} color="blue" trend={stats.sales_change} trendUp />
-        <StatCard icon={<Package size={24} />} title="Valeur Stock" value={`${stats.stock_value} F`} color="green" />
-        <StatCard icon={<Users size={24} />} title="Clients Actifs" value={stats.active_customers} color="purple" />
-        <StatCard icon={<Building size={24} />} title="Articles Faible Stock" value={stats.low_stock_items} color="orange" />
+        <StatCard icon={<Building size={24} />} title="Total Entreprises" value={stats.total_companies} color="blue" />
+        <StatCard icon={<CheckCircle size={24} />} title="Abonnements Actifs" value={stats.active_subscriptions} color="green" />
+        <StatCard icon={<Users size={24} />} title="Total Utilisateurs" value={stats.total_users} color="purple" />
+        <StatCard icon={<AlertTriangle size={24} />} title="Abonnements Suspendus" value={stats.unpaid_count} color="red" />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
-        <div className="card" style={{ padding: '20px' }}>
-          <h3 style={{ marginBottom: '15px' }}>Ventes des 7 derniers jours</h3>
-          <TrendChart
-            data={stats.historical_sales}
-            dataKey="amount"
-            color="#3b82f6"
-            title="Montant des ventes"
-          />
+      <div className="card">
+        <div className="card-header">
+          <h3 style={{ margin: 0, color: '#1e293b' }}>Entreprises nécessitant une action (Impayés / En attente)</h3>
         </div>
-        <div className="card" style={{ padding: '20px' }}>
-          <h3 style={{ marginBottom: '15px' }}>Évolution des ventes</h3>
-          <TrendChart
-            data={stats.historical_sales}
-            dataKey="amount"
-            color="#f59e0b"
-            title="Tendance des ventes"
-          />
+        <div className="table-responsive">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Entreprise</th>
+                <th>Contact</th>
+                <th>Plan Cible</th>
+                <th>Statut Actuel</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stats.unpaid_companies.length === 0 ? (
+                <tr><td colSpan="4" style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>Tous les abonnements sont à jour.</td></tr>
+              ) : (
+                stats.unpaid_companies.map(c => (
+                  <tr key={c.id}>
+                    <td><strong>{c.name}</strong></td>
+                    <td>{c.email}<br/><span style={{fontSize: '11px', color: '#94a3b8'}}>{c.phone}</span></td>
+                    <td><span className="status-badge" style={{ backgroundColor: '#e2e8f0', color: '#475569' }}>{c.plan_id}</span></td>
+                    <td><span className="status-badge error">{c.subscription_status}</span></td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

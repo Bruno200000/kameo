@@ -570,6 +570,29 @@ router.delete('/admin/companies/:id', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+router.get('/admin/stats', async (req, res) => {
+  try {
+    const companies = await supabaseFetch('companies?select=*', {}, req) || [];
+    const users = await supabaseFetch('users?select=id', {}, req) || [];
+    
+    const total_companies = companies.length;
+    const active_subscriptions = companies.filter(c => c.subscription_status === 'active').length;
+    
+    // Entreprises avec statut non actif (et non en essai par défaut)
+    const unpaid_companies = companies.filter(c => c.subscription_status !== 'active');
+    
+    res.json({
+      total_companies,
+      active_subscriptions,
+      unpaid_count: unpaid_companies.length,
+      unpaid_companies,
+      total_users: users.length
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur lecture stats plateforme" });
+  }
+});
+
 router.get('/admin/users', async (req, res) => {
   try {
     const data = await supabaseFetch('users?select=*,companies(name)&order=created_at.desc', {}, req);
