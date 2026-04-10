@@ -97,6 +97,22 @@ export default function App() {
   });
   const [globalSearch, setGlobalSearch] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
+  const [toasts, setToasts] = useState([]);
+
+  const addToast = (title, message, type = 'info') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, title, message, type, fading: false }]);
+    setTimeout(() => {
+      removeToast(id);
+    }, 5000);
+  };
+
+  const removeToast = (id) => {
+    setToasts(prev => prev.map(t => t.id === id ? { ...t, fading: true } : t));
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 300);
+  };
 
   // Utilisateur connecté dynamique
   const [currentUser, setCurrentUser] = useState(null);
@@ -442,6 +458,29 @@ export default function App() {
 
         <div className="page-wrapper">{renderContent()}</div>
       </main>
+
+      {isMobileMenuOpen && (
+        <div 
+          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 40 }} 
+          onClick={() => setIsMobileMenuOpen(false)} 
+        />
+      )}
+
+      {/* Modern Notifications Container */}
+      <div className="toast-container">
+        {toasts.map(t => (
+          <div key={t.id} className={`toast toast-${t.type} ${t.fading ? 'toast-fade-out' : ''}`}>
+            <div className="toast-icon">
+              {t.type === 'success' ? <CheckCircle size={20} /> : (t.type === 'error' ? <AlertCircle size={20} /> : <AlertTriangle size={20} />)}
+            </div>
+            <div className="toast-content">
+              <div className="toast-title">{t.title}</div>
+              <div className="toast-message">{t.message}</div>
+            </div>
+            <button className="toast-close" onClick={() => removeToast(t.id)}><X size={16} /></button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -840,7 +879,7 @@ const POS = () => {
     const item = cart.find(item => item.id === id);
 
     if (item && numPrice < (item.purchase_price || 0)) {
-      alert(`Erreur: Le prix de vente (${numPrice} F) ne peut pas être inférieur au prix d'achat (${item.purchase_price} F).`);
+      addToast('Erreur', `Le prix de vente (${numPrice} F) ne peut pas être inférieur au prix d'achat (${item.purchase_price} F).`, 'error');
       return;
     }
 
@@ -872,15 +911,15 @@ const POS = () => {
       });
       const data = await response.json();
       if (data.success) {
-        alert(paymentStatus === 'paid'
+        addToast('Succès', paymentStatus === 'paid'
           ? 'Vente enregistrée avec succès !'
-          : `Vente enregistrée ! Acompte: ${paidAmount} F, Reste: ${remainingAmount} F`);
+          : `Vente enregistrée ! Acompte: ${paidAmount} F, Reste: ${remainingAmount} F`, 'success');
         setCart([]);
         setPaidAmount('');
       } else {
-        alert('Erreur: ' + (data.error || 'Vérifiez qu`il existe une entreprise dans Supabase.'));
+        addToast('Erreur', data.error || 'Erreur lors de l\'enregistrement', 'error');
       }
-    } catch (err) { alert('Erreur de connexion au serveur.'); }
+    } catch (err) { addToast('Erreur', 'Erreur de connexion au serveur.', 'error'); }
     setIsProcessing(false);
   };
 
@@ -1139,11 +1178,11 @@ const Products = () => {
         setFormData(prev => ({ ...prev, image_url: data.imageUrl }));
       } else {
         console.error("Erreur upload API:", data.error);
-        alert("Erreur lors du téléversement : " + (data.error || "Une erreur inconnue est survenue"));
+        addToast('Erreur', 'Erreur lors du téléversement : ' + (data.error || "Une erreur inconnue est survenue"), 'error');
       }
     } catch (err) {
       console.error("Erreur réseau/connexion:", err);
-      alert("Erreur de connexion au serveur pour le téléversement : " + err.message + "\n(Vérifiez que le serveur est bien lancé et accessible)");
+      addToast('Erreur', 'Erreur de connexion au serveur pour le téléversement : ' + err.message, 'error');
     } finally {
       setIsUploading(false);
     }
@@ -1159,7 +1198,7 @@ const Products = () => {
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleSave = async () => {
-    if (!formData.name || !formData.selling_price) return alert("Le nom et le prix de vente sont requis.");
+    if (!formData.name || !formData.selling_price) return addToast('Erreur', "Le nom et le prix de vente sont requis.", 'error');
     setIsSaving(true);
     try {
       const res = await fetch(`${API_URL}/products`, {
@@ -1167,17 +1206,13 @@ const Products = () => {
         headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(formData)
       });
-      const resData = await res.json();
-      if (resData.success) {
-        // Ajouter le nouveau produit au début de la liste
-        setProducts([resData.product, ...products]);
+      const data = await res.json();
+      if (data.success) {
+        addToast('Succès', 'Produit ajouté avec succès !', 'success');
+        setProducts([data.product, ...products]);
         setShowAdd(false);
         setFormData({ name: '', reference: '', selling_price: '', purchase_price: '', quantity: '', category: 'Outillage', image_url: '' });
       } else {
-        alert('Erreur: ' + resData.error);
-      }
-    } catch (err) {
-      console.error("Erreur Save Product:", err);
       alert('Erreur de connexion au serveur : ' + err.message);
     }
     setIsSaving(false);
@@ -1242,12 +1277,13 @@ const Products = () => {
       });
       const d = await res.json();
       if (d.success) {
+        addToast('Succès', 'Produit supprimé', 'success');
         setProducts(products.filter(p => p.id !== product.id));
       } else {
-        alert('Erreur: ' + (d.error || 'Suppression impossible'));
+        addToast('Erreur', d.error || 'Suppression impossible', 'error');
       }
     } catch (err) {
-      alert('Erreur serveur');
+      addToast('Erreur', 'Erreur serveur', 'error');
     }
   };
 
@@ -1532,7 +1568,7 @@ const Stock = () => {
   });
 
   const handleSave = async () => {
-    if (!formData.productId || !formData.quantity) return alert("Veuillez sélectionner un produit et préciser la quantité.");
+    if (!formData.productId || !formData.quantity) return addToast('Attention', "Veuillez sélectionner un produit et préciser la quantité.", 'warning');
     setIsSaving(true);
     try {
       const res = await fetch(`${API_URL}/stock`, {
@@ -1547,13 +1583,14 @@ const Stock = () => {
       });
       const resData = await res.json();
       if (resData.success) {
+        addToast('Succès', 'Mouvement enregistré !', 'success');
         setStock([resData.movement, ...stock]);
         setShowAdd(false);
         setFormData({ productId: '', type: 'IN', quantity: '', reason: '' });
       } else {
-        alert('Erreur: ' + resData.error);
+        addToast('Erreur', resData.error || 'Erreur lors de l\'enregistrement', 'error');
       }
-    } catch (err) { alert('Erreur serveur'); }
+    } catch (err) { addToast('Erreur', 'Erreur serveur', 'error'); }
     setIsSaving(false);
   };
 
@@ -1763,7 +1800,7 @@ const Sales = () => {
         setSales(sales.map(s => s.id === sale.id ? data.sale : s));
         setSelectedSale(data.sale);
         closePaymentDialog();
-        setPaymentError('Règlement enregistré avec succès.');
+        addToast('Succès', 'Règlement enregistré avec succès.', 'success');
       } else {
         setPaymentError(data.error || 'Erreur lors du règlement');
       }
@@ -1791,7 +1828,7 @@ const Sales = () => {
   });
 
   const handleSave = async () => {
-    if (!formData.totalAmount) return alert("Le montant total est requis.");
+    if (!formData.totalAmount) return addToast('Attention', "Le montant total est requis.", 'warning');
     setIsSaving(true);
 
     const total = Number(formData.totalAmount) || 0;
@@ -1825,6 +1862,7 @@ const Sales = () => {
       });
       const resData = await res.json();
       if (resData.success) {
+        addToast('Succès', 'Vente enregistrée !', 'success');
         // Obtenir la nouvelle vente ajoutée (pour affichage dynamique instantané)
         const newSale = {
           id: resData.sale_id,
@@ -1838,9 +1876,9 @@ const Sales = () => {
         setShowAdd(false);
         setFormData({ totalAmount: '', customerName: '', status: 'paid' });
       } else {
-        alert('Erreur: ' + resData.error);
+        addToast('Erreur', resData.error || 'Erreur lors de l\'enregistrement', 'error');
       }
-    } catch (err) { alert('Erreur serveur'); }
+    } catch (err) { addToast('Erreur', 'Erreur serveur', 'error'); }
     setIsSaving(false);
   };
 
@@ -2417,7 +2455,7 @@ const Purchases = () => {
   });
 
   const handleSave = async () => {
-    if (!formData.totalAmount) return alert("Le montant total est requis.");
+    if (!formData.totalAmount) return addToast('Attention', "Le montant total est requis.", 'warning');
     setIsSaving(true);
     try {
       const url = editingId ? `${API_URL}/purchases/${editingId}` : `${API_URL}/purchases`;
@@ -2440,6 +2478,7 @@ const Purchases = () => {
       });
       const resData = await res.json();
       if (resData.success) {
+        addToast('Succès', 'Achat enregistré !', 'success');
         if (editingId) {
           setPurchases(purchases.map(p => p.id === editingId ? resData.purchase : p));
         } else {
@@ -2457,9 +2496,9 @@ const Purchases = () => {
         });
         setEditingId(null);
       } else {
-        alert('Erreur: ' + resData.error);
+        addToast('Erreur', resData.error || 'Erreur lors de l\'enregistrement', 'error');
       }
-    } catch (err) { alert('Erreur serveur: ' + err.message); }
+    } catch (err) { addToast('Erreur', 'Erreur serveur: ' + err.message, 'error'); }
     setIsSaving(false);
   };
 
@@ -2714,7 +2753,7 @@ const Contacts = () => {
   );
 
   const handleSave = async () => {
-    if (!formData.name) return alert("Le nom est requis.");
+    if (!formData.name) return addToast('Attention', "Le nom est requis.", 'warning');
     setIsSaving(true);
     try {
       const res = await fetch(`${API_URL}/contacts`, {
@@ -2724,6 +2763,7 @@ const Contacts = () => {
       });
       const resData = await res.json();
       if (resData.success) {
+        addToast('Succès', 'Contact ajouté !', 'success');
         if (formData.type === 'client') {
           setContacts({ ...contacts, customers: [resData.contact, ...contacts.customers] });
         } else {
@@ -3432,7 +3472,7 @@ const FinanceModule = () => {
   };
 
   const handleSave = async () => {
-    if (!formData.amount) return alert("Le montant est requis.");
+    if (!formData.amount) return addToast('Attention', "Le montant est requis.", 'warning');
     setIsSaving(true);
     try {
       const endpoint = modalType === 'RECETTE' ? '/sales' : '/purchases';
@@ -3448,13 +3488,14 @@ const FinanceModule = () => {
 
       const resData = await res.json();
       if (resData.success) {
+        addToast('Succès', 'Opération enregistrée !', 'success');
         await refreshData();
         setShowModal(false);
         setFormData({ amount: '', label: '' });
       } else {
-        alert('Erreur: ' + resData.error);
+        addToast('Erreur', resData.error || 'Erreur lors de l\'enregistrement', 'error');
       }
-    } catch (err) { alert('Erreur serveur'); }
+    } catch (err) { addToast('Erreur', 'Erreur serveur', 'error'); }
     setIsSaving(false);
   };
 
