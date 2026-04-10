@@ -323,7 +323,7 @@ export default function App() {
           <p className="nav-section">FINANCES</p>
           <NavItem icon={<FileText size={18} />} label="Ventes & Factures" active={currentPage === 'sales'} onClick={() => setCurrentPage('sales')} />
           <NavItem icon={<Truck size={18} />} label="Achats" active={currentPage === 'purchases'} onClick={() => setCurrentPage('purchases')} />
-          <NavItem icon={null} label="Finance (Trésorerie)" active={currentPage === 'finance'} onClick={() => setCurrentPage('finance')} />
+          <NavItem icon={<Wallet size={18} />} label="Finance (Trésorerie)" active={currentPage === 'finance'} onClick={() => setCurrentPage('finance')} />
           <p className="nav-section">GESTION</p>
           <NavItem icon={<Users size={18} />} label="Contacts" active={currentPage === 'contacts'} onClick={() => setCurrentPage('contacts')} />
           <NavItem icon={<Settings size={18} />} label="Paramètres" active={currentPage === 'settings'} onClick={() => setCurrentPage('settings')} />
@@ -346,13 +346,17 @@ export default function App() {
 
         <div className="sidebar-footer">
           <div className="user-info">
-            <div className="user-avatar">{currentUser.name.split(' ').map(n => n?.[0]).join('')}</div>
+            <div className="user-avatar">
+              {currentUser.name.split(' ').filter(Boolean).slice(0, 2).map(n => n[0]).join('')}
+            </div>
             <div className="user-details">
               <span className="user-name">{currentUser.name}</span>
-              <span className="user-role" style={{ textTransform: 'capitalize' }}>{currentUser.role}</span>
+              <span className="user-role">{currentUser.role === 'superadmin' ? 'Propriétaire' : currentUser.role}</span>
             </div>
           </div>
-          <button className="logout-btn" onClick={handleLogout} title="Déconnexion"><LogOut size={18} /></button>
+          <button className="logout-btn" onClick={handleLogout} title="Déconnexion">
+            <LogOut size={18} />
+          </button>
         </div>
       </aside>
 
