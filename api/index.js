@@ -330,7 +330,8 @@ router.post('/sales', async (req, res) => {
           sale_id: saleId,
           product_id: item.id,
           quantity: item.cartQuantity || 1,
-          unit_price: item.selling_price || item.price
+          unit_price: item.selling_price || item.price,
+          total: (item.cartQuantity || 1) * (item.selling_price || item.price)
         }));
         
         // Créer tous les sale_items en une requête
