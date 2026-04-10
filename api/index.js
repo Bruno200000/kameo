@@ -24,8 +24,11 @@ const supabaseHeaders = {
   'Content-Type': 'application/json; charset=utf-8'
 };
 
-const supabaseFetch = async (path, options = {}, req = null) => {
-  let url = `${supabaseUrl}/rest/v1/${path}`;
+const supabaseFetch = async (resourcePath, options = {}, req = null) => {
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error("Configuration Supabase manquante (URL/KEY)");
+  }
+  let url = `${supabaseUrl}/rest/v1/${resourcePath}`;
 
   const companyId = req?.headers?.['x-company-id'];
   let filterCompanyId = companyId;
@@ -39,11 +42,11 @@ const supabaseFetch = async (path, options = {}, req = null) => {
     } catch (e) { }
   }
 
-  const isExcluded = path.includes('sale_items') || path.includes('purchase_items') || path.includes('companies') || path.includes('platform_settings');
-  const isUserPath = path.includes('users');
+  const isExcluded = resourcePath.includes('sale_items') || resourcePath.includes('purchase_items') || resourcePath.includes('companies') || resourcePath.includes('platform_settings');
+  const isUserPath = resourcePath.includes('users');
 
   if (filterCompanyId && !isExcluded && !isUserPath) {
-    const separator = path.includes('?') ? '&' : '?';
+    const separator = resourcePath.includes('?') ? '&' : '?';
     url += `${separator}company_id=eq.${filterCompanyId}`;
   }
 
@@ -74,7 +77,7 @@ const supabaseFetch = async (path, options = {}, req = null) => {
     });
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Erreur Supabase sur ${path}: ${response.status}`, errorText);
+      console.error(`Erreur Supabase sur ${resourcePath}: ${response.status}`, errorText);
       throw new Error(`Erreur HTTP: ${response.status} - ${errorText}`);
     }
     if (response.status === 204) return null;
