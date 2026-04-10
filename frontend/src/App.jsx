@@ -523,20 +523,20 @@ const SuperAdminDashboard = () => {
   return (
     <>
       <div className="dashboard-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
-        <StatCard icon={<Building size={24} />} title="Entreprises Inscrites" value={stats.totalCompanies} color="blue" />
-        <StatCard icon={<Users size={24} />} title="Utilisateurs Globaux" value={stats.totalUsers} color="purple" />
-        <StatCard icon={<CheckCircle size={24} />} title="Abonnements Actifs" value={stats.activeSubscriptions} color="green" />
-        <StatCard icon={<DollarSign size={24} />} title="Revenu Mensuel (MRR)" value={`${(stats.mrr || 0).toLocaleString()} F`} color="emerald" />
+        <StatCard icon={<Building size={24} />} title="Entreprises Inscrites" value={stats?.totalCompanies || 0} color="blue" />
+        <StatCard icon={<Users size={24} />} title="Utilisateurs Globaux" value={stats?.totalUsers || 0} color="purple" />
+        <StatCard icon={<CheckCircle size={24} />} title="Abonnements Actifs" value={stats?.activeSubscriptions || 0} color="green" />
+        <StatCard icon={<DollarSign size={24} />} title="Revenu Mensuel (MRR)" value={`${(stats?.mrr || 0).toLocaleString()} F`} color="emerald" />
       </div>
 
       <div className="card" style={{ padding: '20px' }}>
         <h3 style={{ marginTop: 0, color: '#1e293b' }}>Dernières entreprises inscrites</h3>
-        {recentCompanies.length === 0 ? <p style={{ color: '#94a3b8' }}>Aucune entreprise.</p> : (
+        {(recentCompanies || []).length === 0 ? <p style={{ color: '#94a3b8' }}>Aucune entreprise.</p> : (
           <div className="table-responsive">
             <table className="data-table">
               <thead><tr><th>Nom</th><th>Email</th><th>Plan</th><th>Statut</th></tr></thead>
               <tbody>
-                {recentCompanies.map(c => (
+                {(recentCompanies || []).map(c => (
                   <tr key={c.id}>
                     <td><strong>{c.name}</strong></td>
                     <td>{c.email}</td>

@@ -17,15 +17,15 @@ const GlobalStatsView = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
       <div className="dashboard-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
-        <StatCard icon={<Building size={24} />} title="Total Entreprises" value={stats.totalCompanies} color="blue" />
-        <StatCard icon={<CheckCircle size={24} />} title="Abonnements Actifs" value={stats.activeSubscriptions} color="green" />
-        <StatCard icon={<Users size={24} />} title="Total Utilisateurs" value={stats.totalUsers} color="purple" />
-        <StatCard icon={<AlertTriangle size={24} />} title="Abonnements Suspendus" value={stats.unpaidCount} color="red" />
+        <StatCard icon={<Building size={24} />} title="Total Entreprises" value={stats?.totalCompanies || 0} color="blue" />
+        <StatCard icon={<CheckCircle size={24} />} title="Abonnements Actifs" value={stats?.activeSubscriptions || 0} color="green" />
+        <StatCard icon={<Users size={24} />} title="Total Utilisateurs" value={stats?.totalUsers || 0} color="purple" />
+        <StatCard icon={<AlertTriangle size={24} />} title="Abonnements Suspendus" value={stats?.unpaidCount || 0} color="red" />
       </div>
 
       <div className="card">
         <div className="card-header">
-          <h3 style={{ margin: 0, color: '#1e293b' }}>Entreprises nécessitant une action (Impayés / En attente)</h3>
+          <h3 style={{ margin: 0, color: '#1e293b' }}>Entreprises nécessitantes une action (Impayés / En attente)</h3>
         </div>
         <div className="table-responsive">
           <table className="data-table">
@@ -38,10 +38,10 @@ const GlobalStatsView = () => {
               </tr>
             </thead>
             <tbody>
-              {stats.unpaidCompanies.length === 0 ? (
+              {(stats?.unpaidCompanies || []).length === 0 ? (
                 <tr><td colSpan="4" style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>Tous les abonnements sont à jour.</td></tr>
               ) : (
-                stats.unpaidCompanies.map(c => (
+                (stats?.unpaidCompanies || []).map(c => (
                   <tr key={c.id}>
                     <td><strong>{c.name}</strong></td>
                     <td>{c.email}<br/><span style={{fontSize: '11px', color: '#94a3b8'}}>{c.phone}</span></td>

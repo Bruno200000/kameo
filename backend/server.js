@@ -87,7 +87,12 @@ const getOrCreateCompanyId = async () => {
   throw new Error("Impossible de configurer l'entreprise.");
 };
 
-app.use(cors());
+app.use(cors({
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Company-Id', 'X-User-Data']
+}));
 app.use(express.json());
 
 // --- ROUTES DE L'API REST ---
