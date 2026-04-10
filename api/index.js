@@ -370,29 +370,90 @@ router.post('/sales/:id/payment', async (req, res) => {
 // Achats
 router.get('/purchases', async (req, res) => {
   try {
-    const data = await supabaseFetch('purchases?select=*,purchase_items(quantity,unit_price,products(name))&order=purchase_date.desc', {}, req);
+    const data = await supabaseFetch('purchases?select=*,suppliers(name),purchase_items(quantity,unit_price,products(name))&order=purchase_date.desc', {}, req);
     res.json(data || []);
   } catch (err) { res.status(500).json({ error: "Erreur" }); }
 });
 
 router.post('/purchases', async (req, res) => {
   try {
+    const { totalAmount, reference, supplierName, status, supplierId, productId, quantity } = req.body;
+    const user = JSON.parse(req.headers['x-user-data'] || '{}');
+    const companyId = req.headers['x-company-id'] || user.company_id;
+
+    const newPurchase = {
+      company_id: companyId,
+      supplier_id: supplierId || null,
+      supplier_name: supplierName || null,
+      reference: reference || null,
+      total_amount: Number(totalAmount) || 0,
+      status: status || 'pending',
+      created_by: user.id || null
+    };
+
     const purRes = await supabaseFetch('purchases', {
       method: 'POST',
       headers: { 'Prefer': 'return=representation' },
-      body: JSON.stringify(req.body)
+      body: JSON.stringify(newPurchase)
     }, req);
+
+    if (!purRes || purRes.length === 0) return res.status(500).json({ error: "Echec insertion achat" });
+    const purchaseId = purRes[0].id;
+
+    if (productId && quantity) {
+      const qty = Number(quantity);
+      const unitPrice = qty > 0 ? (Number(totalAmount) / qty) : 0;
+
+      await supabaseFetch('purchase_items', {
+        method: 'POST',
+        body: JSON.stringify({
+          purchase_id: purchaseId,
+          product_id: productId,
+          quantity: qty,
+          unit_price: unitPrice,
+          total: Number(totalAmount)
+        })
+      }, req);
+
+      if (status === 'received') {
+        const prodData = await supabaseFetch(`products?id=eq.${productId}&select=quantity`, {}, req);
+        const currentQty = (prodData && prodData[0]) ? prodData[0].quantity : 0;
+        await supabaseFetch(`products?id=eq.${productId}`, { method: 'PATCH', body: JSON.stringify({ quantity: currentQty + qty }) }, req);
+
+        await supabaseFetch('stock_movements', {
+          method: 'POST',
+          body: JSON.stringify({
+            product_id: productId,
+            movement_type: 'IN',
+            quantity: qty,
+            reason: `Achat #${purchaseId.split('-')[0]} (${reference || 'Sans ref'})`
+          })
+        }, req);
+      }
+    }
     res.json({ success: true, purchase: purRes[0] });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.patch('/purchases/:id', async (req, res) => {
   try {
+    const { totalAmount, reference, supplierName, status, supplierId, productId, quantity } = req.body;
+    
+    // Pour la modification, on construit un objet de mise à jour propre
+    const updateData = {};
+    if (totalAmount !== undefined) updateData.total_amount = Number(totalAmount);
+    if (reference !== undefined) updateData.reference = reference;
+    if (supplierName !== undefined) updateData.supplier_name = supplierName;
+    if (status !== undefined) updateData.status = status;
+    if (supplierId !== undefined) updateData.supplier_id = supplierId;
+
     const purRes = await supabaseFetch(`purchases?id=eq.${req.params.id}`, {
       method: 'PATCH',
       headers: { 'Prefer': 'return=representation' },
-      body: JSON.stringify(req.body)
+      body: JSON.stringify(updateData)
     }, req);
+    
+    if (!purRes || purRes.length === 0) return res.status(404).json({ error: "Achat non trouvé" });
     res.json({ success: true, purchase: purRes[0] });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
