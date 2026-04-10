@@ -5,11 +5,11 @@ import { Users, Building, AlertTriangle, CheckCircle } from 'lucide-react';
 
 const GlobalStatsView = () => {
   const [stats, loading] = useFetch('/admin/stats', {
-    total_companies: 0,
-    active_subscriptions: 0,
-    unpaid_count: 0,
-    total_users: 0,
-    unpaid_companies: []
+    totalCompanies: 0,
+    activeSubscriptions: 0,
+    unpaidCount: 0,
+    totalUsers: 0,
+    unpaidCompanies: []
   });
 
   if (loading) return <div>Chargement des données de la plateforme...</div>;
@@ -17,10 +17,10 @@ const GlobalStatsView = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
       <div className="dashboard-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
-        <StatCard icon={<Building size={24} />} title="Total Entreprises" value={stats.total_companies} color="blue" />
-        <StatCard icon={<CheckCircle size={24} />} title="Abonnements Actifs" value={stats.active_subscriptions} color="green" />
-        <StatCard icon={<Users size={24} />} title="Total Utilisateurs" value={stats.total_users} color="purple" />
-        <StatCard icon={<AlertTriangle size={24} />} title="Abonnements Suspendus" value={stats.unpaid_count} color="red" />
+        <StatCard icon={<Building size={24} />} title="Total Entreprises" value={stats.totalCompanies} color="blue" />
+        <StatCard icon={<CheckCircle size={24} />} title="Abonnements Actifs" value={stats.activeSubscriptions} color="green" />
+        <StatCard icon={<Users size={24} />} title="Total Utilisateurs" value={stats.totalUsers} color="purple" />
+        <StatCard icon={<AlertTriangle size={24} />} title="Abonnements Suspendus" value={stats.unpaidCount} color="red" />
       </div>
 
       <div className="card">
@@ -38,10 +38,10 @@ const GlobalStatsView = () => {
               </tr>
             </thead>
             <tbody>
-              {stats.unpaid_companies.length === 0 ? (
+              {stats.unpaidCompanies.length === 0 ? (
                 <tr><td colSpan="4" style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>Tous les abonnements sont à jour.</td></tr>
               ) : (
-                stats.unpaid_companies.map(c => (
+                stats.unpaidCompanies.map(c => (
                   <tr key={c.id}>
                     <td><strong>{c.name}</strong></td>
                     <td>{c.email}<br/><span style={{fontSize: '11px', color: '#94a3b8'}}>{c.phone}</span></td>

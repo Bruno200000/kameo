@@ -971,8 +971,6 @@ app.get('/api/admin/stats', async (req, res) => {
     // Monthly Recurring Revenue estimate (basé sur les plans)
     const planPrices = { 'free': 0, 'trial': 0, 'pro': 49, 'enterprise': 149 };
     const mrr = companies.reduce((acc, c) => acc + (planPrices[c.plan_id] || 0), 0);
-
-    // Platform revenue trend (mocking based on creation date)
     // Distribution plans
     const planCounts = companies.reduce((acc, c) => {
       const p = c.plan_id || 'trial';
@@ -987,6 +985,9 @@ app.get('/api/admin/stats', async (req, res) => {
       return acc;
     }, {});
 
+    const activeSubscriptions = companies.filter(c => (c.subscription_status === 'active' || !c.subscription_status) && c.plan_id && c.plan_id !== 'trial').length;
+    const unpaidCompanies = companies.filter(c => c.subscription_status === 'pending' || c.subscription_status === 'rejected');
+
     const growthTrend = [
       { label: 'Jan', companies: 5, mrr: 245 },
       { label: 'Fév', companies: 8, mrr: 392 },
@@ -1000,23 +1001,26 @@ app.get('/api/admin/stats', async (req, res) => {
       .map(c => ({ id: c.id, name: c.name, plan_id: c.plan_id, subscription_status: c.subscription_status, created_at: c.created_at }));
 
     res.json({
-      total_companies: companies.length,
-      total_users: users.length,
-      total_products: products.length,
-      total_revenue: mrr,
-      growth_trend: growthTrend,
-      plan_distribution: {
+      totalCompanies: companies.length,
+      totalUsers: users.length,
+      totalProducts: products.length,
+      activeSubscriptions: activeSubscriptions,
+      mrr: mrr,
+      unpaidCount: unpaidCompanies.length,
+      growthTrend: growthTrend,
+      planDistribution: {
         trial: planCounts.trial || 0,
         pro: planCounts.pro || 0,
         enterprise: planCounts.enterprise || 0,
         free: planCounts.free || 0
       },
-      subscription_status: {
+      subscriptionStatus: {
         active: statusCounts.active || 0,
         pending: statusCounts.pending || 0,
         rejected: statusCounts.rejected || 0
       },
-      recent_companies: recentCompanies
+      unpaidCompanies: unpaidCompanies,
+      recentCompanies: recentCompanies
     });
   } catch (err) {
     res.status(500).json({ error: "Erreur statistiques globales" });

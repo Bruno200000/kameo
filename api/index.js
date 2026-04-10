@@ -725,7 +725,9 @@ router.get('/admin/stats', async (req, res) => {
       totalCompanies: companies?.length || 0,
       totalUsers: users?.length || 0,
       activeSubscriptions,
-      mrr: saasRevenue
+      mrr: saasRevenue,
+      unpaidCount: companies.filter(c => c.subscription_status === 'pending' || c.subscription_status === 'rejected').length,
+      unpaidCompanies: companies.filter(c => c.subscription_status === 'pending' || c.subscription_status === 'rejected')
     });
   } catch (err) { res.status(500).json({ error: "Erreur stats" }); }
 });
