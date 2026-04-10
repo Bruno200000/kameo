@@ -304,9 +304,9 @@ export default function App() {
       <aside className={`sidebar ${isMobileMenuOpen ? 'open' : ''} ${isSidebarCollapsed ? 'collapsed' : ''}`}>
         <div className="sidebar-header" style={{ minHeight: '80px' }}>
           <div className="logo" style={{ cursor: 'pointer' }} onClick={() => setCurrentPage('dashboard')}>
-            <div style={{ 
-              backgroundColor: 'rgba(255,255,255,0.05)', 
-              borderRadius: '12px', 
+            <div style={{
+              backgroundColor: 'rgba(255,255,255,0.05)',
+              borderRadius: '12px',
               padding: '6px',
               display: 'flex',
               alignItems: 'center',
@@ -460,9 +460,9 @@ export default function App() {
       </main>
 
       {isMobileMenuOpen && (
-        <div 
-          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 40 }} 
-          onClick={() => setIsMobileMenuOpen(false)} 
+        <div
+          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 40 }}
+          onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
@@ -486,19 +486,19 @@ export default function App() {
 }
 
 const NavItem = ({ icon, label, active, onClick }) => (
-  <button 
-    className={`nav-item ${active ? 'active' : ''}`} 
+  <button
+    className={`nav-item ${active ? 'active' : ''}`}
     onClick={onClick}
     style={{ position: 'relative' }}
   >
     {icon}
     <span style={{ flex: 1 }}>{label}</span>
-    {active && <div style={{ 
-      position: 'absolute', 
-      right: '12px', 
-      width: '6px', 
-      height: '6px', 
-      borderRadius: '50%', 
+    {active && <div style={{
+      position: 'absolute',
+      right: '12px',
+      width: '6px',
+      height: '6px',
+      borderRadius: '50%',
       backgroundColor: '#60a5fa',
       boxShadow: '0 0 10px #3b82f6'
     }} />}
@@ -2439,14 +2439,14 @@ const Purchases = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedPurchase, setSelectedPurchase] = useState(null);
-  const [formData, setFormData] = useState({ 
-    totalAmount: '', 
-    reference: '', 
-    supplierName: '', 
+  const [formData, setFormData] = useState({
+    totalAmount: '',
+    reference: '',
+    supplierName: '',
     supplierId: '',
     productId: '',
     quantity: '',
-    status: 'pending' 
+    status: 'pending'
   });
   const [editingId, setEditingId] = useState(null);
   const filteredPurchases = purchases.filter((p) => {
@@ -2488,14 +2488,14 @@ const Purchases = () => {
           setPurchases([resData.purchase, ...purchases]);
         }
         setShowAdd(false);
-        setFormData({ 
-          totalAmount: '', 
-          reference: '', 
-          supplierName: '', 
-          supplierId: '', 
-          productId: '', 
-          quantity: '', 
-          status: 'pending' 
+        setFormData({
+          totalAmount: '',
+          reference: '',
+          supplierName: '',
+          supplierId: '',
+          productId: '',
+          quantity: '',
+          status: 'pending'
         });
         setEditingId(null);
       } else {
@@ -2517,71 +2517,73 @@ const Purchases = () => {
       </div>
 
       {showAdd && (
-        <div className="card mt-4" style={{ borderLeft: '4px solid #f59e0b', backgroundColor: '#fffbeb', padding: '25px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h3 style={{ margin: 0, color: '#92400e' }}>{editingId ? 'Modifier un Achat Fournisseur (BC)' : 'Enregistrer un Achat Fournisseur (BC)'}</h3>
-            <button style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#d97706' }} onClick={() => setShowAdd(false)}><X size={20} /></button>
+        <div className="card mt-4" style={{ border: '1px solid #e2e8f0', backgroundColor: '#ffffff', padding: '30px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', borderBottom: '1px solid #f1f5f9', paddingBottom: '15px' }}>
+            <h3 style={{ margin: 0, color: '#1e293b', fontSize: '1.25rem', fontWeight: 600 }}>{editingId ? 'Modifier un Achat Fournisseur (BC)' : 'Enregistrer un Achat Fournisseur (BC)'}</h3>
+            <button style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px', borderRadius: '50%', transition: 'background 0.2s' }} onMouseOver={e => e.currentTarget.style.backgroundColor='#f1f5f9'} onMouseOut={e => e.currentTarget.style.backgroundColor='transparent'} onClick={() => setShowAdd(false)}>
+              <X size={20} />
+            </button>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '25px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '25px' }}>
             <div>
-              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#92400e', fontWeight: 600 }}>Fournisseur</label>
-              <select 
-                value={formData.supplierId} 
+              <label style={{ display: 'block', marginBottom: 6, fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>Fournisseur</label>
+              <select
+                value={formData.supplierId}
                 onChange={e => {
                   const s = contacts.suppliers.find(sup => sup.id === e.target.value);
                   setFormData({ ...formData, supplierId: e.target.value, supplierName: s ? s.name : '' });
-                }} 
-                className="large-input" 
-                style={{ width: '100%', borderColor: '#fcd34d' }}
+                }}
+                className="large-input"
+                style={{ width: '100%' }}
               >
                 <option value="">-- Sélectionner un fournisseur --</option>
                 {contacts.suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
-              <input 
-                type="text" 
-                value={formData.supplierName} 
-                onChange={e => setFormData({ ...formData, supplierName: e.target.value })} 
-                placeholder="Ou saisir un nom manuel" 
-                className="large-input" 
-                style={{ width: '100%', borderColor: '#fcd34d', marginTop: '8px' }} 
+              <input
+                type="text"
+                value={formData.supplierName}
+                onChange={e => setFormData({ ...formData, supplierName: e.target.value })}
+                placeholder="Ou saisir un fournisseur manuel..."
+                className="large-input"
+                style={{ width: '100%', marginTop: '10px' }}
               />
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#92400e', fontWeight: 600 }}>Article / Produit</label>
-              <select 
-                value={formData.productId} 
-                onChange={e => setFormData({ ...formData, productId: e.target.value })} 
-                className="large-input" 
-                style={{ width: '100%', borderColor: '#fcd34d' }}
+              <label style={{ display: 'block', marginBottom: 6, fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>Article / Produit</label>
+              <select
+                value={formData.productId}
+                onChange={e => setFormData({ ...formData, productId: e.target.value })}
+                className="large-input"
+                style={{ width: '100%' }}
               >
                 <option value="">-- Sélectionner un article --</option>
                 {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#92400e', fontWeight: 600 }}>Quantité</label>
-              <input type="number" value={formData.quantity} onChange={e => setFormData({ ...formData, quantity: e.target.value })} placeholder="0" className="large-input" style={{ width: '100%', borderColor: '#fcd34d' }} />
+              <label style={{ display: 'block', marginBottom: 6, fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>Quantité</label>
+              <input type="number" value={formData.quantity} onChange={e => setFormData({ ...formData, quantity: e.target.value })} placeholder="Ex: 50" className="large-input" style={{ width: '100%' }} />
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#92400e', fontWeight: 600 }}>Référence BC (Optionnel)</label>
-              <input type="text" value={formData.reference} onChange={e => setFormData({ ...formData, reference: e.target.value })} placeholder="Ex: BC-2023-001" className="large-input" style={{ width: '100%', borderColor: '#fcd34d' }} />
+              <label style={{ display: 'block', marginBottom: 6, fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>Référence BC (Optionnel)</label>
+              <input type="text" value={formData.reference} onChange={e => setFormData({ ...formData, reference: e.target.value })} placeholder="Ex: BC-2024-001" className="large-input" style={{ width: '100%' }} />
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#92400e', fontWeight: 600 }}>Coût Total (F) *</label>
-              <input type="number" value={formData.totalAmount} onChange={e => setFormData({ ...formData, totalAmount: e.target.value })} placeholder="0" className="large-input" style={{ width: '100%', borderColor: '#fcd34d' }} />
+              <label style={{ display: 'block', marginBottom: 6, fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>Coût Total (F) *</label>
+              <input type="number" value={formData.totalAmount} onChange={e => setFormData({ ...formData, totalAmount: e.target.value })} placeholder="Ex: 150000" className="large-input" style={{ width: '100%' }} />
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#92400e', fontWeight: 600 }}>Statut</label>
-              <select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })} className="large-input" style={{ width: '100%', borderColor: '#fcd34d' }}>
-                <option value="pending">En attente</option>
-                <option value="received">Reçu</option>
+              <label style={{ display: 'block', marginBottom: 6, fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>Statut de l'Achat</label>
+              <select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })} className="large-input" style={{ width: '100%' }}>
+                <option value="pending">En attente de réception</option>
+                <option value="received">Réceptionné</option>
               </select>
             </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px', borderTop: '1px solid #fde68a', paddingTop: '20px' }}>
-            <button className="secondary-btn" onClick={() => setShowAdd(false)} style={{ color: '#b45309' }}>Annuler</button>
-            <button className="primary-btn" onClick={handleSave} disabled={isSaving} style={{ backgroundColor: '#f59e0b', borderColor: '#f59e0b', color: 'white' }}>
-              {isSaving ? (editingId ? 'Modification...' : 'Enregistrement...') : (editingId ? 'Valider la modification' : 'Valider l\'achat')}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid #f1f5f9', paddingTop: '20px' }}>
+            <button className="secondary-btn" onClick={() => setShowAdd(false)}>Annuler</button>
+            <button className="primary-btn" onClick={handleSave} disabled={isSaving}>
+              {isSaving ? (editingId ? 'Modification...' : 'Enregistrement...') : (editingId ? 'Valider la modification' : 'Enregistrer l\'achat')}
             </button>
           </div>
         </div>

@@ -8,7 +8,7 @@ const router = express.Router();
 
 // Configuration de Multer pour le stockage en mémoire (Vercel)
 const storage = multer.memoryStorage();
-const upload = multer({ 
+const upload = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 } // Limite de 5MB
 });
@@ -26,17 +26,17 @@ const supabaseHeaders = {
 
 const supabaseFetch = async (path, options = {}, req = null) => {
   let url = `${supabaseUrl}/rest/v1/${path}`;
-  
+
   const companyId = req?.headers?.['x-company-id'];
   let filterCompanyId = companyId;
-  
+
   if (req?.headers?.['x-user-data']) {
-     try {
-       const u = JSON.parse(req.headers['x-user-data']);
-       if (u.role !== 'superadmin' && !filterCompanyId) {
-         filterCompanyId = u.company_id || 'UNAUTHORIZED';
-       }
-     } catch(e) {}
+    try {
+      const u = JSON.parse(req.headers['x-user-data']);
+      if (u.role !== 'superadmin' && !filterCompanyId) {
+        filterCompanyId = u.company_id || 'UNAUTHORIZED';
+      }
+    } catch (e) { }
   }
 
   const isExcluded = path.includes('sale_items') || path.includes('purchase_items') || path.includes('companies') || path.includes('platform_settings');
@@ -64,8 +64,8 @@ const supabaseFetch = async (path, options = {}, req = null) => {
   try {
     const response = await fetch(url, {
       ...options,
-      headers: { 
-        ...supabaseHeaders, 
+      headers: {
+        ...supabaseHeaders,
         ...(options.headers || {}),
         // Pour les POST/PATCH, on s'assure d'inclure le company_id si on l'a
         ...((options.method === 'POST' || options.method === 'PATCH') && companyId ? { 'Prefer': 'return=representation' } : {})
@@ -111,7 +111,7 @@ router.post('/auth/login', async (req, res) => {
     if (!email || !password) return res.status(400).json({ error: "Email et mot de passe requis" });
 
     const users = await supabaseFetch(`users?email=eq.${encodeURIComponent(email)}&password_hash=eq.${encodeURIComponent(password)}&select=*,companies(name)&limit=1`);
-    
+
     if (users && users.length > 0) {
       res.json({ success: true, user: users[0] });
     } else {
@@ -173,10 +173,10 @@ router.get('/dashboard/stats', async (req, res) => {
       const amount = Number(s.total_amount || 0);
       const d = new Date(s.sale_date);
       const day = d.toISOString().split('T')[0];
-      
+
       if (day === todayStr) sales_today += amount;
       if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) sales_month += amount;
-      
+
       salesByDay[day] = (salesByDay[day] || 0) + amount;
     });
 
@@ -256,7 +256,7 @@ router.delete('/products/:id', async (req, res) => {
 router.post('/upload', upload.single('image'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "Aucun fichier" });
-    
+
     if (!supabaseUrl || !supabaseKey) {
       console.error("ERREUR CRITIQUE: Configuration Supabase manquante");
       return res.status(500).json({ error: "Configuration serveur incomplète (Supabase URL/Key manquante)" });
@@ -265,26 +265,26 @@ router.post('/upload', upload.single('image'), async (req, res) => {
     const fileName = `${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(req.file.originalname)}`;
     const bucketName = 'images';
     const uploadUrl = `${supabaseUrl}/storage/v1/object/${bucketName}/${fileName}`;
-    
+
     console.log(`Tentative d'upload vers Supabase: ${uploadUrl}`);
-    
+
     const uploadResponse = await fetch(uploadUrl, {
       method: 'POST',
       headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}`, 'Content-Type': req.file.mimetype, 'upsert': 'true' },
       body: req.file.buffer
     });
-    
+
     if (!uploadResponse.ok) {
       const errorData = await uploadResponse.text();
       console.error(`Echec upload Supabase (Status: ${uploadResponse.status}):`, errorData);
       throw new Error(`Supabase Storage error: ${uploadResponse.status} - ${errorData}`);
     }
-    
+
     const publicUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${fileName}`;
     res.json({ success: true, imageUrl: publicUrl });
-  } catch (err) { 
+  } catch (err) {
     console.error("Détail erreur upload:", err);
-    res.status(500).json({ error: "Erreur upload: " + err.message }); 
+    res.status(500).json({ error: "Erreur upload: " + err.message });
   }
 });
 
@@ -301,7 +301,7 @@ router.post('/sales', async (req, res) => {
     const user = JSON.parse(req.headers['x-user-data'] || '{}');
     const companyId = req.headers['x-company-id'] || user.company_id;
     const { cart, customerId, totalAmount, paidAmount, remainingAmount, paymentMode, status, ...otherData } = req.body;
-    
+
     // Créer la vente sans le cart, avec mapping camelCase -> snake_case
     const saleToCreate = {
       ...otherData,
@@ -314,16 +314,16 @@ router.post('/sales', async (req, res) => {
       status: status,
       created_by: user.id || null
     };
-    
-    const saleRes = await supabaseFetch('sales', { 
-      method: 'POST', 
-      headers: { 'Prefer': 'return=representation' }, 
+
+    const saleRes = await supabaseFetch('sales', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
       body: JSON.stringify(saleToCreate)
     }, req);
-    
+
     if (saleRes && saleRes.length > 0) {
       const saleId = saleRes[0].id;
-      
+
       // Créer les sale_items si cart est présent
       if (cart && Array.isArray(cart) && cart.length > 0) {
         const saleItems = cart.map(item => ({
@@ -333,7 +333,7 @@ router.post('/sales', async (req, res) => {
           unit_price: item.selling_price || item.price,
           total: (item.cartQuantity || 1) * (item.selling_price || item.price)
         }));
-        
+
         // Créer tous les sale_items en une requête
         await supabaseFetch('sale_items', {
           method: 'POST',
@@ -341,14 +341,14 @@ router.post('/sales', async (req, res) => {
           body: JSON.stringify(saleItems)
         }, req);
       }
-      
+
       res.json({ success: true, sale_id: saleId });
     } else {
       res.status(500).json({ error: "Echec insertion" });
     }
-  } catch (err) { 
+  } catch (err) {
     console.error("Erreur création vente:", err);
-    res.status(500).json({ error: err.message }); 
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -357,7 +357,7 @@ router.post('/sales/:id/payment', async (req, res) => {
     const { paymentAmount, newStatus } = req.body;
     const existing = await supabaseFetch(`sales?id=eq.${req.params.id}&select=paid_amount,total_amount`, {}, req);
     if (!existing || existing.length === 0) return res.status(404).json({ error: 'Vente non trouvée' });
-    
+
     const newPaid = Number(existing[0].paid_amount) + Number(paymentAmount);
     const updated = await supabaseFetch(`sales?id=eq.${req.params.id}`, {
       method: 'PATCH',
@@ -388,8 +388,7 @@ router.post('/purchases', async (req, res) => {
       supplier_name: supplierName || null,
       reference: reference || null,
       total_amount: Number(totalAmount) || 0,
-      status: status || 'pending',
-      created_by: user.id || null
+      status: status || 'pending'
     };
 
     const purRes = await supabaseFetch('purchases', {
@@ -439,7 +438,7 @@ router.post('/purchases', async (req, res) => {
 router.patch('/purchases/:id', async (req, res) => {
   try {
     const { totalAmount, reference, supplierName, status, supplierId, productId, quantity } = req.body;
-    
+
     // Pour la modification, on construit un objet de mise à jour propre
     const updateData = {};
     if (totalAmount !== undefined) updateData.total_amount = Number(totalAmount);
@@ -453,7 +452,7 @@ router.patch('/purchases/:id', async (req, res) => {
       headers: { 'Prefer': 'return=representation' },
       body: JSON.stringify(updateData)
     }, req);
-    
+
     if (!purRes || purRes.length === 0) return res.status(404).json({ error: "Achat non trouvé" });
     res.json({ success: true, purchase: purRes[0] });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -474,7 +473,7 @@ router.post('/stock', async (req, res) => {
       headers: { 'Prefer': 'return=representation' },
       body: JSON.stringify(req.body)
     }, req);
-    
+
     // Mise à jour de la quantité produit associée
     const prod = await supabaseFetch(`products?id=eq.${req.body.product_id}&select=quantity`, {}, req);
     if (prod && prod.length > 0) {
@@ -536,7 +535,7 @@ router.post('/admin/companies', async (req, res) => {
   try {
     const { password, ...companyPayload } = req.body;
     const companyData = await supabaseFetch('companies', { method: 'POST', headers: { 'Prefer': 'return=representation' }, body: JSON.stringify(companyPayload) }, req);
-    
+
     if (companyData && companyData.length > 0) {
       const newCompanyId = companyData[0].id;
       if (password) {
@@ -591,28 +590,28 @@ router.get('/admin/stats', async (req, res) => {
   try {
     const companies = await supabaseFetch('companies?select=id,plan_id,subscription_status', {}, req);
     const users = await supabaseFetch('users?select=id', {}, req);
-    
+
     let activeSubscriptions = 0;
     let saasRevenue = 0;
-    
+
     // Exemple de grille tarifaire mensuelle
     const PRICING = { pro: 15000, enterprise: 50000 };
 
     if (companies) {
       companies.forEach(c => {
-         // Seules les entreprises validées et payantes génèrent du CA
-         if (c.subscription_status === 'active' && c.plan_id && c.plan_id !== 'trial') {
-            activeSubscriptions++;
-            saasRevenue += (PRICING[c.plan_id] || 0);
-         }
+        // Seules les entreprises validées et payantes génèrent du CA
+        if (c.subscription_status === 'active' && c.plan_id && c.plan_id !== 'trial') {
+          activeSubscriptions++;
+          saasRevenue += (PRICING[c.plan_id] || 0);
+        }
       });
     }
 
-    res.json({ 
-      totalCompanies: companies?.length || 0, 
-      totalUsers: users?.length || 0, 
+    res.json({
+      totalCompanies: companies?.length || 0,
+      totalUsers: users?.length || 0,
       activeSubscriptions,
-      mrr: saasRevenue 
+      mrr: saasRevenue
     });
   } catch (err) { res.status(500).json({ error: "Erreur stats" }); }
 });
