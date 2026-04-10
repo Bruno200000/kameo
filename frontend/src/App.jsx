@@ -3180,7 +3180,10 @@ const SettingsPage = ({ currentUser }) => {
                     padding: settings.invoice_format === 'THERMAL' ? '15px' : '30px', 
                     borderRadius: '4px',
                     borderTop: settings.invoice_model === 'model2' ? `8px solid ${settings.invoice_color || '#2563eb'}` : 'none',
-                    border: settings.invoice_model === 'model5' ? `2px solid ${settings.invoice_color || '#2563eb'}` : 'none'
+                    border: settings.invoice_model === 'model5' ? `2px solid ${settings.invoice_color || '#2563eb'}` : 'none',
+                    minHeight: settings.invoice_format === 'THERMAL' ? '350px' : '650px',
+                    display: 'flex',
+                    flexDirection: 'column'
                   }}>
                     {/* Aperçu Header */}
                     <div style={{ 
@@ -3206,7 +3209,7 @@ const SettingsPage = ({ currentUser }) => {
                     </div>
                     
                     {/* Aperçu Corps (Body) */}
-                    <div style={{ fontSize: '0.8rem', color: '#334155', marginBottom: '20px' }}>
+                    <div style={{ fontSize: '0.8rem', color: '#334155', marginBottom: '20px', flex: 1 }}>
                       <div style={{ marginBottom: '15px', padding: settings.invoice_model === 'model5' ? '10px' : '0', backgroundColor: settings.invoice_model === 'model5' ? '#f8fafc' : 'transparent', border: settings.invoice_model === 'model5' ? '1px dashed #cbd5e1' : 'none' }}>
                         <strong>Client :</strong> John Doe<br/>
                         <span style={{ color: '#64748b' }}>+225 00 00 00 00 00</span>
