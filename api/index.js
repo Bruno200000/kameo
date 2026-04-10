@@ -142,7 +142,14 @@ router.get('/settings', async (req, res) => {
     if (!companyId) return res.json({});
     // On filtre explicitement par ID pour être sûr de récupérer la bonne entreprise
     const data = await supabaseFetch(`companies?id=eq.${companyId}&select=*&limit=1`, {}, req);
-    res.json(data && data.length > 0 ? data[0] : {});
+    const company = data && data.length > 0 ? data[0] : {};
+    
+    // Mapping du logo
+    if (company.logo_url) {
+      company.invoice_logo = company.logo_url;
+    }
+    
+    res.json(company);
   } catch (err) { res.status(500).json({ error: "Erreur" }); }
 });
 
@@ -155,6 +162,12 @@ router.post('/settings', async (req, res) => {
     const payload = { ...req.body };
     const fieldsToExclude = ['id', 'created_at', 'updated_at', 'email', 'owner_id', 'subscription_status', 'validation_status'];
     fieldsToExclude.forEach(f => delete payload[f]);
+
+    // Mapping du logo vers la colonne existante
+    if (payload.invoice_logo) {
+      payload.logo_url = payload.invoice_logo;
+      // On ne supprime pas forcément invoice_logo si la colonne a été créée
+    }
 
     console.log(`Mise à jour paramètres pour ${companyId}:`, Object.keys(payload));
 
