@@ -1558,6 +1558,25 @@ const Stock = () => {
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({ productId: '', type: 'IN', quantity: '', reason: '' });
+  const [editingMovement, setEditingMovement] = useState(null);
+
+  const handleEdit = (m) => {
+    setEditingMovement(m);
+    setFormData({ productId: m.product_id, type: m.movement_type, quantity: m.quantity, reason: m.reason || '' });
+    setShowAdd(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Supprimer ce mouvement ? Le stock du produit sera automatiquement ajusté pour revenir à son état précédent.")) return;
+    try {
+      const res = await fetch(`${API_URL}/stock/${id}`, { method: 'DELETE', headers: getHeaders() });
+      if (res.ok) {
+        setStock(stock.filter(s => s.id !== id));
+        addToast('Succès', 'Mouvement supprimé et stock synchronisé', 'success');
+      }
+    } catch (e) { addToast('Erreur', 'Erreur lors de la suppression', 'error'); }
+  };
+
 
   // Récupérer currentUser depuis le contexte global
   const currentUser = JSON.parse(localStorage.getItem('kameo_auth') || '{}');
@@ -1574,21 +1593,29 @@ const Stock = () => {
     if (!formData.productId || !formData.quantity) return addToast('Attention', "Veuillez sélectionner un produit et préciser la quantité.", 'warning');
     setIsSaving(true);
     try {
-      const res = await fetch(`${API_URL}/stock`, {
-        method: 'POST',
+      const url = editingMovement ? `${API_URL}/stock/${editingMovement.id}` : `${API_URL}/stock`;
+      const method = editingMovement ? 'PATCH' : 'POST';
+      
+      const res = await fetch(url, {
+        method,
         headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           product_id: formData.productId,
           movement_type: formData.type,
-          quantity: formData.quantity,
+          quantity: Number(formData.quantity),
           reason: formData.reason
         })
       });
       const resData = await res.json();
       if (resData.success) {
-        addToast('Succès', 'Mouvement enregistré !', 'success');
-        setStock([resData.movement, ...stock]);
+        addToast('Succès', editingMovement ? 'Mouvement mis à jour !' : 'Mouvement enregistré !', 'success');
+        if (editingMovement) {
+          setStock(stock.map(s => s.id === editingMovement.id ? resData.movement : s));
+        } else {
+          setStock([resData.movement, ...stock]);
+        }
         setShowAdd(false);
+        setEditingMovement(null);
         setFormData({ productId: '', type: 'IN', quantity: '', reason: '' });
       } else {
         addToast('Erreur', resData.error || 'Erreur lors de l\'enregistrement', 'error');
@@ -1596,6 +1623,7 @@ const Stock = () => {
     } catch (err) { addToast('Erreur', 'Erreur serveur', 'error'); }
     setIsSaving(false);
   };
+
 
   return (
     <>
@@ -1611,9 +1639,10 @@ const Stock = () => {
       {showAdd && (
         <div className="card mt-4" style={{ borderLeft: '4px solid #8b5cf6', backgroundColor: '#f5f3ff', padding: '25px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h3 style={{ margin: 0, color: '#4c1d95' }}>Déclarer un mouvement d'inventaire</h3>
-            <button style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6d28d9' }} onClick={() => setShowAdd(false)}><X size={20} /></button>
+            <h3 style={{ margin: 0, color: '#4c1d95' }}>{editingMovement ? 'Modifier le mouvement' : 'Déclarer un mouvement d\'inventaire'}</h3>
+            <button style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6d28d9' }} onClick={() => { setShowAdd(false); setEditingMovement(null); setFormData({ productId: '', type: 'IN', quantity: '', reason: '' }); }}><X size={20} /></button>
           </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '25px' }}>
             <div>
               <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#4c1d95', fontWeight: 600 }}>Produit ciblé *</label>
@@ -1691,23 +1720,10 @@ const Stock = () => {
                   <td>{s.reason || '-'}</td>
                   <td style={{ fontWeight: 'bold', color: s.movement_type === 'OUT' ? '#ef4444' : '#10b981', fontSize: '1.1rem' }}>{s.movement_type === 'OUT' ? '-' : '+'}{s.quantity}</td>
                   <td>
-                    {console.log('Vérification rôle:', currentUser.role, 'condition:', (currentUser.role === 'admin' || currentUser.role === 'superadmin'))}
                     {(currentUser.role === 'admin' || currentUser.role === 'superadmin') && (
                       <div style={{ display: 'flex', gap: '5px' }}>
                         <button
-                          style={{
-                            border: 'none',
-                            background: 'transparent',
-                            color: '#3b82f6',
-                            cursor: 'pointer',
-                            padding: '2px',
-                            fontSize: '0.9rem'
-                          }}
-                          title="Voir les détails"
-                        >
-                          <Eye size={14} />
-                        </button>
-                        <button
+                          onClick={() => handleEdit(s)}
                           style={{
                             border: 'none',
                             background: 'transparent',
@@ -1720,9 +1736,24 @@ const Stock = () => {
                         >
                           <Edit3 size={14} />
                         </button>
+                        <button
+                          onClick={() => handleDelete(s.id)}
+                          style={{
+                            border: 'none',
+                            background: 'transparent',
+                            color: '#ef4444',
+                            cursor: 'pointer',
+                            padding: '2px',
+                            fontSize: '0.9rem'
+                          }}
+                          title="Supprimer le mouvement"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                     )}
                   </td>
+
                 </tr>
               ))}
             </tbody>

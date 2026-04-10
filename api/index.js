@@ -477,12 +477,55 @@ router.post('/stock', async (req, res) => {
     // Mise à jour de la quantité produit associée
     const prod = await supabaseFetch(`products?id=eq.${req.body.product_id}&select=quantity`, {}, req);
     if (prod && prod.length > 0) {
-      const newQty = req.body.movement_type === 'IN' ? prod[0].quantity + req.body.quantity : prod[0].quantity - req.body.quantity;
+      const newQty = req.body.movement_type === 'IN' ? prod[0].quantity + Number(req.body.quantity) : prod[0].quantity - Number(req.body.quantity);
       await supabaseFetch(`products?id=eq.${req.body.product_id}`, { method: 'PATCH', body: JSON.stringify({ quantity: Math.max(0, newQty) }) }, req);
     }
     res.json({ success: true, movement: moveRes[0] });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
+
+router.patch('/stock/:id', async (req, res) => {
+  try {
+    const { product_id, movement_type, quantity, reason } = req.body;
+    const oldRes = await supabaseFetch(`stock_movements?id=eq.${req.params.id}`, {}, req);
+    if (!oldRes || oldRes.length === 0) return res.status(404).json({ error: "Mouvement non trouvé" });
+    const oldM = oldRes[0];
+
+    const updatedRes = await supabaseFetch(`stock_movements?id=eq.${req.params.id}`, {
+      method: 'PATCH',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({ product_id, movement_type, quantity: Number(quantity), reason })
+    }, req);
+    const newM = updatedRes[0];
+
+    const prod = await supabaseFetch(`products?id=eq.${product_id}&select=quantity`, {}, req);
+    if (prod && prod.length > 0) {
+      let currentQty = prod[0].quantity;
+      if (oldM.movement_type === 'IN') currentQty -= oldM.quantity;
+      else currentQty += oldM.quantity;
+      if (newM.movement_type === 'IN') currentQty += newM.quantity;
+      else currentQty -= newM.quantity;
+      await supabaseFetch(`products?id=eq.${product_id}`, { method: 'PATCH', body: JSON.stringify({ quantity: Math.max(0, currentQty) }) }, req);
+    }
+    res.json({ success: true, movement: newM });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.delete('/stock/:id', async (req, res) => {
+  try {
+    const mRes = await supabaseFetch(`stock_movements?id=eq.${req.params.id}`, {}, req);
+    if (!mRes || mRes.length === 0) return res.status(404).json({ error: "Mouvement non trouvé" });
+    const m = mRes[0];
+    await supabaseFetch(`stock_movements?id=eq.${req.params.id}`, { method: 'DELETE' }, req);
+    const prod = await supabaseFetch(`products?id=eq.${m.product_id}&select=quantity`, {}, req);
+    if (prod && prod.length > 0) {
+      const newQty = m.movement_type === 'IN' ? prod[0].quantity - m.quantity : prod[0].quantity + m.quantity;
+      await supabaseFetch(`products?id=eq.${m.product_id}`, { method: 'PATCH', body: JSON.stringify({ quantity: Math.max(0, newQty) }) }, req);
+    }
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 
 // Contacts
 router.get('/contacts', async (req, res) => {
