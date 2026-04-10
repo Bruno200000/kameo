@@ -2458,7 +2458,7 @@ const Purchases = () => {
   });
 
   const handleSave = async () => {
-    if (!formData.totalAmount) return addToast('Attention', "Le montant total est requis.", 'warning');
+    if (!formData.totalAmount) return alert("Le montant total est requis.");
     setIsSaving(true);
     try {
       const url = editingId ? `${API_URL}/purchases/${editingId}` : `${API_URL}/purchases`;
@@ -2481,7 +2481,7 @@ const Purchases = () => {
       });
       const resData = await res.json();
       if (resData.success) {
-        addToast('Succès', 'Achat enregistré !', 'success');
+        alert('Achat enregistré !');
         if (editingId) {
           setPurchases(purchases.map(p => p.id === editingId ? resData.purchase : p));
         } else {
@@ -2499,9 +2499,9 @@ const Purchases = () => {
         });
         setEditingId(null);
       } else {
-        addToast('Erreur', resData.error || 'Erreur lors de l\'enregistrement', 'error');
+        alert(resData.error || 'Erreur lors de l\'enregistrement');
       }
-    } catch (err) { addToast('Erreur', 'Erreur serveur: ' + err.message, 'error'); }
+    } catch (err) { alert('Erreur serveur: ' + err.message); }
     setIsSaving(false);
   };
 
