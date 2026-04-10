@@ -153,16 +153,25 @@ router.post('/settings', async (req, res) => {
 
     // On nettoie le body pour ne pas envoyer de champs protégés/système à Supabase
     const payload = { ...req.body };
-    delete payload.id;
-    delete payload.created_at;
-    delete payload.updated_at;
+    const fieldsToExclude = ['id', 'created_at', 'updated_at', 'email', 'owner_id', 'subscription_status', 'validation_status'];
+    fieldsToExclude.forEach(f => delete payload[f]);
 
-    await supabaseFetch(`companies?id=eq.${companyId}`, {
+    console.log(`Mise à jour paramètres pour ${companyId}:`, Object.keys(payload));
+
+    const result = await supabaseFetch(`companies?id=eq.${companyId}`, {
       method: 'PATCH',
       body: JSON.stringify(payload)
     }, req);
-    res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: "Erreur mise à jour" }); }
+    
+    res.json({ success: true, data: result });
+  } catch (err) { 
+    console.error("ERREUR SETTINGS POST:", err.message);
+    res.status(500).json({ 
+      success: false, 
+      error: "Erreur mise à jour", 
+      message: err.message 
+    }); 
+  }
 });
 
 

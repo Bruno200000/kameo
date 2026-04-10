@@ -2951,13 +2951,14 @@ const SettingsPage = ({ currentUser }) => {
       const d = await res.json();
       if (d.success) {
         setSaveStatus('success');
-        // On garde une copie en localstorage pour la rapiditÃ© mais la BDD est la source
         localStorage.setItem(INVOICE_PREFS_KEY, JSON.stringify(settings));
         setTimeout(() => setSaveStatus(null), 3000);
       } else {
+        console.error("Détails erreur sauvegarde:", d.message || d.error);
         setSaveStatus('error');
       }
     } catch (e) {
+      console.error("Erreur technique sauvegarde:", e);
       setSaveStatus('error');
     }
     setIsSaving(false);
