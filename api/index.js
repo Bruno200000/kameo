@@ -27,11 +27,35 @@ const supabaseHeaders = {
 const supabaseFetch = async (path, options = {}, req = null) => {
   let url = `${supabaseUrl}/rest/v1/${path}`;
   
-  // Filtrage par entreprise (Multi-tenancy)
   const companyId = req?.headers?.['x-company-id'];
-  if (companyId && !path.includes('companies') && !path.includes('users')) {
+  let filterCompanyId = companyId;
+  
+  if (req?.headers?.['x-user-data']) {
+     try {
+       const u = JSON.parse(req.headers['x-user-data']);
+       if (u.role !== 'superadmin' && !filterCompanyId) {
+         filterCompanyId = u.company_id || 'UNAUTHORIZED';
+       }
+     } catch(e) {}
+  }
+
+  if (filterCompanyId && !path.includes('companies') && !path.includes('users')) {
     const separator = path.includes('?') ? '&' : '?';
-    url += `${separator}company_id=eq.${companyId}`;
+    url += `${separator}company_id=eq.${filterCompanyId}`;
+  }
+
+  let finalBody = options.body;
+  if ((options.method === 'POST' || options.method === 'PATCH') && companyId && options.body) {
+    try {
+      const parsedBody = JSON.parse(options.body);
+      if (Array.isArray(parsedBody)) {
+        finalBody = JSON.stringify(parsedBody.map(item => ({ ...item, company_id: companyId })));
+      } else if (typeof parsedBody === 'object' && parsedBody !== null) {
+        finalBody = JSON.stringify({ ...parsedBody, company_id: companyId });
+      }
+    } catch (e) {
+      // Ignorer si pas JSON
+    }
   }
 
   try {
@@ -41,9 +65,9 @@ const supabaseFetch = async (path, options = {}, req = null) => {
         ...supabaseHeaders, 
         ...(options.headers || {}),
         // Pour les POST/PATCH, on s'assure d'inclure le company_id si on l'a
-        ...(options.method === 'POST' && companyId ? { 'Prefer': 'return=representation' } : {})
+        ...((options.method === 'POST' || options.method === 'PATCH') && companyId ? { 'Prefer': 'return=representation' } : {})
       },
-      body: options.method === 'POST' && companyId ? JSON.stringify({ ...JSON.parse(options.body || '{}'), company_id: companyId }) : options.body
+      body: finalBody
     });
     if (!response.ok) {
       const errorText = await response.text();
@@ -63,7 +87,7 @@ app.use(cors({
   origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Company-Id']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Company-Id', 'X-User-Data']
 }));
 app.use(express.json());
 
@@ -134,12 +158,22 @@ router.get('/dashboard/stats', async (req, res) => {
     const productsData = await supabaseFetch('products?select=quantity,selling_price,alert_threshold', {}, req);
     const customersData = await supabaseFetch('customers?select=id', {}, req);
 
-    let sales_total = 0;
+    let sales_today = 0;
+    let sales_month = 0;
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
     const salesByDay = {};
+
     if (salesData) salesData.forEach(s => {
       const amount = Number(s.total_amount || 0);
-      sales_total += amount;
-      const day = new Date(s.sale_date).toISOString().split('T')[0];
+      const d = new Date(s.sale_date);
+      const day = d.toISOString().split('T')[0];
+      
+      if (day === todayStr) sales_today += amount;
+      if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) sales_month += amount;
+      
       salesByDay[day] = (salesByDay[day] || 0) + amount;
     });
 
@@ -157,7 +191,7 @@ router.get('/dashboard/stats', async (req, res) => {
       if (p.quantity <= p.alert_threshold) low_stock_items++;
     });
 
-    res.json({ sales_today: sales_total, stock_value, low_stock_items, active_customers: (customersData ? customersData.length : 0), historical_sales });
+    res.json({ sales_today, sales_month, stock_value, low_stock_items, active_customers: (customersData ? customersData.length : 0), historical_sales });
   } catch (err) { res.status(500).json({ error: "Erreur" }); }
 });
 
@@ -262,11 +296,13 @@ router.get('/sales', async (req, res) => {
 router.post('/sales', async (req, res) => {
   try {
     const user = JSON.parse(req.headers['x-user-data'] || '{}');
+    const companyId = req.headers['x-company-id'] || user.company_id;
     const { cart, customerId, totalAmount, paidAmount, remainingAmount, paymentMode, status, ...otherData } = req.body;
     
     // Créer la vente sans le cart, avec mapping camelCase -> snake_case
     const saleToCreate = {
       ...otherData,
+      company_id: companyId || null,
       customer_id: customerId || null,
       total_amount: totalAmount,
       paid_amount: paidAmount,
@@ -331,7 +367,7 @@ router.post('/sales/:id/payment', async (req, res) => {
 // Achats
 router.get('/purchases', async (req, res) => {
   try {
-    const data = await supabaseFetch('purchases?select=*&order=purchase_date.desc', {}, req);
+    const data = await supabaseFetch('purchases?select=*,purchase_items(quantity,unit_price,products(name))&order=purchase_date.desc', {}, req);
     res.json(data || []);
   } catch (err) { res.status(500).json({ error: "Erreur" }); }
 });
@@ -433,8 +469,26 @@ router.get('/admin/companies', async (req, res) => {
 
 router.post('/admin/companies', async (req, res) => {
   try {
-    const companyData = await supabaseFetch('companies', { method: 'POST', headers: { 'Prefer': 'return=representation' }, body: JSON.stringify(req.body) }, req);
-    res.json({ success: true, company: companyData[0] });
+    const { password, ...companyPayload } = req.body;
+    const companyData = await supabaseFetch('companies', { method: 'POST', headers: { 'Prefer': 'return=representation' }, body: JSON.stringify(companyPayload) }, req);
+    
+    if (companyData && companyData.length > 0) {
+      const newCompanyId = companyData[0].id;
+      if (password) {
+        const newAdmin = {
+          first_name: 'Admin',
+          last_name: companyData[0].name,
+          email: companyData[0].email,
+          password_hash: password,
+          role: 'admin',
+          company_id: newCompanyId
+        };
+        await supabaseFetch('users', { method: 'POST', body: JSON.stringify(newAdmin) }, req);
+      }
+      res.json({ success: true, company: companyData[0] });
+    } else {
+      res.status(500).json({ error: "Échec de création entreprise" });
+    }
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -447,7 +501,9 @@ router.get('/admin/users', async (req, res) => {
 
 router.post('/admin/users', async (req, res) => {
   try {
-    const userData = await supabaseFetch('users', { method: 'POST', headers: { 'Prefer': 'return=representation' }, body: JSON.stringify(req.body) }, req);
+    const { password, ...otherData } = req.body;
+    const dbPayload = password ? { ...otherData, password_hash: password } : req.body;
+    const userData = await supabaseFetch('users', { method: 'POST', headers: { 'Prefer': 'return=representation' }, body: JSON.stringify(dbPayload) }, req);
     res.json({ success: true, user: userData[0] });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -468,11 +524,31 @@ router.delete('/admin/users/:id', async (req, res) => {
 
 router.get('/admin/stats', async (req, res) => {
   try {
-    const companies = await supabaseFetch('companies?select=id', {}, req);
+    const companies = await supabaseFetch('companies?select=id,plan_id,subscription_status', {}, req);
     const users = await supabaseFetch('users?select=id', {}, req);
-    const sales = await supabaseFetch('sales?select=total_amount', {}, req);
-    const totalRevenue = (sales || []).reduce((sum, s) => sum + Number(s.total_amount), 0);
-    res.json({ totalCompanies: companies?.length || 0, totalUsers: users?.length || 0, totalRevenue });
+    
+    let activeSubscriptions = 0;
+    let saasRevenue = 0;
+    
+    // Exemple de grille tarifaire mensuelle
+    const PRICING = { pro: 15000, enterprise: 50000 };
+
+    if (companies) {
+      companies.forEach(c => {
+         // Seules les entreprises validées et payantes génèrent du CA
+         if (c.subscription_status === 'active' && c.plan_id && c.plan_id !== 'trial') {
+            activeSubscriptions++;
+            saasRevenue += (PRICING[c.plan_id] || 0);
+         }
+      });
+    }
+
+    res.json({ 
+      totalCompanies: companies?.length || 0, 
+      totalUsers: users?.length || 0, 
+      activeSubscriptions,
+      mrr: saasRevenue 
+    });
   } catch (err) { res.status(500).json({ error: "Erreur stats" }); }
 });
 

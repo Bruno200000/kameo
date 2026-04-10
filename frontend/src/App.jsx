@@ -3,7 +3,7 @@ import {
   Grid, ShoppingCart, Package, Layers, FileText, Truck, 
   Users, Settings, CreditCard, PenTool, X, Menu, Bell, Plus, 
   DollarSign, Box, AlertTriangle, ArrowUpRight, Image as ImageIcon,
-  Edit2, Trash2, LogOut, UserPlus, Search, Filter, CheckCircle, Clock, Smartphone, Mail, TrendingUp, TrendingDown, Wallet, ArrowRightLeft, Shield, PlusCircle, Check
+  Edit2, Trash2, LogOut, UserPlus, Search, Filter, CheckCircle, Clock, Smartphone, Mail, TrendingUp, TrendingDown, Wallet, ArrowRightLeft, Shield, PlusCircle, Check, Printer, Building, AlertCircle
 } from 'lucide-react';
 
 import AdminPanel from './admin/AdminPanel';
@@ -28,14 +28,46 @@ const getHeaders = (extra = {}) => {
   try {
     const storedUser = localStorage.getItem('kameo_current_user');
     const user = storedUser ? JSON.parse(storedUser) : null;
+    const activeCompany = localStorage.getItem('kameo_active_company_id');
+    const companyId = activeCompany !== null ? activeCompany : (user?.company_id || '');
     return {
-      'X-Company-Id': user?.company_id || '',
+      'X-Company-Id': companyId,
       'X-User-Data': JSON.stringify(user || {}),
       ...extra
     };
   } catch (e) {
     return { ...extra };
   }
+};
+
+const CompanySwitcher = ({ currentUser }) => {
+  const [companies, setCompanies] = useState([]);
+  const activeCompany = localStorage.getItem('kameo_active_company_id');
+  const [selected, setSelected] = useState(activeCompany !== null ? activeCompany : (currentUser.company_id || ''));
+
+  useEffect(() => {
+    if (currentUser?.role !== 'superadmin') return;
+    fetch(`${API_URL}/admin/companies`, { headers: getHeaders() })
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setCompanies(data); })
+      .catch(e => console.error(e));
+  }, [currentUser]);
+
+  if (currentUser?.role !== 'superadmin') return null;
+
+  const handleChange = (e) => {
+    const val = e.target.value;
+    setSelected(val);
+    localStorage.setItem('kameo_active_company_id', val);
+    window.location.reload();
+  };
+
+  return (
+    <select value={selected} onChange={handleChange} style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', marginRight: '15px', backgroundColor: '#f8fafc', fontWeight: 600 }}>
+      <option value="">-- Toutes les entreprises --</option>
+      {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+    </select>
+  );
 };
 
 const AppLoader = () => (
@@ -172,7 +204,7 @@ export default function App() {
 
   const renderContent = () => {
     // Protection de la route Admin
-    if (currentPage === 'admin' && !['superadmin', 'admin'].includes(currentUser.role)) {
+    if (currentPage === 'admin' && currentUser.role !== 'superadmin') {
       return <div style={{ padding: '40px', textAlign: 'center' }}><h2>Accès Refusé</h2><p>Vous n'avez pas les droits pour accéder à cette section.</p></div>;
     }
 
@@ -185,7 +217,7 @@ export default function App() {
       case 'purchases': return <Purchases />;
       case 'finance': return <FinanceModule />;
       case 'contacts': return <Contacts />;
-      case 'settings': return <SettingsPage />;
+      case 'settings': return <SettingsPage currentUser={currentUser} />;
       case 'subscription': return <Subscription />;
       case 'users': return <UsersManager />;
       case 'admin': return <AdminPanel />;
@@ -269,11 +301,17 @@ export default function App() {
           <NavItem icon={<Settings size={18} />} label="Paramètres" active={currentPage === 'settings'} onClick={() => setCurrentPage('settings')} />
           <NavItem icon={<CreditCard size={18} />} label="Abonnement" active={currentPage === 'subscription'} onClick={() => setCurrentPage('subscription')} />
           
-          {['superadmin', 'admin'].includes(currentUser.role) && (
+          {currentUser.role === 'superadmin' && (
             <>
               <p className="nav-section">ADMINISTRATION</p>
               <NavItem icon={<Users size={18} />} label="Utilisateurs" active={currentPage === 'users'} onClick={() => setCurrentPage('users')} />
               <NavItem icon={<Shield size={18} />} label="Gestion Plateforme" active={currentPage === 'admin'} onClick={() => setCurrentPage('admin')} />
+            </>
+          )}
+          {currentUser.role === 'admin' && (
+            <>
+              <p className="nav-section">ADMINISTRATION</p>
+              <NavItem icon={<Users size={18} />} label="Utilisateurs" active={currentPage === 'users'} onClick={() => setCurrentPage('users')} />
             </>
           )}
         </nav>
@@ -303,6 +341,7 @@ export default function App() {
             <h1 className="page-title">{getPageTitle()}</h1>
           </div>
           <div className="topbar-right">
+            <CompanySwitcher currentUser={currentUser} />
             {showHeaderActions && (
               <div className="search-bar">
                   <Search size={16} style={{position: 'absolute', left: 15, top: 12, color: '#94a3b8'}} />
@@ -385,10 +424,59 @@ const NavItem = ({ icon, label, active, onClick }) => (
 // COMPOSANTS DES PAGES
 // ==========================================
 
+const SuperAdminDashboard = () => {
+  const [stats, statsLoading] = useFetch('/admin/stats', { totalCompanies: 0, totalUsers: 0, activeSubscriptions: 0, mrr: 0 });
+  const [companies, companiesLoading] = useFetch('/admin/companies', []);
+
+  if (statsLoading || companiesLoading) return <div style={{padding: '40px', textAlign: 'center'}}><div className="spinner"></div> Chargement du tableau SaaS...</div>;
+
+  const recentCompanies = companies.slice(0, 5);
+
+  return (
+    <>
+      <div className="dashboard-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+        <StatCard icon={<Building size={24}/>} title="Entreprises Inscrites" value={stats.totalCompanies} color="blue" />
+        <StatCard icon={<Users size={24}/>} title="Utilisateurs Globaux" value={stats.totalUsers} color="purple" />
+        <StatCard icon={<CheckCircle size={24}/>} title="Abonnements Actifs" value={stats.activeSubscriptions} color="green" />
+        <StatCard icon={<DollarSign size={24}/>} title="Revenu Mensuel (MRR)" value={`${(stats.mrr || 0).toLocaleString()} F`} color="emerald" />
+      </div>
+
+      <div className="card" style={{ padding: '20px' }}>
+        <h3 style={{ marginTop: 0, color: '#1e293b' }}>Dernières entreprises inscrites</h3>
+        {recentCompanies.length === 0 ? <p style={{color: '#94a3b8'}}>Aucune entreprise.</p> : (
+          <div className="table-responsive">
+            <table className="data-table">
+              <thead><tr><th>Nom</th><th>Email</th><th>Plan</th><th>Statut</th></tr></thead>
+              <tbody>
+                {recentCompanies.map(c => (
+                  <tr key={c.id}>
+                    <td><strong>{c.name}</strong></td>
+                    <td>{c.email}</td>
+                    <td>{c.plan_id}</td>
+                    <td><span className={`status-badge ${c.subscription_status === 'active' ? 'success' : 'error'}`}>{c.subscription_status}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </>
+  );
+};
+
 const Dashboard = ({ onNavigate }) => {
-  const [stats, statsLoading] = useFetch('/dashboard/stats', { sales_today: 0, stock_value: 0, low_stock_items: 0, active_customers: 0, historical_sales: [] });
-  const [sales] = useFetch('/sales', []);
-  const [products] = useFetch('/products', []);
+  const storedUser = JSON.parse(localStorage.getItem('kameo_current_user') || '{}');
+  const activeCompany = localStorage.getItem('kameo_active_company_id');
+  const isGlobalSuperAdmin = storedUser?.role === 'superadmin' && !activeCompany;
+
+  const [stats, statsLoading] = useFetch('/dashboard/stats', { sales_today: 0, sales_month: 0, stock_value: 0, low_stock_items: 0, active_customers: 0, historical_sales: [] }, !isGlobalSuperAdmin);
+  const [sales] = useFetch('/sales', [], !isGlobalSuperAdmin);
+  const [products] = useFetch('/products', [], !isGlobalSuperAdmin);
+
+  if (isGlobalSuperAdmin) {
+    return <SuperAdminDashboard />;
+  }
 
   // Filtrer les produits en stock critique (<= 5)
   const criticalStockProducts = products.filter(p => p.quantity <= 5).sort((a, b) => a.quantity - b.quantity);
@@ -397,10 +485,11 @@ const Dashboard = ({ onNavigate }) => {
 
   return (
     <>
-      <div className="dashboard-stats">
-        <StatCard icon={<DollarSign size={24}/>} title="Ventes du jour" value={`${stats.sales_today} F`} color="blue" />
+      <div className="dashboard-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px' }}>
+        <StatCard icon={<DollarSign size={24}/>} title="Ventes (Aujourd'hui)" value={`${stats.sales_today} F`} color="blue" />
+        <StatCard icon={<TrendingUp size={24}/>} title="Ventes (Ce mois)" value={`${stats.sales_month || 0} F`} color="emerald" />
         <StatCard icon={<Box size={24}/>} title="Valeur du stock" value={`${stats.stock_value} F`} color="green" />
-        <StatCard icon={<AlertTriangle size={24}/>} title="Ruptures de stock" value={stats.low_stock_items} color="red" valueColor="red" />
+        <StatCard icon={<AlertTriangle size={24}/>} title="Ruptures" value={stats.low_stock_items} color="red" valueColor="red" />
         <StatCard icon={<Users size={24}/>} title="Clients actifs" value={stats.active_customers} color="purple" trendUp trend="+4 ce mois" />
       </div>
 
@@ -2210,10 +2299,18 @@ const Purchases = () => {
       const url = editingId ? `${API_URL}/purchases/${editingId}` : `${API_URL}/purchases`;
       const method = editingId ? 'PATCH' : 'POST';
       
+      // Map frontend naming to DB naming
+      const dbPayload = {
+        total_amount: formData.totalAmount,
+        reference: formData.reference,
+        supplier_name: formData.supplierName,
+        status: formData.status
+      };
+
       const res = await fetch(url, {
         method: method,
         headers: getHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify(formData)
+        body: JSON.stringify(dbPayload)
       });
       const resData = await res.json();
       if (resData.success) {
@@ -2304,12 +2401,23 @@ const Purchases = () => {
         <div className="card mt-4">
           <div className="table-responsive">
             <table className="data-table">
-              <thead><tr><th>Date</th><th>Référence BC</th><th>Montant de l'Achat</th><th>Statut</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Date</th><th>Référence BC</th><th>Fournisseur</th><th>Articles</th><th>Montant de l'Achat</th><th>Statut</th><th>Actions</th></tr></thead>
               <tbody>
                 {filteredPurchases.map(p => (
                   <tr key={p.id} className="table-row-hover">
                     <td>{new Date(p.purchase_date).toLocaleDateString()}</td>
-                    <td style={{color: '#3b82f6', cursor: 'pointer', fontWeight: 500}}>BC-{p.id.substring(0,8).toUpperCase()}</td>
+                    <td 
+                      style={{color: '#3b82f6', cursor: 'pointer', fontWeight: 600, textDecoration: 'underline'}}
+                      onClick={() => setSelectedPurchase(p)}
+                    >
+                      {p.reference || `BC-${p.id.substring(0,8).toUpperCase()}`}
+                    </td>
+                    <td>{p.supplier_name || 'Non spécifié'}</td>
+                    <td style={{fontSize: '0.85rem', color: '#64748b'}}>
+                      {p.purchase_items && p.purchase_items.length > 0 
+                        ? p.purchase_items.map(item => `${item.quantity}x ${item.products?.name}`).join(', ') 
+                        : 'Aucun article spécifié'}
+                    </td>
                     <td style={{fontWeight: 'bold', color: '#ef4444'}}> - {p.total_amount} F</td>
                     <td><span className={p.status === 'received' ? "status-badge success" : "status-badge warning"} style={{display:'inline-flex', alignItems:'center', gap:4}}><CheckCircle size={12}/> {p.status === 'received' ? 'Reçu' : 'En attente'}</span></td>
                     <td>
@@ -2325,11 +2433,10 @@ const Purchases = () => {
                           className="secondary-btn" 
                           style={{padding: '4px 8px', fontSize: '0.8rem', backgroundColor: '#f59e0b', borderColor: '#f59e0b', color: 'white'}} 
                           onClick={() => {
-                            // Préparer le formulaire pour modification
                             setFormData({
                               totalAmount: p.total_amount,
-                              reference: '', // Champ non stocké en base pour l'instant
-                              supplierName: '', // Champ non stocké en base pour l'instant
+                              reference: p.reference || '',
+                              supplierName: p.supplier_name || '',
                               status: p.status || 'pending'
                             });
                             setEditingId(p.id);
@@ -2349,16 +2456,71 @@ const Purchases = () => {
       ) : null}
       {selectedPurchase && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-          <div className="card" style={{ width: '90%', maxWidth: '520px', padding: '24px' }}>
-            <h3 style={{ marginTop: 0 }}>Détails de l'achat</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
-              <div><strong>Référence:</strong> BC-{String(selectedPurchase.id).substring(0,8).toUpperCase()}</div>
-              <div><strong>Date:</strong> {new Date(selectedPurchase.purchase_date).toLocaleString()}</div>
-              <div><strong>Montant:</strong> {selectedPurchase.total_amount} F</div>
-              <div><strong>Statut:</strong> {selectedPurchase.status === 'received' ? 'Reçu' : 'En attente'}</div>
+          <div className="card" style={{ width: '90%', maxWidth: '650px', padding: '0', overflow: 'hidden', borderRadius: '15px' }}>
+            <div style={{ background: '#f59e0b', color: 'white', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+               <h3 style={{ margin: 0 }}>Fiche d'Achat : {selectedPurchase.reference || `BC-${selectedPurchase.id.substring(0,8).toUpperCase()}`}</h3>
+               <button onClick={() => setSelectedPurchase(null)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}><X size={24}/></button>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <button className="primary-btn" onClick={() => setSelectedPurchase(null)}>Fermer</button>
+            
+            <div style={{ padding: '25px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '25px', backgroundColor: '#fffbeb', padding: '15px', borderRadius: '10px' }}>
+                <div>
+                  <div style={{ fontSize: '0.8rem', color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Fournisseur</div>
+                  <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>{selectedPurchase.supplier_name || 'Non spécifié'}</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '0.8rem', color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Date de commande</div>
+                  <div style={{ fontWeight: 600 }}>{new Date(selectedPurchase.purchase_date).toLocaleString()}</div>
+                </div>
+              </div>
+
+              <h4 style={{ borderBottom: '2px solid #fde68a', paddingBottom: '10px', marginBottom: '15px', color: '#92400e' }}>Articles Commandés</h4>
+              <div className="table-responsive" style={{ marginBottom: '20px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead style={{ backgroundColor: '#f8fafc' }}>
+                    <tr>
+                      <th style={{ textAlign: 'left', padding: '10px', fontSize: '0.85rem' }}>Article</th>
+                      <th style={{ textAlign: 'center', padding: '10px', fontSize: '0.85rem' }}>Qté</th>
+                      <th style={{ textAlign: 'right', padding: '10px', fontSize: '0.85rem' }}>P.U</th>
+                      <th style={{ textAlign: 'right', padding: '10px', fontSize: '0.85rem' }}>Sous-total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedPurchase.purchase_items && selectedPurchase.purchase_items.length > 0 ? (
+                      selectedPurchase.purchase_items.map((item, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '12px 10px' }}>{item.products?.name || 'Produit inconnu'}</td>
+                          <td style={{ padding: '12px 10px', textAlign: 'center' }}>{item.quantity}</td>
+                          <td style={{ padding: '12px 10px', textAlign: 'right' }}>{Number(item.unit_price).toLocaleString()} F</td>
+                          <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 600 }}>{(item.quantity * item.unit_price).toLocaleString()} F</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="4" style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>Aucun article détaillé pour cet achat global.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '20px', borderTop: '2px solid #f1f5f9', paddingTop: '20px' }}>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '0.9rem', color: '#64748b' }}>TOTAL GÉNÉRAL</div>
+                  <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#ef4444' }}>{Number(selectedPurchase.total_amount).toLocaleString()} F</div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '30px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: selectedPurchase.status === 'received' ? '#059669' : '#d97706', fontWeight: 600 }}>
+                   {selectedPurchase.status === 'received' ? <CheckCircle size={18}/> : <AlertCircle size={18}/>}
+                   Statut : {selectedPurchase.status === 'received' ? 'Marchandise Reçue' : 'En attente de livraison'}
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button className="secondary-btn" onClick={() => window.print()} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><Printer size={16}/> Imprimer BC</button>
+                  <button className="primary-btn" onClick={() => setSelectedPurchase(null)} style={{ backgroundColor: '#f59e0b', borderColor: '#f59e0b' }}>Fermer</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -2502,7 +2664,7 @@ const Contacts = () => {
   );
 };
 
-const SettingsPage = () => {
+const SettingsPage = ({ currentUser }) => {
   const [activeTab, setActiveTab] = useState('general');
   const [settings, settingsLoading, setSettings] = useFetch('/settings', { name: '', email: '', phone: '', address: '', currency: 'XOF' });
   const [isSaving, setIsSaving] = useState(false);
@@ -2526,6 +2688,7 @@ const SettingsPage = () => {
           notes: saved.notes || 'Merci pour votre confiance.'
         });
         setInvoiceFormat(saved.invoiceFormat || 'A4');
+        setInvoicePrefs(prev => ({ ...prev, invoiceModel: saved.invoiceModel || 'model1' }));
       }
     } catch (e) {
       // ignore invalid storage
@@ -2635,7 +2798,9 @@ const SettingsPage = () => {
       <div className="card" style={{ padding: '15px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
         <TabButton id="general" label="Informations" icon={<Users size={18} />} />
         <TabButton id="shop" label="Ma Boutique" icon={<Smartphone size={18} />} />
-        <TabButton id="security" label="Sécurité" icon={<Shield size={18} />} />
+        {(currentUser.role === 'admin' || currentUser.role === 'superadmin') && (
+          <TabButton id="security" label="Sécurité" icon={<Shield size={18} />} />
+        )}
       </div>
 
       <div className="card" style={{ padding: '30px', position: 'relative' }}>
@@ -2711,6 +2876,14 @@ const SettingsPage = () => {
                      </div>
                   </div>
                 </div>
+                <div style={{ marginBottom: '20px', marginTop: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', color: '#475569', fontWeight: 500 }}>Modèle de facture</label>
+                  <select className="filter-select" style={{ width: '100%', padding: '10px' }} value={invoicePrefs.invoiceModel || 'model1'} onChange={e => setInvoicePrefs({...invoicePrefs, invoiceModel: e.target.value})}>
+                    <option value="model1">Modèle 1 (Standard)</option>
+                    <option value="model2">Modèle 2 (Moderne)</option>
+                    <option value="model3">Modèle 3 (Minimaliste)</option>
+                  </select>
+                </div>
                 <div style={{ marginTop: '25px', padding: '16px', border: '1px solid #e2e8f0', borderRadius: '10px', backgroundColor: '#f8fafc' }}>
                   <h4 style={{ marginTop: 0, marginBottom: '12px', color: '#1e293b' }}>Personnalisation facture</h4>
                   <div style={{ marginBottom: '10px' }}>
@@ -2767,13 +2940,41 @@ const SettingsPage = () => {
                     <button type="button" className="secondary-btn" onClick={() => setShowPasswordModal(true)}>Modifier</button>
                  </div>
               </div>
+              <div style={{ padding: '20px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
+                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                       <div style={{ fontWeight: 'bold', color: '#1e293b' }}>Authentification à double facteur (2FA)</div>
+                       <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Ajoutez une couche de sécurité supplémentaire à votre compte.</div>
+                    </div>
+                    <div className="status-badge" style={{ backgroundColor: '#fee2e2', color: '#991b1b', cursor: 'pointer' }}>Désactivé</div>
+                 </div>
+                 <div style={{ marginTop: '15px', padding: '15px', backgroundColor: '#fff', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#475569' }}>
+                       Une fois activé, vous devrez saisir un code envoyé par <strong>Email</strong> ou généré par une application comme <strong>Google Authenticator</strong> pour vous connecter.
+                    </p>
+                    <button type="button" className="primary-btn" style={{ marginTop: '10px', fontSize: '0.8rem', padding: '6px 12px' }}>Configurer la 2FA</button>
+                 </div>
+              </div>
+
+              <div style={{ padding: '20px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
+                 <div style={{ fontWeight: 'bold', color: '#1e293b', marginBottom: '10px' }}>Sessions actives</div>
+                 <div style={{ fontSize: '0.85rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #f1f5f9' }}>
+                    <div>
+                       <strong>Windows 10 • Chrome</strong>
+                       <div>Dakar, Sénégal (Actuel)</div>
+                    </div>
+                    <span style={{ color: '#059669', fontWeight: 600 }}>En ligne</span>
+                 </div>
+                 <button type="button" style={{ marginTop: '15px', background: 'transparent', border: 'none', color: '#ef4444', fontSize: '0.85rem', cursor: 'pointer', padding: 0 }}>Déconnecter tous les autres appareils</button>
+              </div>
+
               <div style={{ padding: '20px', backgroundColor: '#fff5f5', borderRadius: '12px', border: '1px solid #feb2b2' }}>
                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                        <div style={{ fontWeight: 'bold', color: '#c53030' }}>Zone de danger</div>
                        <div style={{ fontSize: '0.85rem', color: '#c53030' }}>Suppression définitive du compte et des données</div>
                     </div>
-                    <button type="button" style={{ padding: '8px 15px', borderRadius: '6px', border: '1px solid #c53030', color: '#c53030', backgroundColor: 'transparent', cursor: 'not-allowed', opacity: 0.7 }} disabled>Supprimer (bientot)</button>
+                    <button type="button" style={{ padding: '8px 15px', borderRadius: '6px', border: '1px solid #c53030', color: '#c53030', backgroundColor: 'transparent', cursor: 'not-allowed', opacity: 0.7 }} disabled>Supprimer (bientôt)</button>
                  </div>
               </div>
             </div>

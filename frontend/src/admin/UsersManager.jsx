@@ -8,8 +8,15 @@ const UsersManager = () => {
   const [editingUser, setEditingUser] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [formData, setFormData] = useState({ first_name: '', last_name: '', email: '', role: 'admin' });
+  const [formData, setFormData] = useState({ first_name: '', last_name: '', email: '', role: 'admin', company_id: '' });
   const [createData, setCreateData] = useState({ first_name: '', last_name: '', email: '', password: '', role: 'admin', company_id: '' });
+
+  // Initialize company_id once companies are loaded
+  React.useEffect(() => {
+    if (companies.length > 0 && !createData.company_id) {
+      setCreateData(prev => ({ ...prev, company_id: companies[0].id }));
+    }
+  }, [companies]);
 
   const handleDelete = async (id) => {
     if (!window.confirm("Supprimer cet utilisateur ?")) return;
@@ -39,6 +46,9 @@ const UsersManager = () => {
     if (!createData.first_name || !createData.email || !createData.password) {
       return alert("Prénom, email et mot de passe sont requis.");
     }
+    if (!createData.company_id) {
+      return alert("Vous devez rattacher l'utilisateur à une entreprise.");
+    }
     setIsSaving(true);
     try {
       const res = await fetch(`${API_URL}/admin/users`, {
@@ -50,7 +60,7 @@ const UsersManager = () => {
       if (d.success) {
         setUsers([d.user, ...users]);
         setShowCreate(false);
-        setCreateData({ first_name: '', last_name: '', email: '', password: '', role: 'admin', company_id: '' });
+        setCreateData({ first_name: '', last_name: '', email: '', password: '', role: 'admin', company_id: companies.length > 0 ? companies[0].id : '' });
       } else {
         alert('Erreur: ' + d.error);
       }
@@ -64,7 +74,8 @@ const UsersManager = () => {
       first_name: user.first_name,
       last_name: user.last_name,
       email: user.email,
-      role: user.role
+      role: user.role,
+      company_id: user.company_id || (companies.length > 0 ? companies[0].id : '')
     });
   };
 
@@ -113,9 +124,8 @@ const UsersManager = () => {
               </select>
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>Entreprise</label>
+              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>Entreprise *</label>
               <select className="filter-select" style={{ width: '100%' }} value={createData.company_id} onChange={e => setCreateData({ ...createData, company_id: e.target.value })}>
-                <option value="">– Aucune (Plateforme) –</option>
                 {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
@@ -145,6 +155,9 @@ const UsersManager = () => {
               <option value="superadmin">SuperAdmin (Plateforme)</option>
               <option value="cashier">Caissier</option>
               <option value="stock_manager">Gérant de Stock</option>
+            </select>
+            <select className="filter-select" value={formData.company_id} onChange={e => setFormData({ ...formData, company_id: e.target.value })}>
+              {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           <div style={{ marginTop: '15px', display: 'flex', gap: '10px' }}>

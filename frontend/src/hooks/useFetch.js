@@ -14,16 +14,22 @@ const parseResponseSafely = async (res) => {
   if (!text) return null;
   throw new Error(`Reponse non-JSON recue (${res.status})`);
 };
-export const useFetch = (endpoint, initialData) => {
+export const useFetch = (endpoint, initialData, skip = false) => {
   const [data, setData] = useState(() => {
+    if (skip) return initialData;
     const cached = fetchCache.get(endpoint);
     if (!cached) return initialData;
     if (Date.now() - cached.ts > CACHE_TTL_MS) return initialData;
     return cached.data;
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!skip);
 
   useEffect(() => {
+    if (skip) {
+      setLoading(false);
+      return;
+    }
+
     const cached = fetchCache.get(endpoint);
     if (cached && Date.now() - cached.ts <= CACHE_TTL_MS) {
       setData(cached.data);
@@ -35,7 +41,9 @@ export const useFetch = (endpoint, initialData) => {
     setLoading(true);
 
     const user = JSON.parse(localStorage.getItem('kameo_current_user') || '{}');
-    const headers = { 'X-Company-Id': user.company_id || '' };
+    const activeCompany = localStorage.getItem('kameo_active_company_id');
+    const companyId = activeCompany !== null ? activeCompany : (user.company_id || '');
+    const headers = { 'X-Company-Id': companyId, 'X-User-Data': JSON.stringify(user || {}) };
 
     fetch(`${API_URL}${endpoint}`, { signal: controller.signal, headers })
       .then(async (res) => {
