@@ -556,6 +556,20 @@ router.post('/admin/companies', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+router.patch('/admin/companies/:id', async (req, res) => {
+  try {
+    const updated = await supabaseFetch(`companies?id=eq.${req.params.id}`, { method: 'PATCH', headers: { 'Prefer': 'return=representation' }, body: JSON.stringify(req.body) }, req);
+    res.json({ success: true, company: updated ? updated[0] : null });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.delete('/admin/companies/:id', async (req, res) => {
+  try {
+    await supabaseFetch(`companies?id=eq.${req.params.id}`, { method: 'DELETE' }, req);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 router.get('/admin/users', async (req, res) => {
   try {
     const data = await supabaseFetch('users?select=*,companies(name)&order=created_at.desc', {}, req);
