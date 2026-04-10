@@ -1213,7 +1213,10 @@ const Products = () => {
         setShowAdd(false);
         setFormData({ name: '', reference: '', selling_price: '', purchase_price: '', quantity: '', category: 'Outillage', image_url: '' });
       } else {
-      alert('Erreur de connexion au serveur : ' + err.message);
+        addToast('Erreur', data.error || 'L\'insertion du produit a échoué', 'error');
+      }
+    } catch (err) {
+      addToast('Erreur', 'Erreur de connexion au serveur : ' + err.message, 'error');
     }
     setIsSaving(false);
   };
@@ -1243,7 +1246,7 @@ const Products = () => {
 
   const handleEditSave = async () => {
     if (!editingProductId) return;
-    if (!formData.name || !formData.selling_price) return alert("Le nom et le prix de vente sont requis.");
+    if (!formData.name || !formData.selling_price) return addToast('Attention', "Le nom et le prix de vente sont requis.", 'warning');
     setIsSaving(true);
     try {
       const res = await fetch(`${API_URL}/products/${editingProductId}`, {
@@ -1253,16 +1256,16 @@ const Products = () => {
       });
       const resData = await res.json();
       if (resData.success) {
+        addToast('Succès', 'Produit mis à jour !', 'success');
         setProducts(products.map(p => (p.id === editingProductId ? resData.product : p)));
         setShowEdit(false);
         setEditingProductId(null);
         setFormData({ name: '', reference: '', selling_price: '', purchase_price: '', quantity: '', category: 'Outillage', image_url: '' });
       } else {
-        alert('Erreur: ' + resData.error);
+        addToast('Erreur', resData.error || 'Mise à jour échouée', 'error');
       }
     } catch (err) {
-      console.error("Erreur Edit Product:", err);
-      alert('Erreur de connexion au serveur : ' + err.message);
+      addToast('Erreur', 'Erreur de connexion au serveur : ' + err.message, 'error');
     }
     setIsSaving(false);
   };
@@ -2772,9 +2775,9 @@ const Contacts = () => {
         setShowAdd(false);
         setFormData({ name: '', type: 'client', contact_info: '', current_debt: '' });
       } else {
-        alert('Erreur: ' + resData.error);
+        addToast('Erreur', resData.error || 'Erreur lors de l\'enregistrement', 'error');
       }
-    } catch (err) { alert('Erreur serveur'); }
+    } catch (err) { addToast('Erreur', 'Erreur serveur', 'error'); }
     setIsSaving(false);
   };
 
