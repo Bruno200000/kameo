@@ -286,18 +286,27 @@ export default function App() {
   return (
     <div className="app-container">
       <aside className={`sidebar ${isMobileMenuOpen ? 'open' : ''} ${isSidebarCollapsed ? 'collapsed' : ''}`}>
-        <div className="sidebar-header">
-          <div className="logo">
-            <img src="/logo.png" alt="Logo" style={{ width: '42px', height: '42px', objectFit: 'contain' }} onError={(e) => e.target.style.display = 'none'} />
-            <span className="logo-text">KAméo</span>
+        <div className="sidebar-header" style={{ minHeight: '80px' }}>
+          <div className="logo" style={{ cursor: 'pointer' }} onClick={() => setCurrentPage('dashboard')}>
+            <div style={{ 
+              backgroundColor: 'rgba(255,255,255,0.05)', 
+              borderRadius: '12px', 
+              padding: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <img src="/logo.png" alt="Logo" style={{ width: '32px', height: '32px', objectFit: 'contain' }} onError={(e) => e.target.parentElement.style.display = 'none'} />
+            </div>
+            <span className="logo-text" style={{ fontSize: '22px', letterSpacing: '-0.5px' }}>KAméo</span>
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '4px' }}>
             {!isMobileMenuOpen && (
-              <button className="mobile-toggle" onClick={toggleSidebar} style={{ display: 'block' }}>
+              <button className="mobile-toggle" onClick={toggleSidebar} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px', opacity: 0.7 }}>
                 <Menu size={20} />
               </button>
             )}
-            <button className="mobile-toggle" onClick={() => setIsMobileMenuOpen(false)} style={{ display: isMobileMenuOpen ? 'block' : 'none' }}>
+            <button className="mobile-toggle" onClick={() => setIsMobileMenuOpen(false)} style={{ display: isMobileMenuOpen ? 'flex' : 'none', alignItems: 'center', justifyContent: 'center', padding: '8px' }}>
               <X size={20} />
             </button>
           </div>
@@ -434,7 +443,23 @@ export default function App() {
 }
 
 const NavItem = ({ icon, label, active, onClick }) => (
-  <button className={`nav-item ${active ? 'active' : ''}`} onClick={onClick}>{icon} <span>{label}</span></button>
+  <button 
+    className={`nav-item ${active ? 'active' : ''}`} 
+    onClick={onClick}
+    style={{ position: 'relative' }}
+  >
+    {icon}
+    <span style={{ flex: 1 }}>{label}</span>
+    {active && <div style={{ 
+      position: 'absolute', 
+      right: '12px', 
+      width: '6px', 
+      height: '6px', 
+      borderRadius: '50%', 
+      backgroundColor: '#60a5fa',
+      boxShadow: '0 0 10px #3b82f6'
+    }} />}
+  </button>
 );
 
 
