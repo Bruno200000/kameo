@@ -2930,6 +2930,7 @@ const SettingsPage = ({ currentUser }) => {
     invoice_color: '#2563eb', invoice_format: 'A4', invoice_model: 'model1',
     invoice_conditions: 'Paiement à la livraison', invoice_notes: ''
   });
+  const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -3054,7 +3055,7 @@ const SettingsPage = ({ currentUser }) => {
       <div className="card" style={{ padding: '30px', position: 'relative' }}>
         {saveStatus === 'success' && (
           <div style={{ position: 'absolute', top: 20, right: 30, backgroundColor: '#dcfce7', color: '#166534', padding: '8px 15px', borderRadius: '20px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px', animation: 'fadeIn 0.3s' }}>
-            <CheckCircle size={16} /> Modification enregistrÃ©e
+            <CheckCircle size={16} /> Modification enregistrée
           </div>
         )}
         {saveStatus === 'error' && (
@@ -3107,7 +3108,7 @@ const SettingsPage = ({ currentUser }) => {
                   <label style={{ display: 'block', marginBottom: '8px', color: '#475569', fontWeight: 500 }}>Devise de facturation</label>
                   <select className="filter-select" style={{ width: '100%', padding: '10px' }} value={settings.currency || 'XOF'} onChange={e => setSettings({ ...settings, currency: e.target.value })}>
                     <option value="XOF">Franc CFA (XOF)</option>
-                    <option value="EUR">Euro (â‚¬)</option>
+                    <option value="EUR">Euro (€)</option>
                     <option value="USD">Dollar ($)</option>
                   </select>
                 </div>
@@ -3265,8 +3266,8 @@ const SettingsPage = ({ currentUser }) => {
               <div style={{ padding: '20px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <div style={{ fontWeight: 'bold', color: '#1e293b' }}>Authentification Ã  double facteur (2FA)</div>
-                    <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Ajoutez une couche de sÃ©curitÃ© supplÃ©mentaire Ã  votre compte.</div>
+                    <div style={{ fontWeight: 'bold', color: '#1e293b' }}>Authentification à double facteur (2FA)</div>
+                    <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Ajoutez une couche de sécurité supplémentaire à votre compte.</div>
                   </div>
                   <div className="status-badge" style={{ backgroundColor: '#fee2e2', color: '#991b1b', cursor: 'pointer' }}>Désactivé</div>
                 </div>
