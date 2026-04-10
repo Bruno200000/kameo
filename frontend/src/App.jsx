@@ -2923,7 +2923,12 @@ const Contacts = () => {
 
 const SettingsPage = ({ currentUser }) => {
   const [activeTab, setActiveTab] = useState('general');
-  const [settings, settingsLoading, setSettings] = useFetch('/settings', { name: '', email: '', phone: '', address: '', currency: 'XOF' });
+  const [settings, settingsLoading, setSettings] = useFetch('/settings', { 
+    name: '', email: '', phone: '', address: '', currency: 'XOF',
+    invoice_prefix: 'FAC', invoice_footer: 'Merci pour votre confiance.', 
+    invoice_color: '#2563eb', invoice_format: 'A4', invoice_model: 'model1',
+    invoice_conditions: 'Paiement à la livraison', invoice_notes: ''
+  });
   const [saveStatus, setSaveStatus] = useState(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
