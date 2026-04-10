@@ -17,7 +17,7 @@ const INVOICE_PREFS_KEY = 'kameo_invoice_preferences';
 
 const getCleanImageUrl = (url) => {
   if (!url) return null;
-  // Si l'URL contient localhost alors qu'on est en ligne, on l'invalide pour afficher l'icÃ´ne de secours
+  // Si l'URL contient localhost alors qu'on est en ligne, on l'invalide pour afficher l'icône de secours
   if (url.includes('localhost') && window.location.hostname !== 'localhost') {
     return null;
   }
@@ -78,7 +78,7 @@ const AppLoader = () => (
         <div style={{ position: 'absolute', inset: '12px', border: '3px solid rgba(255,255,255,0.12)', borderBottom: '3px solid #22d3ee', borderRadius: '50%', animation: 'kameoSpinReverse 1s linear infinite' }} />
         <div style={{ position: 'absolute', inset: '28px', borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #22d3ee)' }} />
       </div>
-      <h2 style={{ margin: '0 0 8px', fontSize: '1.4rem', letterSpacing: '0.3px' }}>KAmÃ©o</h2>
+      <h2 style={{ margin: '0 0 8px', fontSize: '1.4rem', letterSpacing: '0.3px' }}>KAméo</h2>
       <p style={{ margin: 0, color: '#bfdbfe' }}>Chargement en cours...</p>
       <style>{`
         @keyframes kameoSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -114,7 +114,7 @@ export default function App() {
     }, 300);
   };
 
-  // Utilisateur connectÃ© dynamique
+  // Utilisateur connecté dynamique
   const [currentUser, setCurrentUser] = useState(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [supportNotice, setSupportNotice] = useState('');
@@ -199,7 +199,8 @@ export default function App() {
   const handleLoginSuccess = (user) => {
     const normalizedUser = {
       id: user.id || null,
-      name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+      name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email || 'Utilisateur',
+      email: user.email || '',
       role: user.role || 'cashier',
       company_id: user.company_id || null
     };
@@ -219,10 +220,10 @@ export default function App() {
   if (currentUser && !['superadmin'].includes(currentUser.role) && companyValidationStatus !== 'active') {
     return (
       <div style={{ padding: '40px', textAlign: 'center' }}>
-        <h2>AccÃ¨s restreint</h2>
+        <h2>Accès restreint</h2>
         <p>Votre plan est en attente de validation par le superadmin.</p>
         <p>Statut actuel : <strong style={{ color: '#d97706' }}>{companyValidationStatus}</strong></p>
-        <p>Merci de patienter, un administrateur va valider votre accÃ¨s.</p>
+        <p>Merci de patienter, un administrateur va valider votre accès.</p>
       </div>
     );
   }
@@ -251,7 +252,7 @@ export default function App() {
   };
 
   const getPageTitle = () => {
-    const titles = { dashboard: "Tableau de bord", pos: "Caisse (POS)", products: "Catalogue Produits", stock: "Mouvements de stock", sales: "Ventes & Factures", purchases: "Achats Fournisseurs", finance: "Finance & TrÃ©sorerie", contacts: "Annuaire Contacts", settings: "ParamÃ¨tres", subscription: "Mon Abonnement", users: "Gestion Utilisateurs", admin: "Administration Plateforme" };
+    const titles = { dashboard: "Tableau de bord", pos: "Caisse (POS)", products: "Catalogue Produits", stock: "Mouvements de stock", sales: "Ventes & Factures", purchases: "Achats Fournisseurs", finance: "Finance & Trésorerie", contacts: "Annuaire Contacts", settings: "Paramètres", subscription: "Mon Abonnement", users: "Gestion Utilisateurs", admin: "Administration Plateforme" };
     return titles[currentPage] || "KAmÃ©o";
   };
 
@@ -314,7 +315,7 @@ export default function App() {
             }}>
               <img src="/logo.png" alt="Logo" style={{ width: '32px', height: '32px', objectFit: 'contain' }} onError={(e) => e.target.parentElement.style.display = 'none'} />
             </div>
-            <span className="logo-text" style={{ fontSize: '22px', letterSpacing: '-0.5px' }}>KAmÃ©o</span>
+            <span className="logo-text" style={{ fontSize: '22px', letterSpacing: '-0.5px' }}>KAméo</span>
           </div>
           <div style={{ display: 'flex', gap: '4px' }}>
             {!isMobileMenuOpen && (
@@ -339,10 +340,10 @@ export default function App() {
           <p className="nav-section">FINANCES</p>
           <NavItem icon={<FileText size={18} />} label="Ventes & Factures" active={currentPage === 'sales'} onClick={() => setCurrentPage('sales')} />
           <NavItem icon={<Truck size={18} />} label="Achats" active={currentPage === 'purchases'} onClick={() => setCurrentPage('purchases')} />
-          <NavItem icon={<Wallet size={18} />} label="Finance (TrÃ©sorerie)" active={currentPage === 'finance'} onClick={() => setCurrentPage('finance')} />
+          <NavItem icon={<Wallet size={18} />} label="Finance (Trésorerie)" active={currentPage === 'finance'} onClick={() => setCurrentPage('finance')} />
           <p className="nav-section">GESTION</p>
           <NavItem icon={<Users size={18} />} label="Contacts" active={currentPage === 'contacts'} onClick={() => setCurrentPage('contacts')} />
-          <NavItem icon={<Settings size={18} />} label="ParamÃ¨tres" active={currentPage === 'settings'} onClick={() => setCurrentPage('settings')} />
+          <NavItem icon={<Settings size={18} />} label="Paramètres" active={currentPage === 'settings'} onClick={() => setCurrentPage('settings')} />
           <NavItem icon={<CreditCard size={18} />} label="Abonnement" active={currentPage === 'subscription'} onClick={() => setCurrentPage('subscription')} />
 
           {currentUser.role === 'superadmin' && (
@@ -367,10 +368,10 @@ export default function App() {
             </div>
             <div className="user-details">
               <span className="user-name">{currentUser.name}</span>
-              <span className="user-role">{currentUser.role === 'superadmin' ? 'PropriÃ©taire' : currentUser.role}</span>
+              <span className="user-role">{currentUser.role === 'superadmin' ? 'Propriétaire' : currentUser.role}</span>
             </div>
           </div>
-          <button className="logout-btn" onClick={handleLogout} title="DÃ©connexion">
+          <button className="logout-btn" onClick={handleLogout} title="Déconnexion">
             <LogOut size={18} />
           </button>
         </div>
@@ -395,7 +396,7 @@ export default function App() {
                 <Search size={16} style={{ position: 'absolute', left: 15, top: 12, color: '#94a3b8' }} />
                 <input
                   type="text"
-                  placeholder="Recherche globale... (EntrÃ©e pour naviguer)"
+                  placeholder="Recherche globale... (Entrée pour naviguer)"
                   style={{ paddingLeft: 40 }}
                   value={globalSearch}
                   onChange={e => setGlobalSearch(e.target.value)}
@@ -446,7 +447,7 @@ export default function App() {
                   <div style={{ padding: '10px 16px', textAlign: 'center' }}>
                     <button onClick={() => { setCurrentPage('stock'); setShowNotifications(false); }}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6', fontSize: '0.85rem', fontWeight: 600 }}>
-                      Voir les alertes stock â†’
+                      Voir les alertes stock →
                     </button>
                   </div>
                 </div>
@@ -2990,7 +2991,7 @@ const SettingsPage = ({ currentUser }) => {
   };
 
 
-  if (settingsLoading) return <div style={{ padding: '40px', textAlign: 'center' }}>Chargement des paramÃ¨tres...</div>;
+  if (settingsLoading) return <div style={{ padding: '40px', textAlign: 'center' }}>Chargement des paramètres...</div>;
 
   const handlePasswordChange = async () => {
     if (!pwdData.current || !pwdData.next || !pwdData.confirm) return;
@@ -3046,7 +3047,7 @@ const SettingsPage = ({ currentUser }) => {
         <TabButton id="general" label="Informations" icon={<Users size={18} />} />
         <TabButton id="shop" label="Ma Boutique" icon={<Smartphone size={18} />} />
         {(currentUser.role === 'admin' || currentUser.role === 'superadmin') && (
-          <TabButton id="security" label="SÃ©curitÃ©" icon={<Shield size={18} />} />
+          <TabButton id="security" label="Sécurité" icon={<Shield size={18} />} />
         )}
       </div>
 
@@ -3075,7 +3076,7 @@ const SettingsPage = ({ currentUser }) => {
         <form onSubmit={handleSave}>
           {activeTab === 'general' && (
             <div>
-              <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#1e293b' }}>Informations GÃ©nÃ©rales</h3>
+              <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#1e293b' }}>Informations Générales</h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                 <div style={{ marginBottom: '15px' }}>
                   <label style={{ display: 'block', marginBottom: '8px', color: '#475569', fontWeight: 500 }}>Nom de l'entreprise</label>
@@ -3087,7 +3088,7 @@ const SettingsPage = ({ currentUser }) => {
                   <small style={{ color: '#94a3b8' }}>Contactez le support pour changer l'email.</small>
                 </div>
                 <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', color: '#475569', fontWeight: 500 }}>TÃ©lÃ©phone professionnel</label>
+                  <label style={{ display: 'block', marginBottom: '8px', color: '#475569', fontWeight: 500 }}>Téléphone professionnel</label>
                   <input type="text" className="large-input" style={{ width: '100%' }} value={settings.phone || ''} onChange={e => setSettings({ ...settings, phone: e.target.value })} />
                 </div>
                 <div style={{ marginBottom: '15px' }}>
@@ -3124,13 +3125,13 @@ const SettingsPage = ({ currentUser }) => {
                   </div>
                 </div>
                 <div style={{ marginBottom: '20px', marginTop: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', color: '#475569', fontWeight: 500 }}>ModÃ¨le de facture</label>
+                  <label style={{ display: 'block', marginBottom: '8px', color: '#475569', fontWeight: 500 }}>Modèle de facture</label>
                   <select className="filter-select" style={{ width: '100%', padding: '10px' }} value={settings.invoice_model || 'model1'} onChange={e => setSettings({ ...settings, invoice_model: e.target.value })}>
-                    <option value="model1">ModÃ¨le 1 (Standard)</option>
-                    <option value="model2">ModÃ¨le 2 (Moderne)</option>
-                    <option value="model3">ModÃ¨le 3 (Minimaliste)</option>
-                    <option value="model4">ModÃ¨le 4 (Multi Services - Bleu)</option>
-                    <option value="model5">ModÃ¨le 5 (Quincaillerie - QSS)</option>
+                    <option value="model1">Modèle 1 (Standard)</option>
+                    <option value="model2">Modèle 2 (Moderne)</option>
+                    <option value="model3">Modèle 3 (Minimaliste)</option>
+                    <option value="model4">Modèle 4 (Multi Services - Bleu)</option>
+                    <option value="model5">Modèle 5 (Quincaillerie - QSS)</option>
                   </select>
                 </div>
                 <div style={{ marginTop: '25px', padding: '16px', border: '1px solid #e2e8f0', borderRadius: '10px', backgroundColor: '#f8fafc' }}>
@@ -3148,20 +3149,20 @@ const SettingsPage = ({ currentUser }) => {
                     <input type="text" className="large-input" style={{ width: '100%' }} value={settings.invoice_logo || ''} onChange={e => setSettings({ ...settings, invoice_logo: e.target.value })} placeholder="https://..." />
                   </div>
                   <div style={{ marginBottom: '10px' }}>
-                    <label style={{ display: 'block', marginBottom: '6px', color: '#475569', fontWeight: 500 }}>TÃ©lÃ©versement du logo</label>
+                    <label style={{ display: 'block', marginBottom: '6px', color: '#475569', fontWeight: 500 }}>Téléversement du logo</label>
                     <input type="file" accept="image/*" onChange={handleInvoiceLogoUpload} style={{ width: '100%' }} />
                     {isUploadingLogo ? (
-                      <small style={{ color: '#2563eb' }}>TÃ©lÃ©versement en cours...</small>
+                      <small style={{ color: '#2563eb' }}>Téléversement en cours...</small>
                     ) : settings.invoice_logo ? (
                       <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <img src={settings.invoice_logo} alt="Logo factures" style={{ height: '45px', borderRadius: '6px', objectFit: 'contain', border: '1px solid #e2e8f0' }} />
-                        <span style={{ color: '#475569', fontSize: '0.85rem' }}>AperÃ§u</span>
+                        <span style={{ color: '#475569', fontSize: '0.85rem' }}>Aperçu</span>
                       </div>
                     ) : null}
                   </div>
                   <div style={{ marginBottom: '10px' }}>
                     <label style={{ display: 'block', marginBottom: '6px', color: '#475569', fontWeight: 500 }}>Conditions de paiement</label>
-                    <input type="text" className="large-input" style={{ width: '100%' }} value={settings.invoice_conditions || ''} onChange={e => setSettings({ ...settings, invoice_conditions: e.target.value })} placeholder="Ex: Paiement Ã  30 jours" />
+                    <input type="text" className="large-input" style={{ width: '100%' }} value={settings.invoice_conditions || ''} onChange={e => setSettings({ ...settings, invoice_conditions: e.target.value })} placeholder="Ex: Paiement à 30 jours" />
                   </div>
                   <div style={{ marginBottom: '10px' }}>
                     <label style={{ display: 'block', marginBottom: '6px', color: '#475569', fontWeight: 500 }}>Note additionnelle</label>
