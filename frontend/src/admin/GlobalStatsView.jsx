@@ -12,12 +12,26 @@ const GlobalStatsView = () => {
     unpaidCompanies: []
   });
 
-  if (loading) return <div>Chargement des données de la plateforme...</div>;
-
   const data = stats || {};
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '30px', padding: '10px 0' }}>
+      {data.success === false && (
+        <div style={{ padding: '15px', background: '#fee2e2', border: '1px solid #ef4444', borderRadius: '8px', color: '#b91c1c' }}>
+          <strong>Attention :</strong> {data.error || "Impossible de charger toutes les données."}
+          {data.debug && <pre style={{ fontSize: '11px', marginTop: '10px', overflow: 'auto' }}>{JSON.stringify(data.debug, null, 2)}</pre>}
+        </div>
+      )}
+
+      {data.debug && data.success !== false && (
+        <div style={{ padding: '10px', background: '#fff7ed', border: '1px solid #fb923c', borderRadius: '8px', color: '#9a3412', fontSize: '13px' }}>
+          <strong>Note :</strong> Certaines statistiques pourraient être incomplètes.
+          <details><summary style={{ cursor: 'pointer' }}>Voir détails techniques</summary>
+            <pre style={{ fontSize: '11px', marginTop: '5px' }}>{JSON.stringify(data.debug, null, 2)}</pre>
+          </details>
+        </div>
+      )}
+
       <div className="dashboard-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
         <StatCard icon={<Building size={24} />} title="Total Entreprises" value={data.totalCompanies || 0} color="blue" />
         <StatCard icon={<CheckCircle size={24} />} title="Abonnements Actifs" value={data.activeSubscriptions || 0} color="green" />

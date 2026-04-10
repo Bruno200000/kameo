@@ -704,12 +704,21 @@ router.delete('/admin/users/:id', async (req, res) => {
 });
 
 router.get('/admin/stats', async (req, res) => {
+  const errors = [];
   try {
-    const [companies, users, products] = await Promise.all([
-      supabaseFetch('companies?select=*&order=created_at.asc', {}, req).then(d => d || []),
-      supabaseFetch('users?select=*', {}, req).then(d => d || []),
-      supabaseFetch('products?select=*', {}, req).then(d => d || [])
-    ]);
+    const fetchSafe = async (resource) => {
+      try {
+        return await supabaseFetch(resource, {}, req) || [];
+      } catch (e) {
+        errors.push(`${resource}: ${e.message}`);
+        console.error(`[Vercel Debug] Failed ${resource}:`, e.message);
+        return [];
+      }
+    };
+
+    const companies = await fetchSafe('companies?select=*&order=created_at.asc');
+    const users = await fetchSafe('users?select=*');
+    const products = await fetchSafe('products?select=*');
 
     const PRICING = { pro: 15000, enterprise: 50000, trial: 0, free: 0 };
 
@@ -744,20 +753,24 @@ router.get('/admin/stats', async (req, res) => {
     const unpaidCompanies = companies.filter(c => c && (c.subscription_status === 'pending' || c.subscription_status === 'rejected'));
 
     res.json({
+      success: true,
       totalCompanies: companies.length,
       totalUsers: users.length,
       activeSubscriptions: companies.filter(c => c && c.subscription_status === 'active' && c.plan_id && c.plan_id !== 'trial').length,
       mrr,
       unpaidCount: unpaidCompanies.length,
       unpaidCompanies,
-      growthTrend
+      growthTrend,
+      debug: errors.length > 0 ? errors : undefined
     });
   } catch (err) { 
-    console.error("Vercel Stats Error:", err.message);
-    res.status(500).json({ 
+    console.error("Vercel Stats Critical Error:", err.message);
+    res.status(200).json({ 
+      success: false,
       error: "Erreur stats: " + err.message,
       totalCompanies: 0,
-      unpaidCompanies: []
+      unpaidCompanies: [],
+      debug: errors.concat([err.message])
     }); 
   }
 });

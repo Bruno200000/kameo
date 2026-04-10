@@ -975,13 +975,21 @@ app.delete('/api/admin/companies/:id', async (req, res) => {
 
 // Statistiques Globales (Données Structurées pour le Dashboard SuperAdmin)
 app.get('/api/admin/stats', async (req, res) => {
+  const errors = [];
   try {
-    // Utilisation de select=* pour éviter les erreurs de colonnes manquantes
-    const [companies, users, products] = await Promise.all([
-      supabaseFetch('companies?select=*&order=created_at.asc').then(d => d || []),
-      supabaseFetch('users?select=*').then(d => d || []),
-      supabaseFetch('products?select=*').then(d => d || [])
-    ]);
+    const fetchSafe = async (resource) => {
+      try {
+        return await supabaseFetch(resource) || [];
+      } catch (e) {
+        errors.push(`${resource}: ${e.message}`);
+        console.error(`[Stats Debug] Failed ${resource}:`, e.message);
+        return [];
+      }
+    };
+
+    const companies = await fetchSafe('companies?select=*&order=created_at.asc');
+    const users = await fetchSafe('users?select=*');
+    const products = await fetchSafe('products?select=*');
     
     console.log(`[Stats API] Found: ${companies.length} companies, ${users.length} users, ${products.length} products.`);
     const PRICING = { pro: 15000, enterprise: 50000, trial: 0, free: 0 };
@@ -1076,15 +1084,19 @@ app.get('/api/admin/stats', async (req, res) => {
         rejected: statusCounts.rejected || 0
       },
       unpaidCompanies,
-      recentCompanies
+      recentCompanies,
+      success: true,
+      debug: errors.length > 0 ? errors : undefined
     });
   } catch (err) {
     console.error("CRITICAL Dashboard Stats Error:", err.message);
-    res.status(500).json({ 
+    res.status(200).json({ 
+      success: false,
       error: "Erreur statistiques globales", 
       details: err.message,
       totalCompanies: 0,
-      unpaidCompanies: [] 
+      unpaidCompanies: [],
+      debug: errors.concat([err.message])
     });
   }
 });
