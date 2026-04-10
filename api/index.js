@@ -702,34 +702,50 @@ router.delete('/admin/users/:id', async (req, res) => {
 
 router.get('/admin/stats', async (req, res) => {
   try {
-    const companies = await supabaseFetch('companies?select=id,plan_id,subscription_status', {}, req);
-    const users = await supabaseFetch('users?select=id', {}, req);
+    const companies = await supabaseFetch('companies?select=id,name,plan_id,subscription_status,created_at&order=created_at.asc', {}, req) || [];
+    const users = await supabaseFetch('users?select=id', {}, req) || [];
+    const products = await supabaseFetch('products?select=id', {}, req) || [];
 
-    let activeSubscriptions = 0;
-    let saasRevenue = 0;
+    const PRICING = { pro: 15000, enterprise: 50000, trial: 0, free: 0 };
 
-    // Exemple de grille tarifaire mensuelle
-    const PRICING = { pro: 15000, enterprise: 50000 };
+    const mrr = companies.reduce((acc, c) => {
+      if (c.subscription_status === 'active' && c.plan_id !== 'trial') {
+        return acc + (PRICING[c.plan_id] || 0);
+      }
+      return acc;
+    }, 0);
 
-    if (companies) {
-      companies.forEach(c => {
-        // Seules les entreprises validées et payantes génèrent du CA
-        if (c.subscription_status === 'active' && c.plan_id && c.plan_id !== 'trial') {
-          activeSubscriptions++;
-          saasRevenue += (PRICING[c.plan_id] || 0);
-        }
-      });
+    const months = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      const yearMonth = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      months.push({ label: d.toLocaleString('fr-FR', { month: 'short' }), yearKey: yearMonth, companies: 0, mrr: 0 });
     }
 
-    res.json({
-      totalCompanies: companies?.length || 0,
-      totalUsers: users?.length || 0,
-      activeSubscriptions,
-      mrr: saasRevenue,
-      unpaidCount: companies.filter(c => c.subscription_status === 'pending' || c.subscription_status === 'rejected').length,
-      unpaidCompanies: companies.filter(c => c.subscription_status === 'pending' || c.subscription_status === 'rejected')
+    companies.forEach(c => {
+      const date = new Date(c.created_at);
+      const yearMonth = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+      const monthData = months.find(m => m.yearKey === yearMonth);
+      if (monthData) {
+        monthData.companies++;
+        if (c.subscription_status === 'active' && c.plan_id !== 'trial') monthData.mrr += (PRICING[c.plan_id] || 0);
+      }
     });
-  } catch (err) { res.status(500).json({ error: "Erreur stats" }); }
+
+    const growthTrend = months.map(({ label, companies, mrr }) => ({ label, companies, mrr }));
+    const unpaidCompanies = companies.filter(c => c.subscription_status === 'pending' || c.subscription_status === 'rejected');
+
+    res.json({
+      totalCompanies: companies.length,
+      totalUsers: users.length,
+      activeSubscriptions: companies.filter(c => c.subscription_status === 'active' && c.plan_id && c.plan_id !== 'trial').length,
+      mrr,
+      unpaidCount: unpaidCompanies.length,
+      unpaidCompanies,
+      growthTrend
+    });
+  } catch (err) { res.status(500).json({ error: "Erreur stats: " + err.message }); }
 });
 
 router.get('/status', (req, res) => {
