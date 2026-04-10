@@ -1,12 +1,19 @@
-require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
+// Charger les variables d'environnement depuis le dossier local du backend
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+
 const app = express();
 const port = process.env.PORT || 5000;
+
+console.log('--- Configuration Backend KAméo ---');
+console.log('SUPABASE_URL:', process.env.SUPABASE_URL ? 'DÉFINIE' : 'MANQUANTE');
+console.log('PORT:', port);
+console.log('-----------------------------------');
 
 // Configuration de Multer pour le stockage local des images
 const storage = multer.diskStorage({
@@ -976,7 +983,7 @@ app.get('/api/admin/stats', async (req, res) => {
       supabaseFetch('products?select=*').then(d => d || [])
     ]);
     
-    // Grille tarifaire mensuelle en FCFA
+    console.log(`[Stats API] Found: ${companies.length} companies, ${users.length} users, ${products.length} products.`);
     const PRICING = { pro: 15000, enterprise: 50000, trial: 0, free: 0 };
     
     // Calcul sécurisé du MRR (somme des abonnements actifs payants)
