@@ -138,7 +138,10 @@ router.patch('/auth/password', async (req, res) => {
 // Réglages Entreprise
 router.get('/settings', async (req, res) => {
   try {
-    const data = await supabaseFetch('companies?select=*&limit=1', {}, req);
+    const companyId = req.headers['x-company-id'];
+    if (!companyId) return res.json({});
+    // On filtre explicitement par ID pour être sûr de récupérer la bonne entreprise
+    const data = await supabaseFetch(`companies?id=eq.${companyId}&select=*&limit=1`, {}, req);
     res.json(data && data.length > 0 ? data[0] : {});
   } catch (err) { res.status(500).json({ error: "Erreur" }); }
 });
@@ -146,13 +149,22 @@ router.get('/settings', async (req, res) => {
 router.post('/settings', async (req, res) => {
   try {
     const companyId = req.headers['x-company-id'];
+    if (!companyId) return res.status(400).json({ error: "ID Entreprise manquant" });
+
+    // On nettoie le body pour ne pas envoyer de champs protégés/système à Supabase
+    const payload = { ...req.body };
+    delete payload.id;
+    delete payload.created_at;
+    delete payload.updated_at;
+
     await supabaseFetch(`companies?id=eq.${companyId}`, {
       method: 'PATCH',
-      body: JSON.stringify(req.body)
+      body: JSON.stringify(payload)
     }, req);
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: "Erreur mise à jour" }); }
 });
+
 
 // Dashboard
 router.get('/dashboard/stats', async (req, res) => {
