@@ -3164,6 +3164,73 @@ const SettingsPage = ({ currentUser }) => {
                   </div>
                 </div>
               </div>
+
+              {/* FACTURE PREVIEW PANEL */}
+              <div style={{ flex: 1, padding: '20px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'center', position: 'sticky', top: '20px' }}>
+                <div style={{ 
+                  width: invoiceFormat === 'THERMAL' ? '280px' : '100%', 
+                  maxWidth: invoiceFormat === 'THERMAL' ? '280px' : '480px', 
+                  backgroundColor: '#fff', 
+                  boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)', 
+                  padding: invoiceFormat === 'THERMAL' ? '15px' : '30px', 
+                  borderRadius: '4px',
+                  borderTop: invoicePrefs.invoiceModel === 'model2' ? `8px solid ${invoicePrefs.accentColor}` : 'none',
+                  border: invoicePrefs.invoiceModel === 'model5' ? `2px solid ${invoicePrefs.accentColor}` : 'none'
+                }}>
+                  {/* Aperçu Header */}
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: invoicePrefs.invoiceModel === 'model3' ? 'column' : invoicePrefs.invoiceModel === 'model2' ? 'row-reverse' : 'row', 
+                    justifyContent: 'space-between', 
+                    alignItems: invoicePrefs.invoiceModel === 'model3' ? 'center' : 'flex-start',
+                    marginBottom: '20px',
+                    borderBottom: invoicePrefs.invoiceModel === 'model1' ? '1px solid #e2e8f0' : 'none',
+                    paddingBottom: invoicePrefs.invoiceModel === 'model1' ? '15px' : '0'
+                  }}>
+                    {invoicePrefs.logoUrl ? (
+                      <img src={invoicePrefs.logoUrl} alt="logo" style={{ height: invoiceFormat === 'THERMAL' ? '30px' : '45px', objectFit: 'contain' }} />
+                    ) : (
+                      <div style={{ width: '80px', height: '40px', backgroundColor: '#e2e8f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#94a3b8' }}>VOTRE LOGO</div>
+                    )}
+                    <div style={{ textAlign: invoicePrefs.invoiceModel === 'model3' ? 'center' : invoicePrefs.invoiceModel === 'model2' ? 'left' : 'right', marginTop: invoicePrefs.invoiceModel === 'model3' ? '15px' : '0' }}>
+                      <div style={{ fontWeight: 'bold', fontSize: invoiceFormat === 'THERMAL' ? '1rem' : '1.3rem', color: invoicePrefs.invoiceModel === 'model4' ? invoicePrefs.accentColor : '#1e293b' }}>
+                        {invoicePrefs.prefix || 'FAC'}-2026-001
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Aujourd'hui</div>
+                    </div>
+                  </div>
+                  
+                  {/* Aperçu Corps (Body) */}
+                  <div style={{ fontSize: '0.8rem', color: '#334155', marginBottom: '20px' }}>
+                    <div style={{ marginBottom: '15px', padding: invoicePrefs.invoiceModel === 'model5' ? '10px' : '0', backgroundColor: invoicePrefs.invoiceModel === 'model5' ? '#f8fafc' : 'transparent', border: invoicePrefs.invoiceModel === 'model5' ? '1px dashed #cbd5e1' : 'none' }}>
+                      <strong>Client :</strong> John Doe<br/>
+                      <span style={{ color: '#64748b' }}>+225 00 00 00 00 00</span>
+                    </div>
+                    
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
+                      <thead>
+                        <tr style={{ backgroundColor: invoicePrefs.invoiceModel === 'model4' ? invoicePrefs.accentColor : '#f1f5f9', color: invoicePrefs.invoiceModel === 'model4' ? '#fff' : '#475569', textAlign: 'left' }}>
+                          <th style={{ padding: '8px' }}>Désignation</th>
+                          <th style={{ padding: '8px', textAlign: 'right' }}>Prix</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr><td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>1x Produit A</td><td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0', textAlign: 'right' }}>15 000</td></tr>
+                        <tr><td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>2x Produit B</td><td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0', textAlign: 'right' }}>20 000</td></tr>
+                      </tbody>
+                    </table>
+                    <div style={{ textAlign: 'right', marginTop: '12px', fontWeight: 'bold', fontSize: '0.9rem', color: invoicePrefs.accentColor }}>
+                      Total TTC : 35 000 {settings.currency || 'XOF'}
+                    </div>
+                  </div>
+
+                  {/* Aperçu Pied de page (Footer) */}
+                  <div style={{ borderTop: `2px solid ${invoicePrefs.accentColor}`, paddingTop: '15px', fontSize: '0.7rem', color: '#64748b', textAlign: 'center' }}>
+                    <div style={{ marginBottom: '5px', fontWeight: 'bold', color: '#475569' }}>{invoicePrefs.conditions || 'Paiement à la livraison'}</div>
+                    <div>{invoicePrefs.notes && <>{invoicePrefs.notes}<br/></>}{invoicePrefs.footerText || 'Merci pour votre confiance.'}</div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
