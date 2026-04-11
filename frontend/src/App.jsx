@@ -120,6 +120,7 @@ export default function App() {
   const [supportNotice, setSupportNotice] = useState('');
   const [companyValidationStatus, setCompanyValidationStatus] = useState('active');
   const [companyNextBilling, setCompanyNextBilling] = useState(null);
+  const [companyPlanId, setCompanyPlanId] = useState('trial');
 
   // Données globales pour les notifications
   const [productsData] = useFetch('/products', []);
@@ -164,7 +165,7 @@ export default function App() {
     const fetchSettings = async () => {
       try {
         const res = await fetch(`${API_URL}/settings`, {
-          headers: { 'X-Company-Id': currentUser?.company_id || '' }
+          headers: getHeaders()
         });
         if (!res.ok) return;
         const contentType = res.headers.get('content-type') || '';
@@ -179,12 +180,15 @@ export default function App() {
         if (settings?.expiry_date) {
           setCompanyNextBilling(settings.expiry_date);
         }
+        if (settings?.plan_id) {
+          setCompanyPlanId(settings.plan_id);
+        }
       } catch (e) {
         console.error('Erreur chargement statut entreprise', e);
       }
     };
-    fetchSettings();
-  }, []);
+    if (currentUser) fetchSettings();
+  }, [currentUser]);
 
   useEffect(() => {
     const onApi404 = (event) => {
@@ -3381,7 +3385,7 @@ const SettingsPage = ({ currentUser }) => {
 };
 
 
-const Subscription = () => {
+const Subscription = ({ companyPlanId, companyNextBilling }) => {
   const [isAnnual, setIsAnnual] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [showContact, setShowContact] = useState(false);
@@ -3390,6 +3394,19 @@ const Subscription = () => {
   const [contactForm, setContactForm] = useState({ company: '', phone: '', details: '' });
 
   const [subscriptionInfo, setSubscriptionInfo] = useState(() => {
+    // Si companyPlanId est fourni (superadmin mode), utiliser ces données
+    if (companyPlanId) {
+      const planMap = { 'pro': 'Pro', 'trial': 'Essai', 'enterprise': 'Entreprise' };
+      const planName = planMap[companyPlanId.toLowerCase()] || 'Essai';
+      return {
+        plan: planName,
+        status: 'active',
+        startDate: null,
+        expiryDate: companyNextBilling || null,
+        billing: 'Mensuel'
+      };
+    }
+    // Sinon, utiliser localStorage pour l'utilisateur normal
     try {
       const stored = JSON.parse(localStorage.getItem('KameoSubscription'));
       if (stored && stored.plan && stored.expiryDate) {
@@ -3400,6 +3417,21 @@ const Subscription = () => {
     }
     return { plan: 'Essai', status: 'inactive', startDate: null, expiryDate: null, billing: 'Mensuel' };
   });
+
+  // Mettre à jour subscriptionInfo quand les props changent (superadmin change d'entreprise)
+  useEffect(() => {
+    if (companyPlanId) {
+      const planMap = { 'pro': 'Pro', 'trial': 'Essai', 'enterprise': 'Entreprise' };
+      const planName = planMap[companyPlanId.toLowerCase()] || 'Essai';
+      setSubscriptionInfo({
+        plan: planName,
+        status: 'active',
+        startDate: null,
+        expiryDate: companyNextBilling || null,
+        billing: 'Mensuel'
+      });
+    }
+  }, [companyPlanId, companyNextBilling]);
 
   const getDaysLeft = () => {
     if (!subscriptionInfo.expiryDate) return null;
