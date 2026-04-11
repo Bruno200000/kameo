@@ -3449,100 +3449,161 @@ const Subscription = () => {
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
       <div style={{ textAlign: 'center', marginBottom: '30px' }}>
         <h2 style={{ fontSize: '2.5rem', color: '#0f172a', fontWeight: '800', marginBottom: '15px' }}>Votre Plan KAméo</h2>
-        <p style={{ color: '#64748b', fontSize: '1.1rem', maxWidth: '600px', margin: '0 auto' }}>Évoluez à votre rythme. Choisissez la puissance dont votre quincaillerie a besoin pour se développer sans limites.</p>
-
-        {subscriptionInfo.status === 'active' ? (
-          <div style={{ marginTop: '25px', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px 20px', borderRadius: '12px', border: '1px solid #a5b4fc', backgroundColor: '#eef2ff', color: '#3730a3' }}>
-            <div style={{ fontWeight: 700 }}>Abonnement actif : {subscriptionInfo.plan}</div>
-            <div>Début : {subscriptionInfo.startDate ? new Date(subscriptionInfo.startDate).toLocaleDateString() : '-'}</div>
-            <div>Expiration : {subscriptionInfo.expiryDate ? new Date(subscriptionInfo.expiryDate).toLocaleDateString() : '-'}</div>
-            {isExpired ? (
-              <div style={{ color: '#dc2626', fontWeight: 700 }}>Votre abonnement est expiré. Renouvelez maintenant.</div>
-            ) : (
-              <div style={{ color: isExpiringSoon ? '#b45309' : '#16a34a', fontWeight: 700 }}>
-                {daysLeft} jour{daysLeft === 1 ? '' : 's'} restants {isExpiringSoon ? '(fin bientôt!)' : ''}
+        
+        {subscriptionInfo.plan === 'Pro' ? (
+          <div style={{ 
+            marginTop: '30px', 
+            padding: '40px', 
+            borderRadius: '24px', 
+            background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)', 
+            color: 'white',
+            boxShadow: '0 20px 25px -5px rgba(59, 130, 246, 0.2)',
+            maxWidth: '800px',
+            margin: '0 auto'
+          }}>
+            <div style={{ 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              gap: '8px', 
+              backgroundColor: 'rgba(255,255,255,0.2)', 
+              padding: '8px 16px', 
+              borderRadius: '20px',
+              fontSize: '0.9rem',
+              fontWeight: 700,
+              marginBottom: '20px'
+            }}>
+              <CheckCircle size={18} /> PLAN PROFESSIONNEL ACTIF
+            </div>
+            <h1 style={{ fontSize: '3rem', margin: '0 0 10px', fontWeight: 900 }}>Vous êtes en version PRO</h1>
+            <p style={{ fontSize: '1.2rem', opacity: 0.9, marginBottom: '30px' }}>
+              Toutes les fonctionnalités de KAméo sont débloquées pour votre entreprise.
+            </p>
+            
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+              gap: '20px',
+              textAlign: 'left',
+              backgroundColor: 'rgba(255,255,255,0.1)',
+              padding: '20px',
+              borderRadius: '16px'
+            }}>
+              <div>
+                <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>Date de début</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>{subscriptionInfo.startDate ? new Date(subscriptionInfo.startDate).toLocaleDateString() : '-'}</div>
               </div>
-            )}
+              <div>
+                <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>Prochain renouvellement</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>{subscriptionInfo.expiryDate ? new Date(subscriptionInfo.expiryDate).toLocaleDateString() : '-'}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>Type de facturation</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>{subscriptionInfo.billing || 'Mensuel'}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>Statut</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 600, color: '#4ade80' }}>Actif</div>
+              </div>
+            </div>
           </div>
         ) : (
-          <div style={{ marginTop: '25px', display: 'inline-flex', padding: '16px 20px', borderRadius: '12px', border: '1px dashed #cbd5e1', backgroundColor: '#f8fafc', color: '#64748b' }}>
-            Vous êtes en période d'essai. Passez en plan Pro pour débloquer toutes les fonctionnalités.
-          </div>
+          <>
+            <p style={{ color: '#64748b', fontSize: '1.1rem', maxWidth: '600px', margin: '0 auto' }}>Évoluez à votre rythme. Choisissez la puissance dont votre quincaillerie a besoin pour se développer sans limites.</p>
+
+            {subscriptionInfo.status === 'active' ? (
+              <div style={{ marginTop: '25px', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px 20px', borderRadius: '12px', border: '1px solid #a5b4fc', backgroundColor: '#eef2ff', color: '#3730a3' }}>
+                <div style={{ fontWeight: 700 }}>Abonnement actif : {subscriptionInfo.plan}</div>
+                <div>Début : {subscriptionInfo.startDate ? new Date(subscriptionInfo.startDate).toLocaleDateString() : '-'}</div>
+                <div>Expiration : {subscriptionInfo.expiryDate ? new Date(subscriptionInfo.expiryDate).toLocaleDateString() : '-'}</div>
+                {isExpired ? (
+                  <div style={{ color: '#dc2626', fontWeight: 700 }}>Votre abonnement est expiré. Renouvelez maintenant.</div>
+                ) : (
+                  <div style={{ color: isExpiringSoon ? '#b45309' : '#16a34a', fontWeight: 700 }}>
+                    {daysLeft} jour{daysLeft === 1 ? '' : 's'} restants {isExpiringSoon ? '(fin bientôt!)' : ''}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{ marginTop: '25px', display: 'inline-flex', padding: '16px 20px', borderRadius: '12px', border: '1px dashed #cbd5e1', backgroundColor: '#f8fafc', color: '#64748b' }}>
+                Vous êtes en période d'essai. Passez en plan Pro pour débloquer toutes les fonctionnalités.
+              </div>
+            )}
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px', marginTop: '30px' }}>
+              <span style={{ fontWeight: isAnnual ? 'normal' : 'bold', color: isAnnual ? '#94a3b8' : '#1e293b' }}>Mensuel</span>
+              <div
+                style={{ width: '50px', height: '26px', backgroundColor: '#3b82f6', borderRadius: '20px', position: 'relative', cursor: 'pointer', transition: '0.3s' }}
+                onClick={() => setIsAnnual(!isAnnual)}
+              >
+                <div style={{ width: '20px', height: '20px', backgroundColor: 'white', borderRadius: '50%', position: 'absolute', top: '3px', left: isAnnual ? '27px' : '3px', transition: '0.3s', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}></div>
+              </div>
+              <span style={{ fontWeight: isAnnual ? 'bold' : 'normal', color: isAnnual ? '#1e293b' : '#94a3b8' }}>Annuel <span className="status-badge success" style={{ marginLeft: '5px', fontSize: '0.75rem' }}>-20%</span></span>
+            </div>
+          </>
         )}
 
         {subscribeMessage && (
           <div style={{ marginTop: '12px', color: '#047857', backgroundColor: '#dcfce7', border: '1px solid #86efac', borderRadius: '8px', padding: '10px' }}>{subscribeMessage}</div>
         )}
+      </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px', marginTop: '30px' }}>
-          <span style={{ fontWeight: isAnnual ? 'normal' : 'bold', color: isAnnual ? '#94a3b8' : '#1e293b' }}>Mensuel</span>
-          <div
-            style={{ width: '50px', height: '26px', backgroundColor: '#3b82f6', borderRadius: '20px', position: 'relative', cursor: 'pointer', transition: '0.3s' }}
-            onClick={() => setIsAnnual(!isAnnual)}
-          >
-            <div style={{ width: '20px', height: '20px', backgroundColor: 'white', borderRadius: '50%', position: 'absolute', top: '3px', left: isAnnual ? '27px' : '3px', transition: '0.3s', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}></div>
+      {subscriptionInfo.plan !== 'Pro' && (
+        <div style={{ display: 'flex', gap: '30px', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Basic */}
+          <div className="card" style={{ flex: '1 1 320px', maxWidth: '350px', padding: '40px 30px', border: '1px solid #e2e8f0', borderTop: '5px solid #94a3b8', borderRadius: '16px', backgroundColor: '#f8fafc', transition: 'transform 0.3s', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+            <h3 style={{ fontSize: '1.5rem', color: '#475569', margin: '0 0 10px' }}>Découverte</h3>
+            <p style={{ color: '#64748b', fontSize: '0.95rem', minHeight: '40px' }}>Pour tester KAméo et se familiariser avec l'outil.</p>
+            <p style={{ fontSize: '2.5rem', fontWeight: '800', margin: '20px 0', color: '#1e293b' }}>0 F <span style={{ fontSize: '1rem', color: '#94a3b8', fontWeight: 'normal' }}>/ 14 jrs</span></p>
+            {subscriptionInfo.plan === 'Essai' ? (
+              <button className="secondary-btn w-100" style={{ padding: '12px', fontSize: '1.05rem', marginBottom: '30px', borderRadius: '8px', backgroundColor: '#e2e8f0', color: '#475569', border: 'none' }} disabled>Plan Actuel</button>
+            ) : (
+              <button className="secondary-btn w-100" style={{ padding: '12px', fontSize: '1.05rem', marginBottom: '30px', borderRadius: '8px', backgroundColor: '#e2e8f0', color: '#475569', border: 'none' }} onClick={() => { setShowPayment(true); }}>Passer au Pro</button>
+            )}
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, color: '#475569', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#10b981" /> 1 Utilisateur</li>
+              <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#10b981" /> Jusqu'à 50 produits</li>
+              <li style={{ display: 'flex', gap: '10px', alignItems: 'center', color: '#94a3b8' }}><X size={18} color="#cbd5e1" /> Facturation exportable</li>
+              <li style={{ display: 'flex', gap: '10px', alignItems: 'center', color: '#94a3b8' }}><X size={18} color="#cbd5e1" /> Support prioritaire</li>
+            </ul>
           </div>
-          <span style={{ fontWeight: isAnnual ? 'bold' : 'normal', color: isAnnual ? '#1e293b' : '#94a3b8' }}>Annuel <span className="status-badge success" style={{ marginLeft: '5px', fontSize: '0.75rem' }}>-20%</span></span>
-        </div>
-      </div>
 
-      <div style={{ display: 'flex', gap: '30px', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
-        {/* Basic */}
-        <div className="card" style={{ flex: '1 1 320px', maxWidth: '350px', padding: '40px 30px', border: '1px solid #e2e8f0', borderTop: '5px solid #94a3b8', borderRadius: '16px', backgroundColor: '#f8fafc', transition: 'transform 0.3s', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-          <h3 style={{ fontSize: '1.5rem', color: '#475569', margin: '0 0 10px' }}>Découverte</h3>
-          <p style={{ color: '#64748b', fontSize: '0.95rem', minHeight: '40px' }}>Pour tester KAméo et se familiariser avec l'outil.</p>
-          <p style={{ fontSize: '2.5rem', fontWeight: '800', margin: '20px 0', color: '#1e293b' }}>0 F <span style={{ fontSize: '1rem', color: '#94a3b8', fontWeight: 'normal' }}>/ 14 jrs</span></p>
-          {subscriptionInfo.plan === 'Essai' ? (
-            <button className="secondary-btn w-100" style={{ padding: '12px', fontSize: '1.05rem', marginBottom: '30px', borderRadius: '8px', backgroundColor: '#e2e8f0', color: '#475569', border: 'none' }} disabled>Plan Actuel</button>
-          ) : (
-            <button className="secondary-btn w-100" style={{ padding: '12px', fontSize: '1.05rem', marginBottom: '30px', borderRadius: '8px', backgroundColor: '#e2e8f0', color: '#475569', border: 'none' }} onClick={() => { setShowPayment(true); }}>Passer au Pro</button>
-          )}
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0, color: '#475569', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#10b981" /> 1 Utilisateur</li>
-            <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#10b981" /> Jusqu'à 50 produits</li>
-            <li style={{ display: 'flex', gap: '10px', alignItems: 'center', color: '#94a3b8' }}><X size={18} color="#cbd5e1" /> Facturation exportable</li>
-            <li style={{ display: 'flex', gap: '10px', alignItems: 'center', color: '#94a3b8' }}><X size={18} color="#cbd5e1" /> Support prioritaire</li>
-          </ul>
-        </div>
+          {/* Pro */}
+          <div className="card" style={{ flex: '1 1 320px', maxWidth: '380px', padding: '40px 30px', border: '2px solid #3b82f6', borderRadius: '16px', position: 'relative', boxShadow: '0 20px 40px -10px rgba(59, 130, 246, 0.25)', zIndex: 10, transform: 'scale(1.05)' }}>
+            <div style={{ display: 'inline-block', background: 'linear-gradient(90deg, #2563eb, #8b5cf6)', color: 'white', padding: '6px 16px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: '900', letterSpacing: '1px', marginBottom: '15px' }}>RECOMMANDÉ</div>
+            <h3 style={{ fontSize: '1.5rem', color: '#2563eb', margin: '0 0 10px' }}>Professionnel</h3>
+            <p style={{ color: '#64748b', fontSize: '0.95rem', minHeight: '40px' }}>L'outil complet pour gérer et scaler votre commerce au quotidien.</p>
+            <p style={{ fontSize: '2.5rem', fontWeight: '800', margin: '20px 0', color: '#0f172a' }}>
+              {isAnnual ? '28 000 F' : '35 000 F'} <span style={{ fontSize: '1rem', color: '#94a3b8', fontWeight: 'normal' }}>/ mois</span>
+            </p>
+            {subscriptionInfo.plan === 'Pro' ? (
+              <button className="primary-btn w-100" style={{ padding: '14px', fontSize: '1.1rem', marginBottom: '30px', borderRadius: '8px', backgroundColor: '#6d28d9', border: 'none', boxShadow: '0 4px 10px rgba(107, 40, 217, 0.4)', color: '#fff' }} disabled>Plan Actuel</button>
+            ) : (
+              <button className="primary-btn w-100" style={{ padding: '14px', fontSize: '1.1rem', marginBottom: '30px', borderRadius: '8px', background: 'linear-gradient(90deg, #2563eb, #3b82f6)', border: 'none', boxShadow: '0 4px 14px rgba(37, 99, 235, 0.4)' }} onClick={() => setShowPayment(true)}>Mettre à niveau</button>
+            )}
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, color: '#1e293b', display: 'flex', flexDirection: 'column', gap: '15px', fontWeight: '500' }}>
+              <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#2563eb" /> 5 Utilisateurs simultanés</li>
+              <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#2563eb" /> Produits & Stocks illimités</li>
+              <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#2563eb" /> Code-barres & POS rapide</li>
+              <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#2563eb" /> Facturation PDF & Rapports</li>
+              <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#2563eb" /> Support dédié 7/7</li>
+            </ul>
+          </div>
 
-        {/* Pro */}
-        <div className="card" style={{ flex: '1 1 320px', maxWidth: '380px', padding: '40px 30px', border: '2px solid #3b82f6', borderRadius: '16px', position: 'relative', boxShadow: '0 20px 40px -10px rgba(59, 130, 246, 0.25)', zIndex: 10, transform: 'scale(1.05)' }}>
-          <div style={{ display: 'inline-block', background: 'linear-gradient(90deg, #2563eb, #8b5cf6)', color: 'white', padding: '6px 16px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: '900', letterSpacing: '1px', marginBottom: '15px' }}>â­ RECOMMANDÉ</div>
-          <h3 style={{ fontSize: '1.5rem', color: '#2563eb', margin: '0 0 10px' }}>Professionnel</h3>
-          <p style={{ color: '#64748b', fontSize: '0.95rem', minHeight: '40px' }}>L'outil complet pour gérer et scaler votre commerce au quotidien.</p>
-          <p style={{ fontSize: '2.5rem', fontWeight: '800', margin: '20px 0', color: '#0f172a' }}>
-            {isAnnual ? '28 000 F' : '35 000 F'} <span style={{ fontSize: '1rem', color: '#94a3b8', fontWeight: 'normal' }}>/ mois</span>
-          </p>
-          {subscriptionInfo.plan === 'Pro' ? (
-            <button className="primary-btn w-100" style={{ padding: '14px', fontSize: '1.1rem', marginBottom: '30px', borderRadius: '8px', backgroundColor: '#6d28d9', border: 'none', boxShadow: '0 4px 10px rgba(107, 40, 217, 0.4)', color: '#fff' }} disabled>Plan Actuel</button>
-          ) : (
-            <button className="primary-btn w-100" style={{ padding: '14px', fontSize: '1.1rem', marginBottom: '30px', borderRadius: '8px', background: 'linear-gradient(90deg, #2563eb, #3b82f6)', border: 'none', boxShadow: '0 4px 14px rgba(37, 99, 235, 0.4)' }} onClick={() => setShowPayment(true)}>Mettre à niveau</button>
-          )}
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0, color: '#1e293b', display: 'flex', flexDirection: 'column', gap: '15px', fontWeight: '500' }}>
-            <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#2563eb" /> 5 Utilisateurs simultanés</li>
-            <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#2563eb" /> Produits & Stocks illimités</li>
-            <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#2563eb" /> Code-barres & POS rapide</li>
-            <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#2563eb" /> Facturation PDF & Rapports</li>
-            <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#2563eb" /> Support dédié 7/7</li>
-          </ul>
+          {/* Enterprise */}
+          <div className="card" style={{ flex: '1 1 320px', maxWidth: '350px', padding: '40px 30px', border: '1px solid #1e293b', borderTop: '5px solid #a855f7', borderRadius: '16px', backgroundColor: '#0f172a', transition: 'transform 0.3s', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
+            <h3 style={{ fontSize: '1.5rem', color: '#f8fafc', margin: '0 0 10px' }}>Entreprise</h3>
+            <p style={{ color: '#94a3b8', fontSize: '0.95rem', minHeight: '40px' }}>La puissance absolue pour les réseaux de franchises.</p>
+            <p style={{ fontSize: '2.5rem', fontWeight: '800', margin: '20px 0', color: '#ffffff' }}>Sur devis</p>
+            <button className="primary-btn w-100" style={{ padding: '12px', fontSize: '1.05rem', marginBottom: '30px', borderRadius: '8px', backgroundColor: 'transparent', color: '#d8b4fe', border: '2px solid #a855f7' }} onClick={() => setShowContact(true)}>Contacter un expert</button>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, color: '#f1f5f9', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#a855f7" /> Utilisateurs illimités</li>
+              <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#a855f7" /> Multi-boutiques / Dépôts</li>
+              <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#a855f7" /> VIP & Formation sur site</li>
+              <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#a855f7" /> API ouverte intégrée</li>
+            </ul>
+          </div>
         </div>
-
-        {/* Enterprise */}
-        <div className="card" style={{ flex: '1 1 320px', maxWidth: '350px', padding: '40px 30px', border: '1px solid #1e293b', borderTop: '5px solid #a855f7', borderRadius: '16px', backgroundColor: '#0f172a', transition: 'transform 0.3s', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
-          <h3 style={{ fontSize: '1.5rem', color: '#f8fafc', margin: '0 0 10px' }}>Entreprise</h3>
-          <p style={{ color: '#94a3b8', fontSize: '0.95rem', minHeight: '40px' }}>La puissance absolue pour les réseaux de franchises.</p>
-          <p style={{ fontSize: '2.5rem', fontWeight: '800', margin: '20px 0', color: '#ffffff' }}>Sur devis</p>
-          <button className="primary-btn w-100" style={{ padding: '12px', fontSize: '1.05rem', marginBottom: '30px', borderRadius: '8px', backgroundColor: 'transparent', color: '#d8b4fe', border: '2px solid #a855f7' }} onClick={() => setShowContact(true)}>Contacter un expert</button>
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0, color: '#f1f5f9', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#a855f7" /> Utilisateurs illimités</li>
-            <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#a855f7" /> Multi-boutiques / Dépôts</li>
-            <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#a855f7" /> VIP & Formation sur site</li>
-            <li style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><CheckCircle size={18} color="#a855f7" /> API ouverte intégrée</li>
-          </ul>
-        </div>
-      </div>
-
-      {/* Modale Paiement */}
+      )}  {/* Modale Paiement */}
       {showPayment && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
           <div className="card" style={{ width: '90%', maxWidth: '450px', padding: '30px', position: 'relative' }}>
@@ -3582,10 +3643,10 @@ const Subscription = () => {
             <p style={{ color: '#64748b', marginBottom: '20px' }}>Laissez-nous vos coordonnées, un expert KAméo vous rappellera sous 24h pour discuter d'un déploiement multi-boutiques.</p>
 
             <input type="text" placeholder="Nom de votre franchise" className="large-input" style={{ width: '100%', marginBottom: '15px' }} value={contactForm.company} onChange={e => setContactForm({ ...contactForm, company: e.target.value })} />
-            <input type="text" placeholder="Numero de telephone" className="large-input" style={{ width: '100%', marginBottom: '15px' }} value={contactForm.phone} onChange={e => setContactForm({ ...contactForm, phone: e.target.value })} />
+            <input type="text" placeholder="Numéro de téléphone" className="large-input" style={{ width: '100%', marginBottom: '15px' }} value={contactForm.phone} onChange={e => setContactForm({ ...contactForm, phone: e.target.value })} />
             <textarea placeholder="Quel est votre volume de stock ou nombre de boutiques ?" className="large-input" style={{ width: '100%', marginBottom: '20px', minHeight: '80px' }} value={contactForm.details} onChange={e => setContactForm({ ...contactForm, details: e.target.value })}></textarea>
 
-            <button className="primary-btn w-100" style={{ padding: '14px', fontSize: '1.05rem', backgroundColor: '#8b5cf6', borderColor: '#8b5cf6', boxShadow: '0 4px 10px rgba(139, 92, 246, 0.3)' }} onClick={() => { if (!contactForm.company || !contactForm.phone) return; setSubscribeMessage(`Demande entreprise envoyee pour ${contactForm.company}.`); setContactForm({ company: '', phone: '', details: '' }); setShowContact(false); }}>
+            <button className="primary-btn w-100" style={{ padding: '14px', fontSize: '1.05rem', backgroundColor: '#8b5cf6', borderColor: '#8b5cf6', boxShadow: '0 4px 10px rgba(139, 92, 246, 0.3)' }} onClick={() => { if (!contactForm.company || !contactForm.phone) return; setSubscribeMessage(`Demande entreprise envoyée pour ${contactForm.company}.`); setContactForm({ company: '', phone: '', details: '' }); setShowContact(false); }}>
               Demander mon devis
             </button>
           </div>
