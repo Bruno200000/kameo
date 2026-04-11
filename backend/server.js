@@ -999,7 +999,7 @@ app.get('/api/admin/stats', async (req, res) => {
     const products = await fetchSafe('products?select=*');
     
     console.log(`[Stats API] Found: ${companies.length} companies, ${users.length} users, ${products.length} products.`);
-    const PRICING = { pro: 15000, enterprise: 50000, trial: 0, free: 0 };
+    const PRICING = { pro: 35000, enterprise: 50000, trial: 0, free: 0 };
     
     // Calcul sécurisé du MRR (somme des abonnements actifs payants)
     let mrr = 0;

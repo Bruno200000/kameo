@@ -720,7 +720,7 @@ router.get('/admin/stats', async (req, res) => {
     const companies = await fetchSafe('companies?select=*&order=created_at.asc');
     const users = await fetchSafe('users?select=*');
 
-    const PRICING = { pro: 15000, enterprise: 50000, trial: 0, free: 0 };
+    const PRICING = { pro: 35000, enterprise: 50000, trial: 0, free: 0 };
 
     let mrr = 0;
     companies.forEach(c => {
