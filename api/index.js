@@ -36,14 +36,16 @@ const supabaseFetch = async (resourcePath, options = {}, req = null) => {
   if (req?.headers?.['x-user-data']) {
     try {
       const u = JSON.parse(req.headers['x-user-data']);
-      // Pour les superadmins, on n'impose pas de filtre sauf s'ils en ont spécifié un (via companyId)
+      // Si c'est un superadmin et qu'il a spécifié un companyId (dans les headers), on utilise celui-là.
+      // Sinon, s'il n'est pas superadmin, on impose son propre company_id.
       if (u.role !== 'superadmin' && !filterCompanyId) {
         filterCompanyId = u.company_id || 'UNAUTHORIZED';
       }
     } catch (e) { }
   }
 
-  const isExcluded = resourcePath.includes('sale_items') || resourcePath.includes('purchase_items') || resourcePath.includes('companies') || resourcePath.includes('platform_settings');
+  // On n'exclut plus sale_items et purchase_items du filtrage si un filterCompanyId est présent
+  const isExcluded = resourcePath.includes('companies') || resourcePath.includes('platform_settings');
   const isUserPath = resourcePath.includes('users');
 
   // Appliquer le filtre de company_id si présent et non exclu
