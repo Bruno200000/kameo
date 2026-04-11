@@ -391,50 +391,11 @@ export default function App() {
           </div>
           <div className="topbar-right">
             <CompanySwitcher currentUser={currentUser} />
-            <div style={{ position: 'relative' }}>
-              {showNotifications && showHeaderActions && (
-                <div style={{
-                  position: 'absolute', top: '110%', right: 0, width: '320px',
-                  background: 'white', borderRadius: '12px', boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
-                  border: '1px solid #e2e8f0', zIndex: 1000, overflow: 'hidden'
-                }}>
-                  <div style={{ padding: '14px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <strong style={{ fontSize: '0.9rem', color: '#1e293b' }}>Notifications</strong>
-                    <button onClick={() => setShowNotifications(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 0 }}><X size={16} /></button>
-                  </div>
-                  <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                    {allNotifications.length === 0 ? (
-                      <div style={{ padding: '30px 16px', textAlign: 'center', color: '#94a3b8' }}>
-                        <Bell size={32} style={{ marginBottom: '10px', opacity: 0.3 }} />
-                        <p style={{ margin: 0, fontSize: '0.9rem' }}>Aucune alerte active</p>
-                      </div>
-                    ) : (
-                      allNotifications.slice(0, 8).map((n) => (
-                        <div key={n.id} style={{ padding: '12px 16px', background: n.color, borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.2s' }}
-                          onClick={() => { setCurrentPage(n.page); setShowNotifications(false); }}
-                          onMouseOver={e => e.currentTarget.style.filter = 'brightness(0.98)'}
-                          onMouseOut={e => e.currentTarget.style.filter = 'none'}>
-                          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                            <div style={{ marginTop: '2px' }}>{n.icon}</div>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#1e293b' }}>{n.title}</div>
-                              <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{n.desc}</div>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                  <div style={{ padding: '10px 16px', textAlign: 'center' }}>
-                    <button onClick={() => { setCurrentPage('stock'); setShowNotifications(false); }}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6', fontSize: '0.85rem', fontWeight: 600 }}>
-                      Voir les alertes stock →
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-            {showHeaderActions && <button className="primary-btn" onClick={() => setCurrentPage('pos')}><Plus size={16} /> Nouvelle Vente</button>}
+            {showHeaderActions && (
+              <button className="primary-btn" onClick={() => setCurrentPage('pos')}>
+                <Plus size={16} /> Nouvelle Vente
+              </button>
+            )}
           </div>
         </header>
 
