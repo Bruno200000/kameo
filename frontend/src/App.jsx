@@ -2214,7 +2214,7 @@ const Sales = () => {
       <div className="page-top-actions">
         <div className="search-filters">
           <Search size={16} style={{ position: 'absolute', left: 15, top: 12, color: '#94a3b8' }} />
-          <input type="text" placeholder="NÂ° de facture ou date..." className="large-input" style={{ paddingLeft: 40 }} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+          <input type="text" placeholder="Rechercher par N° facture ou client..." className="large-input" style={{ paddingLeft: 40 }} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
           <select className="filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}><option value="all">Tous les statuts</option><option value="paid">Payé</option><option value="pending">En attente</option></select>
         </div>
         <button className="primary-btn" onClick={() => setShowAdd(!showAdd)}><FileText size={16} /> Créer une Facture Manuelle</button>
