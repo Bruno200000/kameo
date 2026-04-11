@@ -131,7 +131,7 @@ export default function App() {
     type: 'STOCK',
     icon: <AlertTriangle size={16} color="#f59e0b" />,
     title: 'Stock critique',
-    desc: `${p.name} â€” ${p.quantity} rest.`,
+    desc: `${p.name} - ${p.quantity} restants`,
     color: '#fffbeb',
     page: 'products'
   }));
@@ -141,7 +141,7 @@ export default function App() {
     type: 'PAYMENT',
     icon: <DollarSign size={16} color="#3b82f6" />,
     title: 'Paiement en attente',
-    desc: `Vente #${s.id.slice(0, 5)} â€” Reste: ${s.total_amount - (s.paid_amount || 0)} F`,
+    desc: `Vente #${s.id.slice(0, 5)} - Reste: ${s.total_amount - (s.paid_amount || 0)} F`,
     color: '#eff6ff',
     page: 'sales'
   }));
@@ -190,7 +190,7 @@ export default function App() {
     const onApi404 = (event) => {
       const endpoint = event?.detail?.endpoint || 'ressource';
       setCurrentPage('contacts');
-      setSupportNotice(`La ressource ${endpoint} est introuvable (404). Vous avez ete redirige vers le support.`);
+      setSupportNotice(`La ressource ${endpoint} est introuvable (404). Vous avez été redirigé vers le support.`);
     };
     window.addEventListener('kameo_api_404', onApi404);
     return () => window.removeEventListener('kameo_api_404', onApi404);
@@ -247,12 +247,25 @@ export default function App() {
       case 'subscription': return <Subscription />;
       case 'users': return <UsersManager />;
       case 'admin': return <AdminPanel />;
-      default: return <div>Page inconnue</div>;
+      default: return <div style={{ padding: '20px' }}>Page inconnue</div>;
     }
   };
 
   const getPageTitle = () => {
-    const titles = { dashboard: "Tableau de bord", pos: "Caisse (POS)", products: "Catalogue Produits", stock: "Mouvements de stock", sales: "Ventes & Factures", purchases: "Achats Fournisseurs", finance: "Finance & Trésorerie", contacts: "Annuaire Contacts", settings: "Paramètres", subscription: "Mon Abonnement", users: "Gestion Utilisateurs", admin: "Administration Plateforme" };
+    const titles = { 
+      dashboard: "Tableau de bord", 
+      pos: "Caisse (POS)", 
+      products: "Catalogue Produits", 
+      stock: "Mouvements de stock", 
+      sales: "Ventes & Factures", 
+      purchases: "Achats Fournisseurs", 
+      finance: "Finance & Trésorerie", 
+      contacts: "Annuaire Contacts", 
+      settings: "Paramètres", 
+      subscription: "Mon Abonnement", 
+      users: "Gestion Utilisateurs", 
+      admin: "Administration Plateforme" 
+    };
     return titles[currentPage] || "KAméo";
   };
 
@@ -2052,7 +2065,7 @@ const Sales = () => {
                 <div style="margin-top: 10px; font-weight: bold;">BOUAKE LE : ${new Date(sale.sale_date).toLocaleDateString()}</div>
               </div>
             </div>
-            <div class="title">FACTURE PROFORMA NÂ°${invoiceNumber}</div>
+            <div class="title">FACTURE PROFORMA N°${invoiceNumber}</div>
             <div class="client-area">DOIT : ${sale.customer_name || 'SOLDE'}</div>
             <table class="items-table">
               <thead>
@@ -2105,7 +2118,7 @@ const Sales = () => {
             <div style="display: flex; gap: 40px;">
               <div style="flex: 1;">
                 <table class="items-table">
-                  <tr><td bgcolor="#eee">FACTURE NÂ°</td><td>${invoiceNumber}</td></tr>
+                  <tr><td bgcolor="#eee">FACTURE N°</td><td>${invoiceNumber}</td></tr>
                   <tr><td bgcolor="#eee">DATE</td><td>${new Date(sale.sale_date).toLocaleDateString()}</td></tr>
                 </table>
               </div>
@@ -2165,7 +2178,7 @@ const Sales = () => {
                 </div>
                 <div style="text-align: right">
                   <div style="font-size: 20px; font-weight: bold;">FACTURE</div>
-                  <div>NÂ° ${invoiceNumber}</div>
+                  <div>N° ${invoiceNumber}</div>
                   <div>Date: ${new Date(sale.sale_date).toLocaleDateString()}</div>
                 </div>
               </div>
@@ -2377,16 +2390,16 @@ const Sales = () => {
               <button onClick={() => setSelectedSale(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px', backgroundColor: '#f8fafc', padding: '15px', borderRadius: '10px' }}>
-              <div><strong>Reference:</strong> FAC-{String(selectedSale.id).substring(0, 8).toUpperCase()}</div>
-              <div><strong>Date:</strong> {new Date(selectedSale.sale_date).toLocaleString()}</div>
-              <div><strong>Client:</strong> {selectedSale.customers?.name || 'Client de passage'}</div>
-              <div><strong>Vendeur:</strong> {selectedSale.created_by_name || 'Système'}</div>
-              <div><strong>Montant Total:</strong> {selectedSale.total_amount} F</div>
-              <div><strong>Montant Payé:</strong> {(selectedSale.paid_amount || 0)} F</div>
-              <div><strong>Reste à Payer:</strong> {(selectedSale.remaining_amount || 0)} F</div>
-              <div><strong>Statut:</strong>
+              <div><strong>Référence :</strong> FAC-{String(selectedSale.id).substring(0, 8).toUpperCase()}</div>
+              <div><strong>Date :</strong> {new Date(selectedSale.sale_date).toLocaleString()}</div>
+              <div><strong>Client :</strong> {selectedSale.customers?.name || 'Client de passage'}</div>
+              <div><strong>Vendeur :</strong> {selectedSale.created_by_name || 'Système'}</div>
+              <div><strong>Montant Total :</strong> {selectedSale.total_amount} F</div>
+              <div><strong>Montant Payé :</strong> {(selectedSale.paid_amount || 0)} F</div>
+              <div><strong>Reste à Payer :</strong> {(selectedSale.remaining_amount || 0)} F</div>
+              <div><strong>Statut :</strong>
                 <span className={selectedSale.status === 'paid' ? "status-badge success" : selectedSale.status === 'partial' ? "status-badge warning" : "status-badge error"} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  {selectedSale.status === 'paid' ? 'âœ… Payé' : selectedSale.status === 'partial' ? 'â³ Partiel' : 'âŒ En attente'}
+                  {selectedSale.status === 'paid' ? 'Payé' : selectedSale.status === 'partial' ? 'Partiel' : 'En attente'}
                 </span>
               </div>
             </div>
@@ -2428,7 +2441,7 @@ const Sales = () => {
             </div>
             <div style={{ padding: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ fontWeight: 600, color: '#1f2937' }}>NÂ° Facture</span>
+                <span style={{ fontWeight: 700, color: '#0f172a' }}>N° Facture</span>
                 <span style={{ fontWeight: 700, color: '#0f172a' }}>FAC-{String(paymentDialog.sale.id).substring(0, 8).toUpperCase()}</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
