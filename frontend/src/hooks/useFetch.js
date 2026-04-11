@@ -64,7 +64,7 @@ export const useFetch = (endpoint, initialData, skip = false) => {
       })
       .catch((err) => {
         if (err.name !== 'AbortError') {
-          console.error('Fetch error:', err);
+          console.error(`[KAméo API Error] Fetch failed on ${endpoint}:`, err);
           setData(initialData);
         }
       })

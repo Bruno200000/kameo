@@ -36,6 +36,7 @@ const supabaseFetch = async (resourcePath, options = {}, req = null) => {
   if (req?.headers?.['x-user-data']) {
     try {
       const u = JSON.parse(req.headers['x-user-data']);
+      // Pour les superadmins, on n'impose pas de filtre sauf s'ils en ont spécifié un (via companyId)
       if (u.role !== 'superadmin' && !filterCompanyId) {
         filterCompanyId = u.company_id || 'UNAUTHORIZED';
       }
@@ -45,6 +46,7 @@ const supabaseFetch = async (resourcePath, options = {}, req = null) => {
   const isExcluded = resourcePath.includes('sale_items') || resourcePath.includes('purchase_items') || resourcePath.includes('companies') || resourcePath.includes('platform_settings');
   const isUserPath = resourcePath.includes('users');
 
+  // Appliquer le filtre de company_id si présent et non exclu
   if (filterCompanyId && !isExcluded && !isUserPath) {
     const separator = resourcePath.includes('?') ? '&' : '?';
     url += `${separator}company_id=eq.${filterCompanyId}`;
@@ -59,9 +61,7 @@ const supabaseFetch = async (resourcePath, options = {}, req = null) => {
       } else if (typeof parsedBody === 'object' && parsedBody !== null) {
         finalBody = JSON.stringify({ ...parsedBody, company_id: companyId });
       }
-    } catch (e) {
-      // Ignorer si pas JSON
-    }
+    } catch (e) { }
   }
 
   try {
@@ -70,7 +70,6 @@ const supabaseFetch = async (resourcePath, options = {}, req = null) => {
       headers: {
         ...supabaseHeaders,
         ...(options.headers || {}),
-        // Pour les POST/PATCH, on s'assure d'inclure le company_id si on l'a
         ...((options.method === 'POST' || options.method === 'PATCH') && companyId ? { 'Prefer': 'return=representation' } : {})
       },
       body: finalBody
@@ -201,38 +200,62 @@ router.get('/dashboard/stats', async (req, res) => {
     let sales_today = 0;
     let sales_month = 0;
     const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
+    
+    // Comparaison de dates plus robuste
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const salesByDay = {};
 
-    if (salesData) salesData.forEach(s => {
-      const amount = Number(s.total_amount || 0);
-      const d = new Date(s.sale_date);
-      const day = d.toISOString().split('T')[0];
+    if (salesData) {
+      salesData.forEach(s => {
+        const amount = Number(s.total_amount || 0);
+        const d = new Date(s.sale_date);
+        const saleDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        const dayStr = saleDay.toISOString().split('T')[0];
 
-      if (day === todayStr) sales_today += amount;
-      if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) sales_month += amount;
+        if (saleDay.getTime() === today.getTime()) sales_today += amount;
+        if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) {
+          sales_month += amount;
+        }
 
-      salesByDay[day] = (salesByDay[day] || 0) + amount;
-    });
+        salesByDay[dayStr] = (salesByDay[dayStr] || 0) + amount;
+      });
+    }
 
     const historical_sales = [];
     for (let i = 6; i >= 0; i--) {
-      const d = new Date(); d.setDate(d.getDate() - i);
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      d.setDate(d.getDate() - i);
       const dateStr = d.toISOString().split('T')[0];
-      historical_sales.push({ label: d.toLocaleDateString('fr-FR', { weekday: 'short' }), amount: salesByDay[dateStr] || 0 });
+      historical_sales.push({ 
+        label: d.toLocaleDateString('fr-FR', { weekday: 'short' }), 
+        amount: salesByDay[dateStr] || 0 
+      });
     }
 
     let stock_value = 0;
     let low_stock_items = 0;
-    if (productsData) productsData.forEach(p => {
-      stock_value += (p.quantity * Number(p.selling_price || 0));
-      if (p.quantity <= p.alert_threshold) low_stock_items++;
-    });
+    if (productsData) {
+      productsData.forEach(p => {
+        const qty = Number(p.quantity || 0);
+        const price = Number(p.selling_price || 0);
+        stock_value += (qty * price);
+        if (qty <= (p.alert_threshold || 5)) low_stock_items++;
+      });
+    }
 
-    res.json({ sales_today, sales_month, stock_value, low_stock_items, active_customers: (customersData ? customersData.length : 0), historical_sales });
-  } catch (err) { res.status(500).json({ error: "Erreur" }); }
+    res.json({ 
+      success: true,
+      sales_today, 
+      sales_month, 
+      stock_value, 
+      low_stock_items, 
+      active_customers: (customersData ? customersData.length : 0), 
+      historical_sales 
+    });
+  } catch (err) { 
+    console.error("Dashboard Stats Error:", err.message);
+    res.status(500).json({ error: "Erreur lors du calcul des statistiques" }); 
+  }
 });
 
 // Finance
@@ -650,28 +673,6 @@ router.delete('/admin/companies/:id', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.get('/admin/stats', async (req, res) => {
-  try {
-    const companies = await supabaseFetch('companies?select=*', {}, req) || [];
-    const users = await supabaseFetch('users?select=id', {}, req) || [];
-    
-    const total_companies = companies.length;
-    const active_subscriptions = companies.filter(c => c.subscription_status === 'active').length;
-    
-    // Entreprises avec statut non actif (et non en essai par défaut)
-    const unpaid_companies = companies.filter(c => c.subscription_status !== 'active');
-    
-    res.json({
-      total_companies,
-      active_subscriptions,
-      unpaid_count: unpaid_companies.length,
-      unpaid_companies,
-      total_users: users.length
-    });
-  } catch (err) {
-    res.status(500).json({ error: "Erreur lecture stats plateforme" });
-  }
-});
 
 router.get('/admin/users', async (req, res) => {
   try {
@@ -711,14 +712,13 @@ router.get('/admin/stats', async (req, res) => {
         return await supabaseFetch(resource, {}, req) || [];
       } catch (e) {
         errors.push(`${resource}: ${e.message}`);
-        console.error(`[Vercel Debug] Failed ${resource}:`, e.message);
+        console.error(`[Admin Stats Debug] Failed ${resource}:`, e.message);
         return [];
       }
     };
 
     const companies = await fetchSafe('companies?select=*&order=created_at.asc');
     const users = await fetchSafe('users?select=*');
-    const products = await fetchSafe('products?select=*');
 
     const PRICING = { pro: 15000, enterprise: 50000, trial: 0, free: 0 };
 
@@ -734,7 +734,12 @@ router.get('/admin/stats', async (req, res) => {
       const d = new Date();
       d.setMonth(d.getMonth() - i);
       const yearMonth = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-      months.push({ label: d.toLocaleString('fr-FR', { month: 'short' }), yearKey: yearMonth, companies: 0, mrr: 0 });
+      months.push({ 
+        label: d.toLocaleString('fr-FR', { month: 'short' }), 
+        yearKey: yearMonth, 
+        companies: 0, 
+        mrr: 0 
+      });
     }
 
     companies.forEach(c => {
@@ -745,7 +750,9 @@ router.get('/admin/stats', async (req, res) => {
       const monthData = months.find(m => m.yearKey === yearMonth);
       if (monthData) {
         monthData.companies++;
-        if (c.subscription_status === 'active' && c.plan_id !== 'trial') monthData.mrr += (PRICING[c.plan_id] || 0);
+        if (c.subscription_status === 'active' && c.plan_id !== 'trial') {
+          monthData.mrr += (PRICING[c.plan_id] || 0);
+        }
       }
     });
 
@@ -764,7 +771,7 @@ router.get('/admin/stats', async (req, res) => {
       debug: errors.length > 0 ? errors : undefined
     });
   } catch (err) { 
-    console.error("Vercel Stats Critical Error:", err.message);
+    console.error("Admin Stats Critical Error:", err.message);
     res.status(200).json({ 
       success: false,
       error: "Erreur stats: " + err.message,

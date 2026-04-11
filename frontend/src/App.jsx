@@ -731,9 +731,9 @@ const Dashboard = ({ onNavigate }) => {
   const activeCompany = localStorage.getItem('kameo_active_company_id');
   const isGlobalSuperAdmin = storedUser?.role === 'superadmin' && !activeCompany;
 
-  const [stats, statsLoading] = useFetch('/dashboard/stats', { sales_today: 0, sales_month: 0, stock_value: 0, low_stock_items: 0, active_customers: 0, historical_sales: [] }, !isGlobalSuperAdmin);
-  const [sales] = useFetch('/sales', [], !isGlobalSuperAdmin);
-  const [products] = useFetch('/products', [], !isGlobalSuperAdmin);
+  const [stats, statsLoading] = useFetch('/dashboard/stats', { sales_today: 0, sales_month: 0, stock_value: 0, low_stock_items: 0, active_customers: 0, historical_sales: [] }, isGlobalSuperAdmin);
+  const [sales] = useFetch('/sales', [], isGlobalSuperAdmin);
+  const [products] = useFetch('/products', [], isGlobalSuperAdmin);
 
   if (isGlobalSuperAdmin) {
     return <SuperAdminDashboard />;

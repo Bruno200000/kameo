@@ -204,49 +204,56 @@ app.get('/api/dashboard/stats', async (req, res) => {
     const customersData = await supabaseFetch('customers?select=id');
 
     let sales_total = 0;
-    const salesByDay = {}; // For historical chart
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const salesByDay = {}; 
     
     if (salesData && Array.isArray(salesData)) {
       salesData.forEach(s => {
         const amount = Number(s.total_amount || 0);
-        sales_total += amount;
+        const d = new Date(s.sale_date);
+        const saleDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        const dayStr = saleDay.toISOString().split('T')[0];
         
-        // Group by day for the chart
-        const day = new Date(s.sale_date).toISOString().split('T')[0];
-        salesByDay[day] = (salesByDay[day] || 0) + amount;
+        if (saleDay.getTime() === today.getTime()) sales_total += amount;
+        salesByDay[dayStr] = (salesByDay[dayStr] || 0) + amount;
       });
     }
 
     // Format last 7 days for the chart
     const historical_sales = [];
     for (let i = 6; i >= 0; i--) {
-      const d = new Date();
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       d.setDate(d.getDate() - i);
       const dateStr = d.toISOString().split('T')[0];
-      const label = d.toLocaleDateString('fr-FR', { weekday: 'short' });
-      historical_sales.push({ label, amount: salesByDay[dateStr] || 0 });
+      historical_sales.push({ 
+        label: d.toLocaleDateString('fr-FR', { weekday: 'short' }), 
+        amount: salesByDay[dateStr] || 0 
+      });
     }
 
     let stock_value = 0;
     let low_stock_items = 0;
     if (productsData && Array.isArray(productsData)) {
       productsData.forEach(p => {
-        stock_value += (p.quantity * Number(p.selling_price || 0));
-        if (p.quantity <= p.alert_threshold) low_stock_items++;
+        const qty = Number(p.quantity || 0);
+        const price = Number(p.selling_price || 0);
+        stock_value += (qty * price);
+        if (qty <= (p.alert_threshold || 5)) low_stock_items++;
       });
     }
 
     res.json({
+      success: true,
       sales_today: sales_total || 0,
-      sales_change: "+12.5%",
       stock_value: stock_value || 0,
       low_stock_items: low_stock_items || 0,
       active_customers: (customersData && customersData.length) || 0,
       historical_sales
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Erreur serveur" });
+    console.error("Dashboard Stats Error:", err.message);
+    res.status(500).json({ error: "Erreur serveur lors du calcul des statistiques" });
   }
 });
 
