@@ -391,6 +391,101 @@ export default function App() {
           </div>
           <div className="topbar-right">
             <CompanySwitcher currentUser={currentUser} />
+            
+            <div style={{ position: 'relative' }}>
+              <button className="icon-btn notification-btn" onClick={() => setShowNotifications(v => !v)} style={{ position: 'relative' }}>
+                <Bell size={20} />
+                {allNotifications.length > 0 && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '-5px',
+                    right: '-5px',
+                    backgroundColor: '#ef4444',
+                    color: 'white',
+                    fontSize: '10px',
+                    fontWeight: 'bold',
+                    padding: '2px 6px',
+                    borderRadius: '10px',
+                    border: '2px solid white'
+                  }}>
+                    {allNotifications.length}
+                  </span>
+                )}
+              </button>
+
+              {showNotifications && (
+                <div style={{
+                  position: 'absolute',
+                  top: '120%',
+                  right: 0,
+                  width: '300px',
+                  backgroundColor: 'white',
+                  borderRadius: '12px',
+                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                  border: '1px solid #e2e8f0',
+                  zIndex: 1000,
+                  overflow: 'hidden'
+                }}>
+                  <div style={{ padding: '12px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#1e293b' }}>Notifications</span>
+                    <button onClick={() => setShowNotifications(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}><X size={16} /></button>
+                  </div>
+                  <div style={{ maxHeight: '350px', overflowY: 'auto' }}>
+                    {allNotifications.length === 0 ? (
+                      <div style={{ padding: '30px 20px', textAlign: 'center', color: '#94a3b8' }}>
+                        <Bell size={32} style={{ marginBottom: '10px', opacity: 0.2, margin: '0 auto' }} />
+                        <p style={{ fontSize: '0.85rem', margin: 0 }}>Aucune notification</p>
+                      </div>
+                    ) : (
+                      allNotifications.map((n) => (
+                        <div 
+                          key={n.id} 
+                          onClick={() => { setCurrentPage(n.page); setShowNotifications(false); }}
+                          style={{ 
+                            padding: '12px 16px', 
+                            borderBottom: '1px solid #f1f5f9', 
+                            cursor: 'pointer',
+                            transition: 'background-color 0.2s',
+                            display: 'flex',
+                            gap: '12px'
+                          }}
+                          onMouseOver={e => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                          onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                          <div style={{ 
+                            width: '32px', 
+                            height: '32px', 
+                            borderRadius: '8px', 
+                            backgroundColor: n.type === 'stock' ? '#fff1f2' : '#fefce8',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}>
+                            {n.icon}
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#1e293b', marginBottom: '2px' }}>{n.title}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: '1.4' }}>{n.desc}</div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  {allNotifications.length > 0 && (
+                    <div style={{ padding: '10px', textAlign: 'center', borderTop: '1px solid #f1f5f9', backgroundColor: '#f8fafc' }}>
+                      <button 
+                        onClick={() => { setCurrentPage('dashboard'); setShowNotifications(false); }}
+                        style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Voir le tableau de bord
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             {showHeaderActions && (
               <button className="primary-btn" onClick={() => setCurrentPage('pos')}>
                 <Plus size={16} /> Nouvelle Vente
