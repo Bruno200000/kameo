@@ -391,26 +391,7 @@ export default function App() {
           </div>
           <div className="topbar-right">
             <CompanySwitcher currentUser={currentUser} />
-            {showHeaderActions && (
-              <div className="search-bar">
-                <Search size={16} style={{ position: 'absolute', left: 15, top: 12, color: '#94a3b8' }} />
-                <input
-                  type="text"
-                  placeholder="Recherche globale... (Entrée pour naviguer)"
-                  style={{ paddingLeft: 40 }}
-                  value={globalSearch}
-                  onChange={e => setGlobalSearch(e.target.value)}
-                  onKeyDown={handleGlobalSearchSubmit}
-                />
-              </div>
-            )}
             <div style={{ position: 'relative' }}>
-              {showHeaderActions && (
-                <button className="icon-btn notification-btn" onClick={() => setShowNotifications(v => !v)}>
-                  <Bell size={20} />
-                  {allNotifications.length > 0 && <span className="badge">{allNotifications.length}</span>}
-                </button>
-              )}
               {showNotifications && showHeaderActions && (
                 <div style={{
                   position: 'absolute', top: '110%', right: 0, width: '320px',
