@@ -283,10 +283,12 @@ router.get('/products', async (req, res) => {
 
 router.post('/products', async (req, res) => {
   try {
+    const user = JSON.parse(req.headers['x-user-data'] || '{}');
+    const companyId = req.headers['x-company-id'] || user.company_id;
     const prodRes = await supabaseFetch('products', {
       method: 'POST',
       headers: { 'Prefer': 'return=representation' },
-      body: JSON.stringify({ ...req.body, alert_threshold: 5 })
+      body: JSON.stringify({ ...req.body, company_id: companyId, alert_threshold: 5 })
     }, req);
     if (prodRes && prodRes.length > 0) res.json({ success: true, product: prodRes[0] });
     else res.status(500).json({ error: "Echec insertion" });
@@ -528,10 +530,12 @@ router.get('/stock', async (req, res) => {
 
 router.post('/stock', async (req, res) => {
   try {
+    const user = JSON.parse(req.headers['x-user-data'] || '{}');
+    const companyId = req.headers['x-company-id'] || user.company_id;
     const moveRes = await supabaseFetch('stock_movements', {
       method: 'POST',
       headers: { 'Prefer': 'return=representation' },
-      body: JSON.stringify(req.body)
+      body: JSON.stringify({ ...req.body, company_id: companyId })
     }, req);
 
     // Mise à jour de la quantité produit associée
@@ -598,11 +602,13 @@ router.get('/contacts', async (req, res) => {
 
 router.post('/contacts', async (req, res) => {
   try {
+    const user = JSON.parse(req.headers['x-user-data'] || '{}');
+    const companyId = req.headers['x-company-id'] || user.company_id;
     const table = req.body.type === 'fournisseur' ? 'suppliers' : 'customers';
     const cRes = await supabaseFetch(table, {
       method: 'POST',
       headers: { 'Prefer': 'return=representation' },
-      body: JSON.stringify(req.body)
+      body: JSON.stringify({ ...req.body, company_id: companyId })
     }, req);
     res.json({ success: true, contact: cRes[0] });
   } catch (err) { res.status(500).json({ error: err.message }); }
