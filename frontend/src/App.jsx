@@ -1821,6 +1821,8 @@ const Stock = () => {
 
 const Sales = () => {
   const [sales, , setSales] = useFetch('/sales', []);
+  const [products] = useFetch('/products', []);
+  const [customers] = useFetch('/contacts?type=customer', []);
   const [companySettings] = useFetch('/settings', { name: 'Mon entreprise', phone: '', address: '', currency: 'XOF' });
   const [showAdd, setShowAdd] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -1900,7 +1902,14 @@ const Sales = () => {
     }
   };
 
-  const [formData, setFormData] = useState({ totalAmount: '', customerName: '', status: 'paid' });
+  const [formData, setFormData] = useState({ 
+    totalAmount: '', 
+    customerName: '', 
+    customerId: '',
+    status: 'paid',
+    saleDate: new Date().toISOString().split('T')[0],
+    items: [] // { productId, quantity, unitPrice }
+  });
 
   const filteredSales = sales.filter((s) => {
     const ref = String(s.id || '').toLowerCase();
@@ -1914,38 +1923,50 @@ const Sales = () => {
     if (!formData.totalAmount) return addToast('Attention', "Le montant total est requis.", 'warning');
     setIsSaving(true);
 
-    const total = Number(formData.totalAmount) || 0;
+    const total = formData.items.length > 0 
+      ? formData.items.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.unitPrice)), 0)
+      : (Number(formData.totalAmount) || 0);
+
     let initialPaid = 0;
     let initialRemaining = total;
 
     if (formData.status === 'paid') {
       initialPaid = total;
       initialRemaining = 0;
-    } else if (formData.status === 'pending') {
-      initialPaid = 0;
-      initialRemaining = total;
-    } else if (formData.status === 'partial') {
-      // aucun montant payé pour l'instant, on garde un statut partiel
-      initialPaid = 0;
-      initialRemaining = total;
     }
 
-    setIsSaving(true);
     try {
       const res = await fetch(`${API_URL}/sales`, {
         method: 'POST',
         headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
-          cart: [],
-          totalAmount: total,
-          paidAmount: initialPaid,
-          remainingAmount: initialRemaining,
-          status: formData.status
+          sale_date: new Date(formData.saleDate).toISOString(),
+          customer_id: formData.customerId || null,
+          customer_name: formData.customerName,
+          total_amount: total,
+          paid_amount: initialPaid,
+          remaining_amount: initialRemaining,
+          status: formData.status,
+          sale_items: formData.items.map(item => ({
+            product_id: item.productId,
+            quantity: Number(item.quantity),
+            unit_price: Number(item.unitPrice)
+          }))
         })
       });
       const resData = await res.json();
       if (resData.success) {
         addToast('Succès', 'Vente enregistrée !', 'success');
+        // Réinitialiser le formulaire
+        setFormData({ 
+          totalAmount: '', 
+          customerName: '', 
+          customerId: '',
+          status: 'paid',
+          saleDate: new Date().toISOString().split('T')[0],
+          items: []
+        });
+        setShowAdd(false);
         // Obtenir la nouvelle vente ajoutée (pour affichage dynamique instantané)
         const newSale = {
           id: resData.sale_id,
@@ -2282,20 +2303,113 @@ const Sales = () => {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '25px' }}>
             <div>
-              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#065f46', fontWeight: 600 }}>Client (Optionnel)</label>
-              <input type="text" value={formData.customerName} onChange={e => setFormData({ ...formData, customerName: e.target.value })} placeholder="Facultatif (ex: Client X)" className="large-input" style={{ width: '100%', borderColor: '#6ee7b7' }} />
+              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#065f46', fontWeight: 600 }}>Date de la vente</label>
+              <input type="date" value={formData.saleDate} onChange={e => setFormData({ ...formData, saleDate: e.target.value })} className="large-input" style={{ width: '100%', borderColor: '#6ee7b7' }} />
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#065f46', fontWeight: 600 }}>Statut</label>
-              <select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })} className="filter-select" style={{ width: '100%', borderColor: '#6ee7b7' }}>
-                <option value="paid">Payée</option>
-                <option value="pending">En attente / Crédit</option>
+              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#065f46', fontWeight: 600 }}>Client (Sélectionner)</label>
+              <select 
+                value={formData.customerId} 
+                onChange={e => {
+                  const c = (customers || []).find(x => x.id === e.target.value);
+                  setFormData({ ...formData, customerId: e.target.value, customerName: c ? c.name : '' });
+                }} 
+                className="filter-select" 
+                style={{ width: '100%', borderColor: '#6ee7b7' }}
+              >
+                <option value="">Client de passage / Autre</option>
+                {(customers || []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#065f46', fontWeight: 600 }}>Montant Facturé (F) *</label>
-              <input type="number" value={formData.totalAmount} onChange={e => setFormData({ ...formData, totalAmount: e.target.value })} placeholder="0" className="large-input" style={{ width: '100%', borderColor: '#6ee7b7' }} />
+              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#065f46', fontWeight: 600 }}>Nom du Client (si non listé)</label>
+              <input type="text" value={formData.customerName} onChange={e => setFormData({ ...formData, customerName: e.target.value })} placeholder="Ex: Client X" className="large-input" style={{ width: '100%', borderColor: '#6ee7b7' }} />
             </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#065f46', fontWeight: 600 }}>Statut de paiement</label>
+              <select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })} className="filter-select" style={{ width: '100%', borderColor: '#6ee7b7' }}>
+                <option value="paid">Payée (Totalité)</option>
+                <option value="pending">En attente / Crédit</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '25px', backgroundColor: 'white', padding: '15px', borderRadius: '10px', border: '1px solid #a7f3d0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <h4 style={{ margin: 0, color: '#065f46' }}>Articles de la facture</h4>
+              <button 
+                onClick={() => setFormData({ ...formData, items: [...formData.items, { productId: '', quantity: 1, unitPrice: 0 }] })}
+                className="secondary-btn"
+                style={{ fontSize: '0.8rem', padding: '5px 10px' }}
+              >
+                + Ajouter un article
+              </button>
+            </div>
+            
+            {formData.items.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {formData.items.map((item, idx) => (
+                  <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: '10px', alignItems: 'center' }}>
+                    <select 
+                      value={item.productId} 
+                      onChange={e => {
+                        const p = (products || []).find(x => x.id === e.target.value);
+                        const newItems = [...formData.items];
+                        newItems[idx] = { ...newItems[idx], productId: e.target.value, unitPrice: p ? p.selling_price : 0 };
+                        setFormData({ ...formData, items: newItems });
+                      }}
+                      className="filter-select"
+                      style={{ width: '100%' }}
+                    >
+                      <option value="">Sélectionner un produit</option>
+                      {(products || []).map(p => <option key={p.id} value={p.id}>{p.name} ({p.selling_price} F)</option>)}
+                    </select>
+                    <input 
+                      type="number" 
+                      placeholder="Qté" 
+                      value={item.quantity} 
+                      onChange={e => {
+                        const newItems = [...formData.items];
+                        newItems[idx].quantity = e.target.value;
+                        setFormData({ ...formData, items: newItems });
+                      }}
+                      className="large-input"
+                    />
+                    <input 
+                      type="number" 
+                      placeholder="Prix Unit." 
+                      value={item.unitPrice} 
+                      onChange={e => {
+                        const newItems = [...formData.items];
+                        newItems[idx].unitPrice = e.target.value;
+                        setFormData({ ...formData, items: newItems });
+                      }}
+                      className="large-input"
+                    />
+                    <button 
+                      onClick={() => {
+                        const newItems = formData.items.filter((_, i) => i !== idx);
+                        setFormData({ ...formData, items: newItems });
+                      }}
+                      style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                ))}
+                <div style={{ textAlign: 'right', marginTop: '10px', fontWeight: 700, color: '#065f46', fontSize: '1.1rem' }}>
+                  Total calculé : {formData.items.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.unitPrice)), 0).toLocaleString()} F
+                </div>
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '20px', color: '#64748b', fontSize: '0.9rem' }}>
+                Aucun article ajouté. Vous pouvez aussi saisir un montant global ci-dessous.
+                <div style={{ marginTop: '10px' }}>
+                  <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#065f46', fontWeight: 600 }}>Montant Global (F)</label>
+                  <input type="number" value={formData.totalAmount} onChange={e => setFormData({ ...formData, totalAmount: e.target.value })} placeholder="0" className="large-input" style={{ width: '100%', borderColor: '#6ee7b7' }} />
+                </div>
+              </div>
+            )}
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px', borderTop: '1px solid #a7f3d0', paddingTop: '20px' }}>
             <button className="secondary-btn" onClick={() => setShowAdd(false)} style={{ color: '#047857' }}>Annuler</button>
@@ -2398,9 +2512,9 @@ const Sales = () => {
               <div><strong>Date :</strong> {new Date(selectedSale.sale_date).toLocaleString()}</div>
               <div><strong>Client :</strong> {selectedSale.customers?.name || 'Client de passage'}</div>
               <div><strong>Vendeur :</strong> {selectedSale.created_by_name || 'Système'}</div>
-              <div><strong>Montant Total :</strong> {selectedSale.total_amount} F</div>
-              <div><strong>Montant Payé :</strong> {(selectedSale.paid_amount || 0)} F</div>
-              <div><strong>Reste à Payer :</strong> {(selectedSale.remaining_amount || 0)} F</div>
+              <div><strong>Montant Total :</strong> {Number(selectedSale.total_amount || 0).toLocaleString()} F</div>
+              <div><strong>Montant Payé :</strong> {(selectedSale.status === 'paid' ? selectedSale.total_amount : (selectedSale.paid_amount || 0)).toLocaleString()} F</div>
+              <div><strong>Reste à Payer :</strong> {(selectedSale.status === 'paid' ? 0 : (selectedSale.remaining_amount || 0)).toLocaleString()} F</div>
               <div><strong>Statut :</strong>
                 <span className={selectedSale.status === 'paid' ? "status-badge success" : selectedSale.status === 'partial' ? "status-badge warning" : "status-badge error"} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                   {selectedSale.status === 'paid' ? 'Payé' : selectedSale.status === 'partial' ? 'Partiel' : 'En attente'}
