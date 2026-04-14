@@ -44,8 +44,11 @@ const supabaseFetch = async (resourcePath, options = {}, req = null) => {
     } catch (e) { }
   }
 
-  // On n'exclut plus sale_items et purchase_items du filtrage si un filterCompanyId est présent
-  const isExcluded = resourcePath.includes('companies') || resourcePath.includes('platform_settings');
+  // Exclure les tables qui n'ont pas de colonne company_id
+  const isExcluded = resourcePath.includes('companies') || 
+                   resourcePath.includes('platform_settings') || 
+                   resourcePath.includes('sale_items') || 
+                   resourcePath.includes('purchase_items');
   const isUserPath = resourcePath.includes('users');
 
   // Appliquer le filtre de company_id si présent et non exclu
