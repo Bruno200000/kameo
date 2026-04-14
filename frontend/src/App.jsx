@@ -2170,8 +2170,8 @@ const Sales = ({ addToast }) => {
               }
               .credit-badge, .paid-badge {
                 position: absolute;
-                top: 20px;
-                right: 20px;
+                top: 150px;
+                right: 40px;
                 padding: 10px 20px;
                 font-weight: 900;
                 font-size: 1.2rem;
