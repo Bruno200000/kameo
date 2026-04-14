@@ -125,39 +125,54 @@ export default function App() {
   // Données globales pour les notifications
   const [productsData] = useFetch('/products', []);
   const [salesData] = useFetch('/sales', []);
+  const [companiesData] = useFetch('/admin/companies', []);
 
-  // Déterminer si on doit afficher les notifications (Superadmin en vue globale = Non)
+  // Déterminer si on doit afficher les notifications (Superadmin en vue globale = Alertes abonnement)
   const activeCompanyId = localStorage.getItem('kameo_active_company_id');
-  const showNotificationsOnCompany = (currentUser?.role !== 'superadmin') || (activeCompanyId && activeCompanyId !== "");
+  const isGlobalView = !activeCompanyId || activeCompanyId === "";
+  const showBusinessNotifications = (currentUser?.role !== 'superadmin') || !isGlobalView;
+
+  // Alertes d'abonnement pour le Superadmin en vue globale
+  const subscriptionAlerts = (currentUser?.role === 'superadmin' && isGlobalView && Array.isArray(companiesData))
+    ? companiesData.filter(c => c.subscription_status !== 'active').map(c => ({
+        id: `sub-${c.id}`,
+        type: 'SUBSCRIPTION',
+        icon: <AlertCircle size={16} color="#ef4444" />,
+        title: 'Abonnement impayé',
+        desc: `L'entreprise ${c.name} est suspendue`,
+        color: '#fef2f2',
+        page: 'admin'
+      }))
+    : [];
 
   // Calcul des alertes en temps réel (uniquement si une entreprise est sélectionnée ou si staff)
-  const stockAlerts = showNotificationsOnCompany 
+  const stockAlerts = showBusinessNotifications 
     ? productsData.filter(p => p.quantity <= (p.alert_threshold || 5)).map(p => ({
         id: `stock-${p.id}`,
         type: 'STOCK',
         icon: <AlertTriangle size={16} color="#f59e0b" />,
         title: 'Stock critique',
         desc: `${p.name} - ${p.quantity} restants`,
-        company: p.companies?.name,
         color: '#fffbeb',
         page: 'products'
       }))
     : [];
 
-  const unpaidAlerts = showNotificationsOnCompany
+  const unpaidAlerts = showBusinessNotifications
     ? salesData.filter(s => s.status !== 'paid').map(s => ({
         id: `sale-${s.id}`,
         type: 'PAYMENT',
         icon: <DollarSign size={16} color="#3b82f6" />,
         title: 'Paiement en attente',
         desc: `Vente #${s.id.slice(0, 5)} - Reste: ${s.total_amount - (s.paid_amount || 0)} F`,
-        company: s.companies?.name,
         color: '#eff6ff',
         page: 'sales'
       }))
     : [];
 
-  const allNotifications = [...stockAlerts, ...unpaidAlerts];
+  const allNotifications = showBusinessNotifications 
+    ? [...stockAlerts, ...unpaidAlerts] 
+    : subscriptionAlerts;
 
   useEffect(() => {
     const saved = localStorage.getItem(AUTH_STORAGE_KEY);
@@ -492,10 +507,7 @@ export default function App() {
                             {n.icon}
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
-                              <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#1e293b', marginBottom: '2px' }}>{n.title}</div>
-                              {n.company && <span style={{ fontSize: '10px', backgroundColor: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', color: '#64748b', whiteSpace: 'nowrap' }}>{n.company}</span>}
-                            </div>
+                            <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#1e293b', marginBottom: '2px' }}>{n.title}</div>
                             <div style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: '1.4' }}>{n.desc}</div>
                           </div>
                         </div>
