@@ -1820,6 +1820,17 @@ const Stock = () => {
 };
 
 const Sales = () => {
+  const getHeaders = (extra = {}) => {
+    const user = JSON.parse(localStorage.getItem('kameo_current_user') || '{}');
+    const activeCompany = localStorage.getItem('kameo_active_company_id');
+    const companyId = activeCompany !== null ? activeCompany : (user.company_id || '');
+    return {
+      'X-Company-Id': companyId,
+      'X-User-Data': JSON.stringify(user || {}),
+      ...extra
+    };
+  };
+
   const [sales, , setSales] = useFetch('/sales', []);
   const [products] = useFetch('/products', []);
   const [customers] = useFetch('/contacts?type=customer', []);
@@ -2002,6 +2013,29 @@ const Sales = () => {
     const conditions = s.invoice_conditions || 'Paiement à la réception';
     const notes = s.invoice_notes || '';
 
+    // Préparer les items de la facture
+    const items = sale.sale_items && sale.sale_items.length > 0 
+      ? sale.sale_items.map(item => ({
+          name: item.products?.name || 'Produit',
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total: item.quantity * item.unit_price
+        }))
+      : (sale.cart && sale.cart.length > 0
+          ? sale.cart.map(item => ({
+              name: item.name,
+              quantity: item.cartQuantity,
+              unit_price: item.selling_price,
+              total: item.cartQuantity * item.selling_price
+            }))
+          : [{ name: 'Vente globale', quantity: 1, unit_price: sale.total_amount, total: sale.total_amount }]
+        );
+
+    const printFrame = document.createElement('iframe');
+    printFrame.style.display = 'none';
+    document.body.appendChild(printFrame);
+    const printDocument = printFrame.contentWindow.document;
+
     let html = '';
 
     if (invoiceFormat === 'THERMAL') {
@@ -2022,24 +2056,22 @@ const Sales = () => {
             <div class="center">${companyAddress}</div>
             <div class="center">Tél: ${companyPhone}</div>
             <div class="divider"></div>
-            <div class="bold">FACT NÂ°: ${invoiceNumber}</div>
+            <div class="bold">FACT N°: ${invoiceNumber}</div>
             <div>Date: ${new Date(sale.sale_date).toLocaleString()}</div>
-            <div>Client: ${sale.customer_name || 'Comptoir'}</div>
+            <div>Client: ${sale.customers?.name || sale.customer_name || 'Comptoir'}</div>
             <div class="divider"></div>
             <table>
               <thead>
                 <tr><th align="left">ART</th><th align="center">QTE</th><th align="right">TOTAL</th></tr>
               </thead>
               <tbody>
-                ${sale.cart && sale.cart.length > 0 ? sale.cart.map(item => `
+                ${items.map(item => `
                   <tr>
                     <td>${item.name}</td>
-                    <td align="center">${item.cartQuantity}</td>
-                    <td align="right">${(item.cartQuantity * item.selling_price).toLocaleString()}</td>
+                    <td align="center">${item.quantity}</td>
+                    <td align="right">${Number(item.total).toLocaleString()}</td>
                   </tr>
-                `).join('') : `
-                  <tr><td>Vente globale</td><td>1</td><td align="right">${Number(sale.total_amount).toLocaleString()}</td></tr>
-                `}
+                `).join('')}
               </tbody>
             </table>
             <div class="divider"></div>
@@ -2055,19 +2087,19 @@ const Sales = () => {
           </body>
         </html>
       `;
-    } else if (model === 'model4') {
+    } else if (model === 'model4') { // Modèle MSI (Multi Services Informatique)
       html = `
         <html>
           <head>
             <style>
-              body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #1e293b; }
-              .header { display: flex; justify-content: space-between; border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px; }
-              .logo-area { display: flex; align-items: center; gap: 15px; }
-              .company-name { font-size: 24px; font-weight: 800; color: #2563eb; }
-              .tax-info { font-size: 12px; text-align: right; }
-              .title { text-align: center; font-size: 22px; font-weight: 800; text-decoration: underline; margin: 40px 0; }
-              .client-area { margin-bottom: 30px; font-size: 16px; font-weight: bold; }
-              .items-table { width: 100%; border-collapse: collapse; border: 1px solid #2563eb; }
+              body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #000; font-size: 14px; }
+              .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #2563eb; padding-bottom: 10px; margin-bottom: 20px; }
+              .logo-area { display: flex; align-items: center; gap: 10px; }
+              .company-name { font-size: 1.5em; font-weight: bold; color: #2563eb; }
+              .tax-info { text-align: right; font-size: 0.8em; }
+              .title { text-align: center; font-size: 1.8em; font-weight: bold; text-decoration: underline; margin-bottom: 20px; }
+              .client-area { margin-bottom: 15px; font-weight: bold; }
+              .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
               .items-table th { background: #dbeafe; color: #2563eb; padding: 12px; border: 1px solid #2563eb; }
               .items-table td { padding: 12px; border: 1px solid #2563eb; }
               .total-row { font-weight: bold; background: #f8fafc; }
@@ -2085,24 +2117,22 @@ const Sales = () => {
                 </div>
               </div>
               <div class="tax-info">
-                <div>NCC: 2404242 H</div>
-                <div>REGIME: TEE</div>
-                <div style="margin-top: 10px; font-weight: bold;">BOUAKE LE : ${new Date(sale.sale_date).toLocaleDateString()}</div>
+                <div>DATE: ${new Date(sale.sale_date).toLocaleDateString()}</div>
               </div>
             </div>
-            <div class="title">FACTURE PROFORMA N°${invoiceNumber}</div>
-            <div class="client-area">DOIT : ${sale.customer_name || 'SOLDE'}</div>
+            <div class="title">FACTURE N°${invoiceNumber}</div>
+            <div class="client-area">DOIT : ${sale.customers?.name || sale.customer_name || 'Comptoir'}</div>
             <table class="items-table">
               <thead>
                 <tr><th>DESIGNATIONS</th><th>QTE</th><th>PU.TTC</th><th>PT.TTC</th></tr>
               </thead>
               <tbody>
-                ${(sale.cart || []).map(item => `
+                ${items.map(item => `
                   <tr>
                     <td>${item.name}</td>
-                    <td align="center">${item.cartQuantity}</td>
-                    <td align="right">${Number(item.selling_price).toLocaleString()}</td>
-                    <td align="right">${(Number(item.cartQuantity) * Number(item.selling_price)).toLocaleString()}</td>
+                    <td align="center">${item.quantity}</td>
+                    <td align="right">${Number(item.unit_price).toLocaleString()}</td>
+                    <td align="right">${Number(item.total).toLocaleString()}</td>
                   </tr>
                 `).join('')}
                 <tr class="total-row">
@@ -2116,7 +2146,7 @@ const Sales = () => {
           </body>
         </html>
       `;
-    } else if (model === 'model5') {
+    } else if (model === 'model5') { // Modèle QSS
       html = `
         <html>
           <head>
@@ -2133,10 +2163,9 @@ const Sales = () => {
           </head>
           <body>
             <div style="display: flex; gap: 40px; margin-bottom: 30px;">
-              <div style="width: 150px; border: 3px solid #000; height: 100px; display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: 900;">QSS</div>
+              <div style="width: 150px; border: 3px solid #000; height: 100px; display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: 900;">LOGO</div>
               <div style="flex: 1; text-align: center;">
                 <div style="font-size: 24px; font-weight: 900;">${companyName}</div>
-                <div>TOUT POUR LE BÂTIMENT</div>
                 <div>Contact: ${companyPhone}</div>
               </div>
             </div>
@@ -2148,7 +2177,7 @@ const Sales = () => {
                 </table>
               </div>
               <div style="flex: 1;">
-                <div class="box"><strong>CLIENT:</strong><br/>${sale.customer_name || 'Comptoir'}</div>
+                <div class="box"><strong>CLIENT:</strong><br/>${sale.customers?.name || sale.customer_name || 'Comptoir'}</div>
               </div>
             </div>
             <table class="items-table" style="margin-top: 20px;">
@@ -2156,12 +2185,12 @@ const Sales = () => {
                 <tr><th>REF</th><th>DESIGNATION</th><th>QTE</th><th>TOTAL HT</th></tr>
               </thead>
               <tbody>
-                ${(sale.cart || []).map((item, idx) => `
+                ${items.map((item, idx) => `
                   <tr>
                     <td>${idx + 1}</td>
                     <td>${item.name}</td>
-                    <td align="center">${item.cartQuantity}</td>
-                    <td align="right">${(item.cartQuantity * item.selling_price).toLocaleString()}</td>
+                    <td align="center">${item.quantity}</td>
+                    <td align="right">${Number(item.total).toLocaleString()}</td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -2170,11 +2199,12 @@ const Sales = () => {
               <tr><td>TOTAL BRUT HT</td><td align="right">${Number(sale.total_amount).toLocaleString()}</td></tr>
               <tr style="background: #eee; font-weight: bold;"><td>NET A PAYER</td><td align="right">${Number(sale.total_amount).toLocaleString()} ${currency}</td></tr>
             </table>
+            <div style="margin-top: 20px; font-size: 11px;">${footerText}</div>
           </body>
         </html>
       `;
     } else {
-      // Modèle Standard (1, 2, 3) - Template A4 de base
+      // Modèle Standard (model1, model2, model3)
       html = `
         <html>
           <head>
@@ -2210,7 +2240,7 @@ const Sales = () => {
               <div style="padding: 30px;">
                 <div style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 8px;">
                    <strong>CLIENT:</strong><br/>
-                   ${sale.customer_name || 'Comptoir'}
+                   ${sale.customers?.name || sale.customer_name || 'Comptoir'}
                 </div>
                 <table class="items-table">
                   <thead>
@@ -2221,24 +2251,22 @@ const Sales = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    ${(sale.cart || []).length > 0 ? sale.cart.map(item => `
+                    ${items.map(item => `
                       <tr>
                         <td>${item.name}</td>
-                        <td align="center">${item.cartQuantity}</td>
-                        <td align="right">${(Number(item.cartQuantity) * Number(item.selling_price)).toLocaleString()}</td>
+                        <td align="center">${item.quantity}</td>
+                        <td align="right">${Number(item.total).toLocaleString()}</td>
                       </tr>
-                    `).join('') : `
-                      <tr>
-                        <td>Vente globale</td>
-                        <td align="center">1</td>
-                        <td align="right">${Number(sale.total_amount).toLocaleString()}</td>
-                      </tr>
-                    `}
+                    `).join('')}
                   </tbody>
                 </table>
                 <div class="total-section">
                   <span>NET A PAYER</span>
                   <span style="font-size: 26px; font-weight: 800;">${Number(sale.total_amount).toLocaleString()} ${currency}</span>
+                </div>
+                <div style="margin-top: 20px; font-size: 13px;">
+                   <strong>Notes:</strong> ${notes || 'N/A'}<br/>
+                   <strong>Conditions:</strong> ${conditions}<br/>
                 </div>
                 <div style="margin-top: 40px; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 20px; color: #64748b; font-size: 13px;">
                    ${footerText}
