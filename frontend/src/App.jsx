@@ -2061,8 +2061,22 @@ const Sales = () => {
         );
 
     const paidAmount = Number(sale.paid_amount || 0);
-    const remainingAmount = Number(sale.remaining_amount ?? (Number(sale.total_amount || 0) - paidAmount));
+    const totalAmount = Number(sale.total_amount || 0);
+    const rawRemaining = Number(sale.remaining_amount ?? (totalAmount - paidAmount));
+    const remainingAmount = Math.max(0, Math.round(rawRemaining * 100) / 100);
     const isCredit = remainingAmount > 0;
+
+    // Déterminer un tampon unique pour éviter toute superposition
+    let statusStamp = '';
+    if (isCredit) {
+      statusStamp = invoiceFormat === 'THERMAL' 
+        ? '<div class="center bold" style="margin-top: 10px; border: 1px solid #000; padding: 5px;">VENTE À CRÉDIT</div>'
+        : '<div class="credit-badge">VENTE À CRÉDIT</div>';
+    } else if (sale.status === 'paid' || remainingAmount <= 0) {
+      statusStamp = invoiceFormat === 'THERMAL'
+        ? '<div class="center bold" style="margin-top: 10px; border: 1px solid #10b981; color: #10b981; padding: 5px;">CASH / PAYÉ</div>'
+        : '<div class="paid-badge">FACTURE PAYÉE</div>';
+    }
 
     const printFrame = document.createElement('iframe');
     printFrame.style.display = 'none';
@@ -2113,8 +2127,7 @@ const Sales = () => {
             <div align="right">Paiement: ${paidAmount.toLocaleString()} ${currency}</div>
             <div align="right" class="bold">Reste: ${remainingAmount.toLocaleString()} ${currency}</div>
             
-            ${isCredit ? '<div class="center bold" style="margin-top: 10px; border: 1px solid #000; padding: 5px;">VENTE À CRÉDIT</div>' : 
-              (sale.status === 'paid' || remainingAmount <= 0 ? '<div class="center bold" style="margin-top: 10px; border: 1px solid #10b981; color: #10b981; padding: 5px;">CASH / PAYÉ</div>' : '')}
+            ${statusStamp}
 
             <div class="center" style="margin-top: 5px;">${conditions}</div>
             <div class="center" style="margin-top: 15px;">${notes ? notes + '<br/>' : ''}${footerText}</div>
@@ -2215,8 +2228,7 @@ const Sales = () => {
           </head>
           <body>
             <div class="invoice-card">
-              ${isCredit ? '<div class="credit-badge">VENTE À CRÉDIT</div>' : 
-                (sale.status === 'paid' || remainingAmount <= 0 ? '<div class="paid-badge">FACTURE PAYÉE</div>' : '')}
+              ${statusStamp}
               
               <div class="header">
                 ${logoUrl ? `<img src="${logoUrl}" class="logo" />` : '<div style="width:80px;height:40px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:10px;color:#94a3b8">LOGO</div>'}
