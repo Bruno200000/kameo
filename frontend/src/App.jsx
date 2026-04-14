@@ -3178,7 +3178,59 @@ const SettingsPage = ({ currentUser }) => {
   const [saveStatus, setSaveStatus] = useState(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [pwdData, setPwdData] = useState({ current: '', next: '', confirm: '' });
+   const [pwdData, setPwdData] = useState({ current: '', next: '', confirm: '' });
+ 
+   const [securityData, securityLoading, setSecurityData] = useFetch('/auth/security-status', {
+     two_factor_enabled: false, last_login_at: null, password_changed_at: null
+   });
+ 
+   const formatDateRelative = (dateString) => {
+     if (!dateString) return 'Non renseigné';
+     const date = new Date(dateString);
+     const now = new Date();
+     const diff = now - date;
+     if (isNaN(diff)) return 'Format invalide';
+     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+     if (days === 0) return "Aujourd'hui";
+     if (days === 1) return "Hier";
+     if (days < 30) return `Il y a ${days} jours`;
+     return date.toLocaleDateString();
+   };
+ 
+   const toggle2FA = async () => {
+     const nextVal = !securityData.two_factor_enabled;
+     try {
+       const res = await fetch(`${API_URL}/auth/security-status`, {
+         method: 'PATCH',
+         headers: getHeaders({ 'Content-Type': 'application/json' }),
+         body: JSON.stringify({ two_factor_enabled: nextVal })
+       });
+       if (res.ok) {
+         setSecurityData(prev => ({ ...prev, two_factor_enabled: nextVal }));
+         if (typeof addToast === 'function') addToast('Sécurité', `Authentification 2FA ${nextVal ? 'activée' : 'désactivée'}`, 'info');
+       }
+     } catch (e) {
+       console.error("2FA Error:", e);
+     }
+   };
+ 
+   const currentBrowserInfo = () => {
+     const ua = navigator.userAgent;
+     let browser = "Navigateur";
+     let os = "OS";
+     if (ua.includes("Win")) os = "Windows";
+     else if (ua.includes("Mac")) os = "macOS";
+     else if (ua.includes("Linux")) os = "Linux";
+     else if (ua.includes("Android")) os = "Android";
+     else if (ua.includes("iPhone")) os = "iOS";
+ 
+     if (ua.includes("Chrome")) browser = "Chrome";
+     else if (ua.includes("Firefox")) browser = "Firefox";
+     else if (ua.includes("Safari") && !ua.includes("Chrome")) browser = "Safari";
+     else if (ua.includes("Edge")) browser = "Edge";
+     
+     return `${os} â€¢ ${browser}`;
+   };
 
   // On n'utilise plus d'état local invoicePrefs pour éviter tout décalage avec la BDD
 
@@ -3503,36 +3555,55 @@ const SettingsPage = ({ currentUser }) => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <div style={{ fontWeight: 'bold', color: '#1e293b' }}>Mot de passe</div>
-                    <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Dernière modification il y a 3 mois</div>
+                    <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                      {securityData.password_changed_at ? `Dernière modification ${formatDateRelative(securityData.password_changed_at)}` : "Aucune modification récente"}
+                    </div>
                   </div>
                   <button type="button" className="secondary-btn" onClick={() => setShowPasswordModal(true)}>Modifier</button>
                 </div>
               </div>
-              <div style={{ padding: '20px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontWeight: 'bold', color: '#1e293b' }}>Authentification à double facteur (2FA)</div>
-                    <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Ajoutez une couche de sécurité supplémentaire à votre compte.</div>
-                  </div>
-                  <div className="status-badge" style={{ backgroundColor: '#fee2e2', color: '#991b1b', cursor: 'pointer' }}>Désactivé</div>
-                </div>
-                <div style={{ marginTop: '15px', padding: '15px', backgroundColor: '#fff', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
-                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#475569' }}>
-                    Une fois activé, vous devrez saisir un code envoyé par <strong>Email</strong> ou généré par une application comme <strong>Google Authenticator</strong> pour vous connecter.
-                  </p>
-                  <button type="button" className="primary-btn" style={{ marginTop: '10px', fontSize: '0.8rem', padding: '6px 12px' }}>Configurer la 2FA</button>
-                </div>
-              </div>
+               <div style={{ padding: '20px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
+                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                   <div>
+                     <div style={{ fontWeight: 'bold', color: '#1e293b' }}>Authentification à double facteur (2FA)</div>
+                     <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Ajoutez une couche de sécurité supplémentaire à votre compte.</div>
+                   </div>
+                   <div 
+                     onClick={toggle2FA}
+                     className="status-badge" 
+                     style={{ 
+                       backgroundColor: securityData.two_factor_enabled ? '#dcfce7' : '#fee2e2', 
+                       color: securityData.two_factor_enabled ? '#166534' : '#991b1b', 
+                       cursor: 'pointer' 
+                     }}
+                   >
+                     {securityData.two_factor_enabled ? 'Activé' : 'Désactivé'}
+                   </div>
+                 </div>
+                 <div style={{ marginTop: '15px', padding: '15px', backgroundColor: '#fff', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+                   <p style={{ margin: 0, fontSize: '0.85rem', color: '#475569' }}>
+                     Une fois activé, vous devrez saisir un code envoyé par <strong>Email</strong> ou généré par une application de sécurité pour vous connecter.
+                   </p>
+                   <button 
+                     type="button" 
+                     onClick={toggle2FA}
+                     className={securityData.two_factor_enabled ? "secondary-btn" : "primary-btn"} 
+                     style={{ marginTop: '10px', fontSize: '0.8rem', padding: '6px 12px' }}
+                   >
+                     {securityData.two_factor_enabled ? 'Désactiver la 2FA' : 'Configurer la 2FA'}
+                   </button>
+                 </div>
+               </div>
 
               <div style={{ padding: '20px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
                 <div style={{ fontWeight: 'bold', color: '#1e293b', marginBottom: '10px' }}>Sessions actives</div>
-                <div style={{ fontSize: '0.85rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #f1f5f9' }}>
-                  <div>
-                    <strong>Windows 10 â€¢ Chrome</strong>
-                    <div>Dakar, Sénégal (Actuel)</div>
-                  </div>
-                  <span style={{ color: '#059669', fontWeight: 600 }}>En ligne</span>
-                </div>
+                 <div style={{ fontSize: '0.85rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #f1f5f9' }}>
+                   <div>
+                     <strong>{currentBrowserInfo()}</strong>
+                     <div>{securityData.last_login_at ? `Connecté ${formatDateRelative(securityData.last_login_at)}` : "Session actuelle"}</div>
+                   </div>
+                   <span style={{ color: '#059669', fontWeight: 600 }}>En ligne</span>
+                 </div>
                 <button type="button" style={{ marginTop: '15px', background: 'transparent', border: 'none', color: '#ef4444', fontSize: '0.85rem', cursor: 'pointer', padding: 0 }}>Déconnecter tous les autres appareils</button>
               </div>
 

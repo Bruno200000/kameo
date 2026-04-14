@@ -25,6 +25,9 @@ CREATE TABLE users (
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     role VARCHAR(50) DEFAULT 'cashier', -- superadmin, admin, stock_manager, cashier, readonly
+    two_factor_enabled BOOLEAN DEFAULT false,
+    last_login_at TIMESTAMP,
+    password_changed_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

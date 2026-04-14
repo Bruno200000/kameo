@@ -122,7 +122,14 @@ router.post('/auth/login', async (req, res) => {
     const users = await supabaseFetch(`users?email=eq.${encodeURIComponent(email)}&password_hash=eq.${encodeURIComponent(password)}&select=*,companies(name)&limit=1`);
 
     if (users && users.length > 0) {
-      res.json({ success: true, user: users[0] });
+      const user = users[0];
+      // Update last login timestamp in background
+      supabaseFetch(`users?id=eq.${user.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ last_login_at: new Date().toISOString() })
+      }).catch(e => console.error('Error updating last_login_at', e));
+
+      res.json({ success: true, user });
     } else {
       res.status(401).json({ error: "Identifiants incorrects" });
     }
@@ -137,11 +144,38 @@ router.patch('/auth/password', async (req, res) => {
       if (!user || user.length === 0) return res.status(401).json({ error: 'Mot de passe actuel incorrect' });
       await supabaseFetch(`users?id=eq.${userId}`, {
         method: 'PATCH',
-        body: JSON.stringify({ password_hash: newPassword })
+        body: JSON.stringify({ 
+          password_hash: newPassword,
+          password_changed_at: new Date().toISOString()
+        })
       });
     }
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: 'Erreur changement' }); }
+});
+
+router.get('/auth/security-status', async (req, res) => {
+  try {
+    const userHeader = req.headers['x-user-data'];
+    if (!userHeader) return res.status(401).json({ error: 'Non authentifié' });
+    const user = JSON.parse(userHeader);
+    const data = await supabaseFetch(`users?id=eq.${user.id}&select=two_factor_enabled,last_login_at,password_changed_at`);
+    res.json(data && data.length > 0 ? data[0] : {});
+  } catch (err) { res.status(500).json({ error: 'Erreur' }); }
+});
+
+router.patch('/auth/security-status', async (req, res) => {
+  try {
+    const userHeader = req.headers['x-user-data'];
+    if (!userHeader) return res.status(401).json({ error: 'Non authentifié' });
+    const user = JSON.parse(userHeader);
+    const { two_factor_enabled } = req.body;
+    await supabaseFetch(`users?id=eq.${user.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ two_factor_enabled })
+    });
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: 'Erreur' }); }
 });
 
 // Réglages Entreprise
