@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, TrendingUp, Settings } from 'lucide-react';
+import { Users, TrendingUp, Settings, Activity } from 'lucide-react';
 import CompaniesManager from './CompaniesManager';
 import GlobalStatsView from './GlobalStatsView';
 import UsersManager from './UsersManager';
@@ -39,6 +39,13 @@ const AdminPanel = () => {
               <TrendingUp size={18} /> Données Structurées
             </button>
             <button 
+              onClick={() => setActiveTab('monitoring')}
+              className={`nav-item ${activeTab === 'monitoring' ? 'active' : ''}`}
+              style={{ width: 'auto', padding: '10px 20px' }}
+            >
+              <Activity size={18} /> Monitoring
+            </button>
+            <button 
               onClick={() => setActiveTab('config')}
               className={`nav-item ${activeTab === 'config' ? 'active' : ''}`}
               style={{ width: 'auto', padding: '10px 20px' }}
@@ -52,6 +59,7 @@ const AdminPanel = () => {
       {activeTab === 'companies' && isSuperAdmin ? <CompaniesManager /> : 
        activeTab === 'users' ? <UsersManager /> : 
        activeTab === 'stats' && isSuperAdmin ? <GlobalStatsView /> :
+       activeTab === 'monitoring' && isSuperAdmin ? <SessionsMonitor /> :
        activeTab === 'config' && isSuperAdmin ? <SaaSConfig /> :
        <UsersManager />}
     </div>
@@ -183,6 +191,113 @@ const ConfigInput = ({ label, value, type = "text", onBlur }) => {
         onChange={(e) => setVal(e.target.value)}
         onBlur={() => onBlur(val)}
       />
+    </div>
+  );
+};
+
+const SessionsMonitor = () => {
+  const [users, usersLoading] = useFetch('/admin/users', []);
+  const [filterActive, setFilterActive] = useState(false);
+
+  const isOnline = (lastLogin) => {
+    if (!lastLogin) return false;
+    const date = new Date(lastLogin);
+    const now = new Date();
+    // Considéré en ligne si dernière activité < 30 min
+    return (now - date) < (30 * 60 * 1000);
+  };
+
+  const filteredUsers = filterActive 
+    ? users.filter(u => isOnline(u.last_login_at)) 
+    : users;
+
+  const onlineCount = users.filter(u => isOnline(u.last_login_at)).length;
+
+  if (usersLoading) return <div>Analyse des sessions en cours...</div>;
+
+  return (
+    <div>
+      <style>{`
+        @keyframes monitor-pulse {
+          0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+          70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+          100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+      `}</style>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <div>
+          <h3 style={{ margin: 0 }}>Surveillance des sessions</h3>
+          <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>{onlineCount} utilisateur(s) actuellement en ligne</p>
+        </div>
+        <button 
+          className="secondary-btn" 
+          onClick={() => setFilterActive(!filterActive)}
+          style={{ borderColor: filterActive ? '#10b981' : '#e2e8f0', color: filterActive ? '#10b981' : '#64748b' }}
+        >
+          {filterActive ? 'Voir tout le monde' : 'Voir uniquement les actifs'}
+        </button>
+      </div>
+
+      <div className="card">
+        <div className="table-responsive">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Utilisateur</th>
+                <th>Entreprise</th>
+                <th>Rôle</th>
+                <th>Statut</th>
+                <th>Dernière connexion</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredUsers.length === 0 ? (
+                <tr><td colSpan="5" style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>Aucune session trouvée</td></tr>
+              ) : filteredUsers.map(u => {
+                const active = isOnline(u.last_login_at);
+                return (
+                  <tr key={u.id}>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div className="user-avatar" style={{ 
+                          width: '32px', height: '32px', fontSize: '12px',
+                          backgroundColor: active ? '#ecfdf5' : '#f8fafc', 
+                          color: active ? '#10b981' : '#64748b',
+                          border: active ? '1px solid #10b981' : '1px solid #e2e8f0'
+                        }}>
+                          {u.first_name?.[0]}{u.last_name?.[0]}
+                        </div>
+                        <strong>{u.first_name} {u.last_name}</strong>
+                      </div>
+                    </td>
+                    <td>{u.companies ? u.companies.name : <em style={{ color: '#94a3b8' }}>Plateforme</em>}</td>
+                    <td><span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b' }}>{u.role}</span></td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ 
+                          width: '10px', height: '10px', borderRadius: '50%', 
+                          backgroundColor: active ? '#10b981' : '#cbd5e1',
+                          animation: active ? 'monitor-pulse 2s infinite' : 'none'
+                        }} />
+                        <span style={{ fontSize: '12px', color: active ? '#10b981' : '#64748b', fontWeight: active ? 600 : 400 }}>
+                          {active ? 'En ligne' : 'Inactif'}
+                        </span>
+                      </div>
+                    </td>
+                    <td style={{ fontSize: '12px', color: '#64748b' }}>
+                      {u.last_login_at ? new Date(u.last_login_at).toLocaleString('fr-FR', {
+                        dateStyle: 'short',
+                        timeStyle: 'short'
+                      }) : 'Jamais'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 };
