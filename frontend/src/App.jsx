@@ -2242,8 +2242,122 @@ const Sales = () => {
           </body>
         </html>
       `;
+    } else if (model === 'model2') { // Modèle Moderne
+      html = `
+        <html>
+          <head>
+            <title>Facture ${invoiceNumber}</title>
+            <style>
+              @page { margin: 20mm; }
+              body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; color: #1e293b; }
+              .invoice-container { max-width: 800px; margin: 0 auto; border-top: 10px solid ${accentColor}; }
+              .header { display: flex; justify-content: space-between; align-items: center; padding: 40px 30px; background: #f8fafc; }
+              .items-table { width: 100%; border-collapse: collapse; margin: 30px 0; }
+              .items-table th { text-align: left; padding: 12px; border-bottom: 2px solid ${accentColor}; color: ${accentColor}; font-weight: 700; text-transform: uppercase; font-size: 0.8rem; }
+              .items-table td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
+              .totals { margin-left: auto; width: 250px; margin-top: 20px; }
+              .total-row { display: flex; justify-content: space-between; padding: 10px 0; font-weight: bold; border-top: 2px solid ${accentColor}; color: ${accentColor}; font-size: 1.2rem; }
+            </style>
+          </head>
+          <body>
+            <div class="invoice-container">
+              <div class="header">
+                 <div>
+                   <h1 style="margin: 0; color: ${accentColor};">FACTURE</h1>
+                   <div style="color: #64748b;">N° ${invoiceNumber}</div>
+                   <div style="color: #64748b;">Date: ${new Date(sale.sale_date).toLocaleDateString()}</div>
+                 </div>
+                 <div style="text-align: right;">
+                   ${logoUrl ? `<img src="${logoUrl}" style="height: 60px; margin-bottom: 10px;" />` : ''}
+                   <div style="font-weight: bold; font-size: 1.2rem;">${companyName}</div>
+                   <div style="font-size: 0.85rem; color: #64748b;">${companyAddress}</div>
+                 </div>
+              </div>
+              <div style="padding: 30px;">
+                <div style="margin-bottom: 30px;">
+                  <div style="text-transform: uppercase; font-size: 0.75rem; font-weight: 700; color: #94a3b8; margin-bottom: 5px;">Facturé à</div>
+                  <div style="font-size: 1.1rem; font-weight: 600;">${sale.customers?.name || sale.customer_name || 'Comptoir'}</div>
+                </div>
+                <table class="items-table">
+                  <thead><tr><th>Désignation</th><th style="text-align: center">Qté</th><th style="text-align: right">Total</th></tr></thead>
+                  <tbody>
+                    ${items.map(item => `
+                      <tr>
+                        <td>${item.name}</td>
+                        <td align="center">${item.quantity}</td>
+                        <td align="right">${Number(item.total).toLocaleString()}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+                <div class="totals">
+                  <div class="total-row"><span>NET A PAYER</span><span>${Number(sale.total_amount).toLocaleString()} ${currency}</span></div>
+                </div>
+                <div style="margin-top: 50px; font-size: 0.85rem; color: #64748b; border-left: 4px solid #e2e8f0; padding-left: 15px;">
+                  <strong>Notes:</strong> ${notes || 'N/A'}<br/>
+                  <strong>Conditions:</strong> ${conditions}<br/>
+                  <div style="margin-top: 10px; font-style: italic;">${footerText}</div>
+                </div>
+              </div>
+            </div>
+          </body>
+        </html>
+      `;
+    } else if (model === 'model3') { // Modèle Minimaliste
+      html = `
+        <html>
+          <head>
+            <title>Facture ${invoiceNumber}</title>
+            <style>
+              body { font-family: 'Helvetica', Arial, sans-serif; padding: 40px; color: #000; }
+              .center { text-align: center; }
+              .header { margin-bottom: 50px; }
+              .items-table { width: 100%; border-collapse: collapse; margin: 30px 0; }
+              .items-table th { border-bottom: 1px solid #000; padding: 10px; text-align: left; }
+              .items-table td { padding: 10px; border-bottom: 1px solid #eee; }
+              .total-box { text-align: right; font-size: 1.5rem; font-weight: bold; margin-top: 30px; }
+            </style>
+          </head>
+          <body>
+            <div class="center header">
+              ${logoUrl ? `<img src="${logoUrl}" style="height: 50px; margin-bottom: 15px;" />` : ''}
+              <h1 style="margin: 0; letter-spacing: 5px;">FACTURE</h1>
+              <div style="margin-top: 10px;">${companyName} | ${companyPhone}</div>
+              <div style="font-size: 0.9rem;">${companyAddress}</div>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 30px; border-bottom: 1px solid #000; padding-bottom: 20px;">
+              <div>
+                <strong>Client:</strong><br/>
+                ${sale.customers?.name || sale.customer_name || 'Comptoir'}
+              </div>
+              <div style="text-align: right;">
+                <strong>N°:</strong> ${invoiceNumber}<br/>
+                <strong>Date:</strong> ${new Date(sale.sale_date).toLocaleDateString()}
+              </div>
+            </div>
+            <table class="items-table">
+              <thead><tr><th>Description</th><th>Qté</th><th style="text-align: right">Prix</th></tr></thead>
+              <tbody>
+                ${items.map(item => `
+                  <tr>
+                    <td>${item.name}</td>
+                    <td>${item.quantity}</td>
+                    <td align="right">${Number(item.total).toLocaleString()}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            <div class="total-box">
+              TOTAL: ${Number(sale.total_amount).toLocaleString()} ${currency}
+            </div>
+            <div style="margin-top: 60px; font-size: 0.8rem; text-align: center; color: #666;">
+              ${conditions} | ${footerText}
+            </div>
+          </body>
+        </html>
+      `;
     } else {
-      // Modèle Standard (model1, model2, model3)
+      // Modèle Standard (model1)
       html = `
         <html>
           <head>
