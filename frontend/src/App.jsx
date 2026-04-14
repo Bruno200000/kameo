@@ -2113,8 +2113,8 @@ const Sales = () => {
             <div align="right">Paiement: ${paidAmount.toLocaleString()} ${currency}</div>
             <div align="right" class="bold">Reste: ${remainingAmount.toLocaleString()} ${currency}</div>
             
-            ${isCredit ? '<div class="center bold" style="margin-top: 10px; border: 1px solid #000; padding: 5px;">VENTE À CRÉDIT</div>' : ''}
-            ${sale.status === 'paid' || remainingAmount <= 0 ? '<div class="center bold" style="margin-top: 10px; border: 1px solid #10b981; color: #10b981; padding: 5px;">CASH / PAYÉ</div>' : ''}
+            ${isCredit ? '<div class="center bold" style="margin-top: 10px; border: 1px solid #000; padding: 5px;">VENTE À CRÉDIT</div>' : 
+              (sale.status === 'paid' || remainingAmount <= 0 ? '<div class="center bold" style="margin-top: 10px; border: 1px solid #10b981; color: #10b981; padding: 5px;">CASH / PAYÉ</div>' : '')}
 
             <div class="center" style="margin-top: 5px;">${conditions}</div>
             <div class="center" style="margin-top: 15px;">${notes ? notes + '<br/>' : ''}${footerText}</div>
@@ -2215,8 +2215,8 @@ const Sales = () => {
           </head>
           <body>
             <div class="invoice-card">
-              ${isCredit ? '<div class="credit-badge">VENTE À CRÉDIT</div>' : ''}
-              ${sale.status === 'paid' || remainingAmount <= 0 ? '<div class="paid-badge">FACTURE PAYÉE</div>' : ''}
+              ${isCredit ? '<div class="credit-badge">VENTE À CRÉDIT</div>' : 
+                (sale.status === 'paid' || remainingAmount <= 0 ? '<div class="paid-badge">FACTURE PAYÉE</div>' : '')}
               
               <div class="header">
                 ${logoUrl ? `<img src="${logoUrl}" class="logo" />` : '<div style="width:80px;height:40px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:10px;color:#94a3b8">LOGO</div>'}
