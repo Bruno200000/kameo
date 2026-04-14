@@ -3229,7 +3229,7 @@ const SettingsPage = ({ currentUser }) => {
      else if (ua.includes("Safari") && !ua.includes("Chrome")) browser = "Safari";
      else if (ua.includes("Edge")) browser = "Edge";
      
-     return `${os} â€¢ ${browser}`;
+     return `${os} | ${browser}`;
    };
 
   // On n'utilise plus d'état local invoicePrefs pour éviter tout décalage avec la BDD
@@ -3600,7 +3600,7 @@ const SettingsPage = ({ currentUser }) => {
                  <div style={{ fontSize: '0.85rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #f1f5f9' }}>
                    <div>
                      <strong>{currentBrowserInfo()}</strong>
-                     <div>{securityData.last_login_at ? `Connecté ${formatDateRelative(securityData.last_login_at)}` : "Session actuelle"}</div>
+                     <div>{securityData.last_login_at ? `Session démarrée ${formatDateRelative(securityData.last_login_at).toLowerCase()}` : "Session actuelle"}</div>
                    </div>
                    <span style={{ color: '#059669', fontWeight: 600 }}>En ligne</span>
                  </div>
