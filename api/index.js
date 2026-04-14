@@ -365,6 +365,7 @@ router.get('/sales', async (req, res) => {
 
 router.post('/sales', async (req, res) => {
   try {
+    const user = JSON.parse(req.headers['x-user-data'] || '{}');
     const { cart, customerId, totalAmount, paidAmount, remainingAmount, paymentMode, status, ...otherData } = req.body;
 
     // Créer la vente sans le cart, avec mapping camelCase -> snake_case
