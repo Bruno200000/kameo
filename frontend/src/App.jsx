@@ -190,6 +190,16 @@ export default function App() {
     setLoadingAuth(false);
   }, []);
 
+  // Heartbeat / Presence Sync
+  useEffect(() => {
+    if (currentUser) {
+      fetch(`${API_URL}/auth/ping`, {
+        method: 'POST',
+        headers: getHeaders()
+      }).catch(e => console.warn("Presence sync failed", e));
+    }
+  }, [currentUser]);
+
   useEffect(() => {
     const fetchSettings = async () => {
       try {

@@ -154,6 +154,19 @@ router.patch('/auth/password', async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Erreur changement' }); }
 });
 
+router.post('/auth/ping', async (req, res) => {
+  try {
+    const userHeader = req.headers['x-user-data'];
+    if (!userHeader) return res.status(401).json({ error: 'Non authentifié' });
+    const user = JSON.parse(userHeader);
+    await supabaseFetch(`users?id=eq.${user.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ last_login_at: new Date().toISOString() })
+    });
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: 'Erreur ping' }); }
+});
+
 router.get('/auth/security-status', async (req, res) => {
   try {
     const userHeader = req.headers['x-user-data'];
