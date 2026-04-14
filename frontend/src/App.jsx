@@ -2392,7 +2392,7 @@ const Sales = () => {
                 style={{ width: '100%', borderColor: '#6ee7b7' }}
               >
                 <option value="">Client de passage / Autre</option>
-                {(customers || []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {(Array.isArray(customers) ? customers : []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
             <div>
@@ -2431,7 +2431,7 @@ const Sales = () => {
                       style={{ width: '100%' }}
                     >
                       <option value="">Sélectionner un produit</option>
-                      {(products || []).map(p => <option key={p.id} value={p.id}>{p.name} ({p.selling_price} F)</option>)}
+                      {(Array.isArray(products) ? products : []).map(p => <option key={p.id} value={p.id}>{p.name} ({p.selling_price} F)</option>)}
                     </select>
                     <input 
                       type="number" 

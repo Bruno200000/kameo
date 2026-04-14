@@ -724,6 +724,11 @@ app.get('/api/contacts', async (req, res) => {
   try {
     const customers = await supabaseFetch('customers?select=*&order=created_at.desc');
     const suppliers = await supabaseFetch('suppliers?select=*&order=created_at.desc');
+    
+    const { type } = req.query;
+    if (type === 'customer') return res.json(customers || []);
+    if (type === 'fournisseur') return res.json(suppliers || []);
+
     res.json({ customers: customers || [], suppliers: suppliers || [] });
   } catch (err) {
     res.status(500).json({ error: "Erreur API contacts" });
