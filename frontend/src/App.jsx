@@ -1922,6 +1922,37 @@ const Sales = () => {
     items: [] // { productId, quantity, unitPrice }
   });
 
+  const handleManualSaleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const addManualItem = () => {
+    setFormData(prev => ({
+      ...prev,
+      items: [...prev.items, { productId: '', quantity: 1, unitPrice: 0 }]
+    }));
+  };
+
+  const updateManualItem = (idx, field, value) => {
+    const newItems = [...formData.items];
+    newItems[idx] = { ...newItems[idx], [field]: value };
+    
+    if (field === 'productId') {
+      const p = (products || []).find(x => x.id === value);
+      if (p) newItems[idx].unitPrice = p.selling_price;
+    }
+    
+    setFormData(prev => ({ ...prev, items: newItems }));
+  };
+
+  const removeManualItem = (idx) => {
+    setFormData(prev => ({
+      ...prev,
+      items: prev.items.filter((_, i) => i !== idx)
+    }));
+  };
+
   const filteredSales = sales.filter((s) => {
     const ref = String(s.id || '').toLowerCase();
     const date = new Date(s.sale_date).toLocaleString().toLowerCase();
@@ -2143,6 +2174,11 @@ const Sales = () => {
             </table>
             <div class="direction">LA DIRECTION</div>
             <div class="footer-text">${companyAddress}</div>
+            <script>
+              window.onload = function() {
+                setTimeout(() => { window.print(); window.close(); }, 500);
+              };
+            </script>
           </body>
         </html>
       `;
@@ -2200,6 +2236,11 @@ const Sales = () => {
               <tr style="background: #eee; font-weight: bold;"><td>NET A PAYER</td><td align="right">${Number(sale.total_amount).toLocaleString()} ${currency}</td></tr>
             </table>
             <div style="margin-top: 20px; font-size: 11px;">${footerText}</div>
+            <script>
+              window.onload = function() {
+                setTimeout(() => { window.print(); window.close(); }, 500);
+              };
+            </script>
           </body>
         </html>
       `;
@@ -2366,7 +2407,7 @@ const Sales = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
               <h4 style={{ margin: 0, color: '#065f46' }}>Articles de la facture</h4>
               <button 
-                onClick={() => setFormData({ ...formData, items: [...formData.items, { productId: '', quantity: 1, unitPrice: 0 }] })}
+                onClick={addManualItem}
                 className="secondary-btn"
                 style={{ fontSize: '0.8rem', padding: '5px 10px' }}
               >
@@ -2380,12 +2421,7 @@ const Sales = () => {
                   <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: '10px', alignItems: 'center' }}>
                     <select 
                       value={item.productId} 
-                      onChange={e => {
-                        const p = (products || []).find(x => x.id === e.target.value);
-                        const newItems = [...formData.items];
-                        newItems[idx] = { ...newItems[idx], productId: e.target.value, unitPrice: p ? p.selling_price : 0 };
-                        setFormData({ ...formData, items: newItems });
-                      }}
+                      onChange={e => updateManualItem(idx, 'productId', e.target.value)}
                       className="filter-select"
                       style={{ width: '100%' }}
                     >
@@ -2396,29 +2432,18 @@ const Sales = () => {
                       type="number" 
                       placeholder="Qté" 
                       value={item.quantity} 
-                      onChange={e => {
-                        const newItems = [...formData.items];
-                        newItems[idx].quantity = e.target.value;
-                        setFormData({ ...formData, items: newItems });
-                      }}
+                      onChange={e => updateManualItem(idx, 'quantity', e.target.value)}
                       className="large-input"
                     />
                     <input 
                       type="number" 
                       placeholder="Prix Unit." 
                       value={item.unitPrice} 
-                      onChange={e => {
-                        const newItems = [...formData.items];
-                        newItems[idx].unitPrice = e.target.value;
-                        setFormData({ ...formData, items: newItems });
-                      }}
+                      onChange={e => updateManualItem(idx, 'unitPrice', e.target.value)}
                       className="large-input"
                     />
                     <button 
-                      onClick={() => {
-                        const newItems = formData.items.filter((_, i) => i !== idx);
-                        setFormData({ ...formData, items: newItems });
-                      }}
+                      onClick={() => removeManualItem(idx)}
                       style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}
                     >
                       <Trash2 size={18} />
@@ -2434,7 +2459,7 @@ const Sales = () => {
                 Aucun article ajouté. Vous pouvez aussi saisir un montant global ci-dessous.
                 <div style={{ marginTop: '10px' }}>
                   <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#065f46', fontWeight: 600 }}>Montant Global (F)</label>
-                  <input type="number" value={formData.totalAmount} onChange={e => setFormData({ ...formData, totalAmount: e.target.value })} placeholder="0" className="large-input" style={{ width: '100%', borderColor: '#6ee7b7' }} />
+                  <input type="number" name="totalAmount" value={formData.totalAmount} onChange={handleManualSaleChange} placeholder="0" className="large-input" style={{ width: '100%', borderColor: '#6ee7b7' }} />
                 </div>
               </div>
             )}
