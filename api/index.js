@@ -30,20 +30,16 @@ const supabaseFetch = async (resourcePath, options = {}, req = null) => {
   }
   let url = `${supabaseUrl}/rest/v1/${resourcePath}`;
 
-  const companyId = req?.headers?.['x-company-id'];
-  // Si header présent, on l'utilise tel quel (même si "")
-  let filterCompanyId = (companyId !== undefined && companyId !== null) ? companyId : null;
-
+  const rawCompanyId = req?.headers?.['x-company-id'];
+  let userData = null;
   if (req?.headers?.['x-user-data']) {
-    try {
-      const u = JSON.parse(req.headers['x-user-data']);
-      // Si c'est un superadmin et qu'il a spécifié un companyId (dans les headers), on utilise celui-là.
-      // Sinon, s'il n'est pas superadmin, on impose son propre company_id.
-      if (u.role !== 'superadmin' && (filterCompanyId === null || filterCompanyId === undefined)) {
-        filterCompanyId = u.company_id || 'UNAUTHORIZED';
-      }
-    } catch (e) { }
+    try { userData = JSON.parse(req.headers['x-user-data']); } catch (e) { }
   }
+
+  // Déterminer l'ID de l'entreprise cible (Switcher > User profile)
+  const effectiveCompanyId = (rawCompanyId !== undefined && rawCompanyId !== null && rawCompanyId !== "") 
+    ? rawCompanyId 
+    : (userData?.role !== 'superadmin' ? userData?.company_id : null);
 
   // Exclure les tables qui n'ont pas de colonne company_id
   const isExcluded = resourcePath.includes('companies') || 
@@ -52,20 +48,25 @@ const supabaseFetch = async (resourcePath, options = {}, req = null) => {
                    resourcePath.includes('purchase_items');
   const isUserPath = resourcePath.includes('users');
 
-  // Appliquer le filtre de company_id si présent et non exclu
-  if (filterCompanyId && !isExcluded && !isUserPath) {
+  // Appliquer le filtre de lecture (GET)
+  if (effectiveCompanyId && !isExcluded && !isUserPath) {
     const separator = resourcePath.includes('?') ? '&' : '?';
-    url += `${separator}company_id=eq.${filterCompanyId}`;
+    url += `${separator}company_id=eq.${effectiveCompanyId}`;
   }
 
+  // Enrichissement obligatoire pour les créations/modifications
   let finalBody = options.body;
-  if ((options.method === 'POST' || options.method === 'PATCH') && companyId && options.body && !isExcluded) {
+  if ((options.method === 'POST' || options.method === 'PATCH') && !isExcluded) {
+    if (!effectiveCompanyId) {
+      throw new Error("Opération impossible : Aucune entreprise sélectionnée ou associée.");
+    }
+
     try {
       const parsedBody = JSON.parse(options.body);
       if (Array.isArray(parsedBody)) {
-        finalBody = JSON.stringify(parsedBody.map(item => ({ ...item, company_id: companyId })));
+        finalBody = JSON.stringify(parsedBody.map(item => ({ ...item, company_id: effectiveCompanyId })));
       } else if (typeof parsedBody === 'object' && parsedBody !== null) {
-        finalBody = JSON.stringify({ ...parsedBody, company_id: companyId });
+        finalBody = JSON.stringify({ ...parsedBody, company_id: effectiveCompanyId });
       }
     } catch (e) { }
   }
@@ -368,13 +369,20 @@ router.post('/sales', async (req, res) => {
   try {
     const user = JSON.parse(req.headers['x-user-data'] || '{}');
     const headerCompanyId = req.headers['x-company-id'];
-    const companyId = (headerCompanyId !== undefined && headerCompanyId !== null) ? headerCompanyId : user.company_id;
+    
+    // Utiliser la même logique stricte que supabaseFetch
+    const companyId = (headerCompanyId !== undefined && headerCompanyId !== null && headerCompanyId !== "") 
+      ? headerCompanyId 
+      : (user.role !== 'superadmin' ? user.company_id : null);
+
+    if (!companyId) throw new Error("Veuillez sélectionner une entreprise pour cette vente.");
+
     const { cart, customerId, totalAmount, paidAmount, remainingAmount, paymentMode, status, ...otherData } = req.body;
 
     // Créer la vente sans le cart, avec mapping camelCase -> snake_case
     const saleToCreate = {
       ...otherData,
-      company_id: companyId || null,
+      company_id: companyId,
       customer_id: customerId || null,
       total_amount: totalAmount,
       paid_amount: paidAmount,
