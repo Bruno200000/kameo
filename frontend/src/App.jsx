@@ -133,6 +133,7 @@ export default function App() {
     icon: <AlertTriangle size={16} color="#f59e0b" />,
     title: 'Stock critique',
     desc: `${p.name} - ${p.quantity} restants`,
+    company: p.companies?.name,
     color: '#fffbeb',
     page: 'products'
   }));
@@ -143,6 +144,7 @@ export default function App() {
     icon: <DollarSign size={16} color="#3b82f6" />,
     title: 'Paiement en attente',
     desc: `Vente #${s.id.slice(0, 5)} - Reste: ${s.total_amount - (s.paid_amount || 0)} F`,
+    company: s.companies?.name,
     color: '#eff6ff',
     page: 'sales'
   }));
@@ -481,8 +483,11 @@ export default function App() {
                           }}>
                             {n.icon}
                           </div>
-                          <div>
-                            <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#1e293b', marginBottom: '2px' }}>{n.title}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                              <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#1e293b', marginBottom: '2px' }}>{n.title}</div>
+                              {n.company && <span style={{ fontSize: '10px', backgroundColor: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', color: '#64748b', whiteSpace: 'nowrap' }}>{n.company}</span>}
+                            </div>
                             <div style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: '1.4' }}>{n.desc}</div>
                           </div>
                         </div>

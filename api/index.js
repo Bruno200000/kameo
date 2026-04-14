@@ -283,7 +283,7 @@ router.get('/finance/summary', async (req, res) => {
 // Produits
 router.get('/products', async (req, res) => {
   try {
-    const data = await supabaseFetch('products?select=*&order=created_at.desc', {}, req);
+    const data = await supabaseFetch('products?select=*,companies(name)&order=created_at.desc', {}, req);
     res.json(data || []);
   } catch (err) { res.status(500).json({ error: "Erreur" }); }
 });
@@ -358,7 +358,7 @@ router.post('/upload', upload.single('image'), async (req, res) => {
 // Ventes
 router.get('/sales', async (req, res) => {
   try {
-    const data = await supabaseFetch('sales?select=*,customers(name),sale_items(product_id,quantity,unit_price,products(name,image_url))&order=sale_date.desc', {}, req);
+    const data = await supabaseFetch('sales?select=*,companies(name),customers(name),sale_items(product_id,quantity,unit_price,products(name,image_url))&order=sale_date.desc', {}, req);
     res.json(data || []);
   } catch (err) { res.status(500).json({ error: "Erreur" }); }
 });
