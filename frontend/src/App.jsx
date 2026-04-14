@@ -2095,13 +2095,14 @@ const Sales = () => {
             <div class="divider"></div>
             <table>
               <thead>
-                <tr><th align="left">ART</th><th align="center">QTE</th><th align="right">TOTAL</th></tr>
+                <tr><th align="left">ART</th><th align="center">QTE</th><th align="right">P.U.</th><th align="right">TOTAL</th></tr>
               </thead>
               <tbody>
                 ${items.map(item => `
                   <tr>
                     <td>${item.name}</td>
                     <td align="center">${item.quantity}</td>
+                    <td align="right">${Number(item.unit_price).toLocaleString()}</td>
                     <td align="right">${Number(item.total).toLocaleString()}</td>
                   </tr>
                 `).join('')}
@@ -2234,6 +2235,7 @@ const Sales = () => {
                   <tr>
                     <th>Désignation</th>
                     <th style="text-align: center">Qté</th>
+                    <th style="text-align: right">P.U.</th>
                     <th style="text-align: right">Total</th>
                   </tr>
                 </thead>
@@ -2242,6 +2244,7 @@ const Sales = () => {
                     <tr>
                       <td>${item.name}</td>
                       <td align="center">${item.quantity}</td>
+                      <td align="right">${Number(item.unit_price).toLocaleString()}</td>
                       <td align="right">${Number(item.total).toLocaleString()}</td>
                     </tr>
                   `).join('')}
