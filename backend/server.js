@@ -777,11 +777,21 @@ app.get('/api/settings', async (req, res) => {
 app.post('/api/settings', async (req, res) => {
   try {
     const companyId = await getOrCreateCompanyId();
-    const { name, phone, address, currency } = req.body;
+    
+    // On nettoie le body pour ne pas envoyer de champs protégés/système à Supabase
+    const payload = { ...req.body };
+    const fieldsToExclude = ['id', 'created_at', 'updated_at', 'email', 'owner_id', 'subscription_status', 'validation_status'];
+    fieldsToExclude.forEach(f => delete payload[f]);
+
+    // Mapping du logo vers la colonne existante
+    if (payload.invoice_logo !== undefined) {
+      payload.logo_url = payload.invoice_logo;
+      delete payload.invoice_logo;
+    }
     
     await supabaseFetch(`companies?id=eq.${companyId}`, {
       method: 'PATCH',
-      body: JSON.stringify({ name, phone, address, currency })
+      body: JSON.stringify(payload)
     });
     
     res.json({ success: true });

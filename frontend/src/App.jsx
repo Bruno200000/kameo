@@ -2019,8 +2019,6 @@ const Sales = () => {
           status: formData.status
         };
         setSales([newSale, ...sales]);
-        setShowAdd(false);
-        setFormData({ totalAmount: '', customerName: '', status: 'paid' });
       } else {
         addToast('Erreur', resData.error || 'Erreur lors de l\'enregistrement', 'error');
       }
@@ -2348,7 +2346,14 @@ const Sales = () => {
     setFormData({
       totalAmount: sale.total_amount || '',
       customerName: sale.customer_name || '',
-      status: sale.status || 'paid'
+      status: sale.status || 'paid',
+      customerId: sale.customer_id || '',
+      saleDate: new Date().toISOString().split('T')[0],
+      items: sale.sale_items ? sale.sale_items.map(item => ({
+        productId: item.product_id || '',
+        quantity: item.quantity || 1,
+        unitPrice: item.unit_price || 0
+      })) : []
     });
     setShowAdd(true);
   };

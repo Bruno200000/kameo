@@ -168,9 +168,9 @@ router.post('/settings', async (req, res) => {
     fieldsToExclude.forEach(f => delete payload[f]);
 
     // Mapping du logo vers la colonne existante
-    if (payload.invoice_logo) {
+    if (payload.invoice_logo !== undefined) {
       payload.logo_url = payload.invoice_logo;
-      // On ne supprime pas forcément invoice_logo si la colonne a été créée
+      delete payload.invoice_logo;
     }
 
     console.log(`Mise à jour paramètres pour ${companyId}:`, Object.keys(payload));
