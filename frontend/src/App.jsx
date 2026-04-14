@@ -1265,7 +1265,12 @@ const Products = ({ addToast }) => {
       const res = await fetch(`${API_URL}/products`, {
         method: 'POST',
         headers: getHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          ...formData,
+          selling_price: Number(formData.selling_price || 0),
+          purchase_price: Number(formData.purchase_price || 0),
+          quantity: Number(formData.quantity || 0)
+        })
       });
       const data = await res.json();
       if (data.success) {
@@ -1313,7 +1318,12 @@ const Products = ({ addToast }) => {
       const res = await fetch(`${API_URL}/products/${editingProductId}`, {
         method: 'PATCH',
         headers: getHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          ...formData,
+          selling_price: Number(formData.selling_price || 0),
+          purchase_price: Number(formData.purchase_price || 0),
+          quantity: Number(formData.quantity || 0)
+        })
       });
       const resData = await res.json();
       if (resData.success) {
