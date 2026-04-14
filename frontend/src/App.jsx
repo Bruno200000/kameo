@@ -1826,16 +1826,7 @@ const Stock = ({ addToast }) => {
 };
 
 const Sales = ({ addToast }) => {
-  const getHeaders = (extra = {}) => {
-    const user = JSON.parse(localStorage.getItem('kameo_current_user') || '{}');
-    const activeCompany = localStorage.getItem('kameo_active_company_id');
-    const companyId = activeCompany !== null ? activeCompany : (user.company_id || '');
-    return {
-      'X-Company-Id': companyId,
-      'X-User-Data': JSON.stringify(user || {}),
-      ...extra
-    };
-  };
+
 
   const [sales, , setSales] = useFetch('/sales', []);
   const [products] = useFetch('/products', []);

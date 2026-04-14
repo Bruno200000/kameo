@@ -31,14 +31,15 @@ const supabaseFetch = async (resourcePath, options = {}, req = null) => {
   let url = `${supabaseUrl}/rest/v1/${resourcePath}`;
 
   const companyId = req?.headers?.['x-company-id'];
-  let filterCompanyId = companyId;
+  // Si header présent, on l'utilise tel quel (même si "")
+  let filterCompanyId = (companyId !== undefined && companyId !== null) ? companyId : null;
 
   if (req?.headers?.['x-user-data']) {
     try {
       const u = JSON.parse(req.headers['x-user-data']);
       // Si c'est un superadmin et qu'il a spécifié un companyId (dans les headers), on utilise celui-là.
       // Sinon, s'il n'est pas superadmin, on impose son propre company_id.
-      if (u.role !== 'superadmin' && !filterCompanyId) {
+      if (u.role !== 'superadmin' && (filterCompanyId === null || filterCompanyId === undefined)) {
         filterCompanyId = u.company_id || 'UNAUTHORIZED';
       }
     } catch (e) { }
@@ -366,7 +367,8 @@ router.get('/sales', async (req, res) => {
 router.post('/sales', async (req, res) => {
   try {
     const user = JSON.parse(req.headers['x-user-data'] || '{}');
-    const companyId = req.headers['x-company-id'] || user.company_id;
+    const headerCompanyId = req.headers['x-company-id'];
+    const companyId = (headerCompanyId !== undefined && headerCompanyId !== null) ? headerCompanyId : user.company_id;
     const { cart, customerId, totalAmount, paidAmount, remainingAmount, paymentMode, status, ...otherData } = req.body;
 
     // Créer la vente sans le cart, avec mapping camelCase -> snake_case
