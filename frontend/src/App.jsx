@@ -2060,6 +2060,10 @@ const Sales = () => {
           : [{ name: 'Vente globale', quantity: 1, unit_price: sale.total_amount, total: sale.total_amount }]
         );
 
+    const paidAmount = Number(sale.paid_amount || 0);
+    const remainingAmount = Number(sale.remaining_amount ?? (Number(sale.total_amount || 0) - paidAmount));
+    const isCredit = remainingAmount > 0;
+
     const printFrame = document.createElement('iframe');
     printFrame.style.display = 'none';
     document.body.appendChild(printFrame);
@@ -2105,14 +2109,13 @@ const Sales = () => {
             </table>
             <div class="divider"></div>
             <div class="total bold" align="right">TOTAL: ${Number(sale.total_amount).toLocaleString()} ${currency}</div>
+            <div align="right">Paiement: ${paidAmount.toLocaleString()} ${currency}</div>
+            <div align="right" class="bold">Reste: ${remainingAmount.toLocaleString()} ${currency}</div>
+            
+            ${isCredit ? '<div class="center bold" style="margin-top: 10px; border: 1px solid #000; padding: 5px;">VENTE À CRÉDIT</div>' : ''}
+
             <div class="center" style="margin-top: 5px;">${conditions}</div>
             <div class="center" style="margin-top: 15px;">${notes ? notes + '<br/>' : ''}${footerText}</div>
-
-            <script>
-              window.onload = function() {
-                setTimeout(() => { window.print(); window.close(); }, 500);
-              };
-            </script>
           </body>
         </html>
       `;
@@ -2139,8 +2142,23 @@ const Sales = () => {
                 background: #fff; 
                 padding: ${isModel3 ? '40px' : '30px'};
                 border-radius: 4px;
+                position: relative;
                 ${isModel2 ? `border-top: 8px solid ${accentColor};` : ''}
                 ${isModel5 ? `border: 2px solid ${accentColor};` : ''}
+              }
+              .credit-badge {
+                position: absolute;
+                top: 20px;
+                right: 20px;
+                border: 2px solid #ef4444;
+                color: #ef4444;
+                padding: 10px 20px;
+                font-weight: 900;
+                font-size: 1.2rem;
+                transform: rotate(5deg);
+                opacity: 0.8;
+                border-radius: 4px;
+                z-index: 10;
               }
               .header { 
                 display: flex; 
@@ -2174,6 +2192,8 @@ const Sales = () => {
               }
               .items-table td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
               .total-area { text-align: right; margin-top: 15px; }
+              .total-row { display: flex; justify-content: flex-end; gap: 20px; margin-bottom: 5px; }
+              .total-label { color: #64748b; font-size: 0.9rem; }
               .total-amount { font-size: 1.2rem; font-weight: bold; color: ${accentColor}; }
               .footer { 
                 margin-top: 50px; 
@@ -2187,6 +2207,8 @@ const Sales = () => {
           </head>
           <body>
             <div class="invoice-card">
+              ${isCredit ? '<div class="credit-badge">VENTE À CRÉDIT</div>' : ''}
+              
               <div class="header">
                 ${logoUrl ? `<img src="${logoUrl}" class="logo" />` : '<div style="width:80px;height:40px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:10px;color:#94a3b8">LOGO</div>'}
                 <div class="header-text">
@@ -2227,8 +2249,20 @@ const Sales = () => {
               </table>
 
               <div class="total-area">
-                <div style="font-size: 0.9rem; color: #64748b;">Total Net à Payer</div>
-                <div class="total-amount">${Number(sale.total_amount).toLocaleString()} ${currency}</div>
+                <div class="total-row">
+                  <span class="total-label">Total Net</span>
+                  <span class="total-amount">${Number(sale.total_amount).toLocaleString()} ${currency}</span>
+                </div>
+                <div class="total-row">
+                  <span class="total-label">Montant Versé</span>
+                  <span style="font-weight: 600;">${paidAmount.toLocaleString()} ${currency}</span>
+                </div>
+                <div class="total-row" style="border-top: 1px solid #e2e8f0; padding-top: 5px; margin-top: 5px;">
+                  <span class="total-label">Reste à Payer</span>
+                  <span style="font-weight: bold; color: ${remainingAmount > 0 ? '#ef4444' : '#10b981'}; font-size: 1.1rem;">
+                    ${remainingAmount.toLocaleString()} ${currency}
+                  </span>
+                </div>
               </div>
 
               <div class="footer">
