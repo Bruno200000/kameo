@@ -2116,319 +2116,130 @@ const Sales = () => {
           </body>
         </html>
       `;
-    } else if (model === 'model4') { // Modèle MSI (Multi Services Informatique)
-      html = `
-        <html>
-          <head>
-            <style>
-              body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #000; font-size: 14px; }
-              .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #2563eb; padding-bottom: 10px; margin-bottom: 20px; }
-              .logo-area { display: flex; align-items: center; gap: 10px; }
-              .company-name { font-size: 1.5em; font-weight: bold; color: #2563eb; }
-              .tax-info { text-align: right; font-size: 0.8em; }
-              .title { text-align: center; font-size: 1.8em; font-weight: bold; text-decoration: underline; margin-bottom: 20px; }
-              .client-area { margin-bottom: 15px; font-weight: bold; }
-              .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-              .items-table th { background: #dbeafe; color: #2563eb; padding: 12px; border: 1px solid #2563eb; }
-              .items-table td { padding: 12px; border: 1px solid #2563eb; }
-              .total-row { font-weight: bold; background: #f8fafc; }
-              .footer-text { margin-top: 50px; text-align: center; font-size: 11px; color: #ef4444; }
-              .direction { text-align: right; margin-top: 60px; font-style: italic; font-weight: bold; }
-            </style>
-          </head>
-          <body>
-            <div class="header">
-              <div class="logo-area">
-                ${logoUrl ? `<img src="${logoUrl}" height="60" />` : ''}
-                <div>
-                  <div class="company-name">${companyName}</div>
-                  <div style="font-size: 12px; color: #64748b;">Informatiques - Bureautiques - Services</div>
-                </div>
-              </div>
-              <div class="tax-info">
-                <div>DATE: ${new Date(sale.sale_date).toLocaleDateString()}</div>
-              </div>
-            </div>
-            <div class="title">FACTURE N°${invoiceNumber}</div>
-            <div class="client-area">DOIT : ${sale.customers?.name || sale.customer_name || 'Comptoir'}</div>
-            <table class="items-table">
-              <thead>
-                <tr><th>DESIGNATIONS</th><th>QTE</th><th>PU.TTC</th><th>PT.TTC</th></tr>
-              </thead>
-              <tbody>
-                ${items.map(item => `
-                  <tr>
-                    <td>${item.name}</td>
-                    <td align="center">${item.quantity}</td>
-                    <td align="right">${Number(item.unit_price).toLocaleString()}</td>
-                    <td align="right">${Number(item.total).toLocaleString()}</td>
-                  </tr>
-                `).join('')}
-                <tr class="total-row">
-                  <td colspan="3" align="right">TOTAL TTC</td>
-                  <td align="right">${Number(sale.total_amount).toLocaleString()} ${currency}</td>
-                </tr>
-              </tbody>
-            </table>
-            <div class="direction">LA DIRECTION</div>
-            <div class="footer-text">${companyAddress}</div>
-            <script>
-              window.onload = function() {
-                setTimeout(() => { window.print(); window.close(); }, 500);
-              };
-            </script>
-          </body>
-        </html>
-      `;
-    } else if (model === 'model5') { // Modèle QSS
-      html = `
-        <html>
-          <head>
-            <style>
-              body { font-family: Arial, sans-serif; padding: 40px; color: #000; font-size: 13px; }
-              .logo-box { border: 3px solid #000; padding: 20px; text-align: center; font-size: 32px; font-weight: 900; margin-bottom: 20px; }
-              .items-table { width: 100%; border-collapse: collapse; border: 1px solid #000; }
-              .items-table th { background: #eee; border: 1px solid #000; padding: 8px; }
-              .items-table td { border: 1px solid #000; padding: 8px; }
-              .totals-table { width: 250px; margin-left: auto; border-collapse: collapse; border: 1px solid #000; margin-top: 20px; }
-              .totals-table td { border: 1px solid #000; padding: 8px; }
-              .box { border: 1px solid #000; padding: 10px; margin-bottom: 20px; }
-            </style>
-          </head>
-          <body>
-            <div style="display: flex; gap: 40px; margin-bottom: 30px;">
-              <div style="width: 150px; border: 3px solid #000; height: 100px; display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: 900;">LOGO</div>
-              <div style="flex: 1; text-align: center;">
-                <div style="font-size: 24px; font-weight: 900;">${companyName}</div>
-                <div>Contact: ${companyPhone}</div>
-              </div>
-            </div>
-            <div style="display: flex; gap: 40px;">
-              <div style="flex: 1;">
-                <table class="items-table">
-                  <tr><td bgcolor="#eee">FACTURE N°</td><td>${invoiceNumber}</td></tr>
-                  <tr><td bgcolor="#eee">DATE</td><td>${new Date(sale.sale_date).toLocaleDateString()}</td></tr>
-                </table>
-              </div>
-              <div style="flex: 1;">
-                <div class="box"><strong>CLIENT:</strong><br/>${sale.customers?.name || sale.customer_name || 'Comptoir'}</div>
-              </div>
-            </div>
-            <table class="items-table" style="margin-top: 20px;">
-              <thead>
-                <tr><th>REF</th><th>DESIGNATION</th><th>QTE</th><th>TOTAL HT</th></tr>
-              </thead>
-              <tbody>
-                ${items.map((item, idx) => `
-                  <tr>
-                    <td>${idx + 1}</td>
-                    <td>${item.name}</td>
-                    <td align="center">${item.quantity}</td>
-                    <td align="right">${Number(item.total).toLocaleString()}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-            <table class="totals-table">
-              <tr><td>TOTAL BRUT HT</td><td align="right">${Number(sale.total_amount).toLocaleString()}</td></tr>
-              <tr style="background: #eee; font-weight: bold;"><td>NET A PAYER</td><td align="right">${Number(sale.total_amount).toLocaleString()} ${currency}</td></tr>
-            </table>
-            <div style="margin-top: 20px; font-size: 11px;">${footerText}</div>
-            <script>
-              window.onload = function() {
-                setTimeout(() => { window.print(); window.close(); }, 500);
-              };
-            </script>
-          </body>
-        </html>
-      `;
-    } else if (model === 'model2') { // Modèle Moderne
-      html = `
-        <html>
-          <head>
-            <title>Facture ${invoiceNumber}</title>
-            <style>
-              @page { margin: 20mm; }
-              body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; color: #1e293b; }
-              .invoice-container { max-width: 800px; margin: 0 auto; border-top: 10px solid ${accentColor}; }
-              .header { display: flex; justify-content: space-between; align-items: center; padding: 40px 30px; background: #f8fafc; }
-              .items-table { width: 100%; border-collapse: collapse; margin: 30px 0; }
-              .items-table th { text-align: left; padding: 12px; border-bottom: 2px solid ${accentColor}; color: ${accentColor}; font-weight: 700; text-transform: uppercase; font-size: 0.8rem; }
-              .items-table td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
-              .totals { margin-left: auto; width: 250px; margin-top: 20px; }
-              .total-row { display: flex; justify-content: space-between; padding: 10px 0; font-weight: bold; border-top: 2px solid ${accentColor}; color: ${accentColor}; font-size: 1.2rem; }
-            </style>
-          </head>
-          <body>
-            <div class="invoice-container">
-              <div class="header">
-                 <div>
-                   <h1 style="margin: 0; color: ${accentColor};">FACTURE</h1>
-                   <div style="color: #64748b;">N° ${invoiceNumber}</div>
-                   <div style="color: #64748b;">Date: ${new Date(sale.sale_date).toLocaleDateString()}</div>
-                 </div>
-                 <div style="text-align: right;">
-                   ${logoUrl ? `<img src="${logoUrl}" style="height: 60px; margin-bottom: 10px;" />` : ''}
-                   <div style="font-weight: bold; font-size: 1.2rem;">${companyName}</div>
-                   <div style="font-size: 0.85rem; color: #64748b;">${companyAddress}</div>
-                 </div>
-              </div>
-              <div style="padding: 30px;">
-                <div style="margin-bottom: 30px;">
-                  <div style="text-transform: uppercase; font-size: 0.75rem; font-weight: 700; color: #94a3b8; margin-bottom: 5px;">Facturé à</div>
-                  <div style="font-size: 1.1rem; font-weight: 600;">${sale.customers?.name || sale.customer_name || 'Comptoir'}</div>
-                </div>
-                <table class="items-table">
-                  <thead><tr><th>Désignation</th><th style="text-align: center">Qté</th><th style="text-align: right">Total</th></tr></thead>
-                  <tbody>
-                    ${items.map(item => `
-                      <tr>
-                        <td>${item.name}</td>
-                        <td align="center">${item.quantity}</td>
-                        <td align="right">${Number(item.total).toLocaleString()}</td>
-                      </tr>
-                    `).join('')}
-                  </tbody>
-                </table>
-                <div class="totals">
-                  <div class="total-row"><span>NET A PAYER</span><span>${Number(sale.total_amount).toLocaleString()} ${currency}</span></div>
-                </div>
-                <div style="margin-top: 50px; font-size: 0.85rem; color: #64748b; border-left: 4px solid #e2e8f0; padding-left: 15px;">
-                  <strong>Notes:</strong> ${notes || 'N/A'}<br/>
-                  <strong>Conditions:</strong> ${conditions}<br/>
-                  <div style="margin-top: 10px; font-style: italic;">${footerText}</div>
-                </div>
-              </div>
-            </div>
-          </body>
-        </html>
-      `;
-    } else if (model === 'model3') { // Modèle Minimaliste
-      html = `
-        <html>
-          <head>
-            <title>Facture ${invoiceNumber}</title>
-            <style>
-              body { font-family: 'Helvetica', Arial, sans-serif; padding: 40px; color: #000; }
-              .center { text-align: center; }
-              .header { margin-bottom: 50px; }
-              .items-table { width: 100%; border-collapse: collapse; margin: 30px 0; }
-              .items-table th { border-bottom: 1px solid #000; padding: 10px; text-align: left; }
-              .items-table td { padding: 10px; border-bottom: 1px solid #eee; }
-              .total-box { text-align: right; font-size: 1.5rem; font-weight: bold; margin-top: 30px; }
-            </style>
-          </head>
-          <body>
-            <div class="center header">
-              ${logoUrl ? `<img src="${logoUrl}" style="height: 50px; margin-bottom: 15px;" />` : ''}
-              <h1 style="margin: 0; letter-spacing: 5px;">FACTURE</h1>
-              <div style="margin-top: 10px;">${companyName} | ${companyPhone}</div>
-              <div style="font-size: 0.9rem;">${companyAddress}</div>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 30px; border-bottom: 1px solid #000; padding-bottom: 20px;">
-              <div>
-                <strong>Client:</strong><br/>
-                ${sale.customers?.name || sale.customer_name || 'Comptoir'}
-              </div>
-              <div style="text-align: right;">
-                <strong>N°:</strong> ${invoiceNumber}<br/>
-                <strong>Date:</strong> ${new Date(sale.sale_date).toLocaleDateString()}
-              </div>
-            </div>
-            <table class="items-table">
-              <thead><tr><th>Description</th><th>Qté</th><th style="text-align: right">Prix</th></tr></thead>
-              <tbody>
-                ${items.map(item => `
-                  <tr>
-                    <td>${item.name}</td>
-                    <td>${item.quantity}</td>
-                    <td align="right">${Number(item.total).toLocaleString()}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-            <div class="total-box">
-              TOTAL: ${Number(sale.total_amount).toLocaleString()} ${currency}
-            </div>
-            <div style="margin-top: 60px; font-size: 0.8rem; text-align: center; color: #666;">
-              ${conditions} | ${footerText}
-            </div>
-          </body>
-        </html>
-      `;
     } else {
-      // Modèle Standard (model1)
+      // Modèles A4 (Standard, Moderne, Minimaliste, MSI, QSS)
+      // On harmonise parfaitement avec l'aperçu des paramètres
+      
+      const isModel1 = model === 'model1';
+      const isModel2 = model === 'model2';
+      const isModel3 = model === 'model3';
+      const isModel4 = model === 'model4';
+      const isModel5 = model === 'model5';
+
       html = `
         <html>
           <head>
             <title>Facture ${invoiceNumber}</title>
             <style>
-              @page { margin: 20mm; }
-              body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; color: #1f2937; line-height: 1.6; }
-              .invoice-container { max-width: 800px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07); }
-              .invoice-header { background: linear-gradient(135deg, ${accentColor} 0%, ${accentColor}dd 100%); color: white; padding: 30px; display: flex; justify-content: space-between; align-items: center; }
-              .company-info { flex: 1; }
-              .company-name { font-size: 24px; font-weight: 700; margin: 0 0 8px 0; }
-              .items-table { width: 100%; border-collapse: collapse; margin: 20px 0; background: white; }
-              .items-table th { background: #f8fafc; padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid ${accentColor}; }
-              .items-table td { padding: 16px; border-bottom: 1px solid #f1f5f9; }
-              .total-section { background: ${accentColor}; color: white; padding: 24px 30px; border-radius: 8px; margin: 20px 0; display: flex; justify-content: space-between; align-items: center; }
+              @page { margin: 15mm; }
+              body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; color: #1e293b; line-height: 1.5; }
+              .invoice-card { 
+                max-width: 800px; 
+                margin: 0 auto; 
+                background: #fff; 
+                padding: ${isModel3 ? '40px' : '30px'};
+                border-radius: 4px;
+                ${isModel2 ? `border-top: 8px solid ${accentColor};` : ''}
+                ${isModel5 ? `border: 2px solid ${accentColor};` : ''}
+              }
+              .header { 
+                display: flex; 
+                flex-direction: ${isModel3 ? 'column' : isModel2 ? 'row-reverse' : 'row'};
+                justify-content: space-between; 
+                align-items: ${isModel3 ? 'center' : 'flex-start'};
+                margin-bottom: 25px;
+                ${isModel1 ? `border-bottom: 1px solid #e2e8f0; padding-bottom: 15px;` : ''}
+              }
+              .logo { height: 50px; object-fit: contain; }
+              .header-text { 
+                text-align: ${isModel3 ? 'center' : isModel2 ? 'left' : 'right'}; 
+                margin-top: ${isModel3 ? '15px' : '0'};
+              }
+              .invoice-title { 
+                font-weight: bold; 
+                font-size: 1.5rem; 
+                color: ${isModel4 ? accentColor : '#1e293b'};
+              }
+              .client-box { 
+                margin-bottom: 25px; 
+                font-size: 0.9rem;
+                ${isModel5 ? `background: #f8fafc; border: 1px dashed #cbd5e1; padding: 15px; border-radius: 4px;` : ''}
+              }
+              .items-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 0.9rem; }
+              .items-table th { 
+                padding: 12px; 
+                text-align: left; 
+                background: ${isModel4 ? accentColor : '#f1f5f9'}; 
+                color: ${isModel4 ? '#fff' : '#475569'}; 
+              }
+              .items-table td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
+              .total-area { text-align: right; margin-top: 15px; }
+              .total-amount { font-size: 1.2rem; font-weight: bold; color: ${accentColor}; }
+              .footer { 
+                margin-top: 50px; 
+                border-top: 2px solid ${accentColor}; 
+                padding-top: 20px; 
+                text-align: center; 
+                font-size: 0.8rem; 
+                color: #64748b; 
+              }
             </style>
           </head>
           <body>
-            <div class="invoice-container">
-              <div class="invoice-header">
-                <div class="company-info">
-                  ${logoUrl ? `<img src="${logoUrl}" style="height: 60px; margin-bottom: 10px;" />` : ''}
-                  <div class="company-name">${companyName}</div>
-                  <div>${companyAddress}</div>
-                  <div>Tel: ${companyPhone}</div>
-                </div>
-                <div style="text-align: right">
-                  <div style="font-size: 20px; font-weight: bold;">FACTURE</div>
-                  <div>N° ${invoiceNumber}</div>
-                  <div>Date: ${new Date(sale.sale_date).toLocaleDateString()}</div>
+            <div class="invoice-card">
+              <div class="header">
+                ${logoUrl ? `<img src="${logoUrl}" class="logo" />` : '<div style="width:80px;height:40px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:10px;color:#94a3b8">LOGO</div>'}
+                <div class="header-text">
+                  <div class="invoice-title">${invoiceNumber}</div>
+                  <div style="font-size: 0.8rem; color: #64748b;">Le ${new Date(sale.sale_date).toLocaleDateString()}</div>
                 </div>
               </div>
-              <div style="padding: 30px;">
-                <div style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 8px;">
-                   <strong>CLIENT:</strong><br/>
-                   ${sale.customers?.name || sale.customer_name || 'Comptoir'}
+
+              <div style="display: flex; justify-content: space-between; gap: 20px; margin-bottom: 25px;">
+                <div style="font-size: 0.85rem;">
+                  <strong>${companyName}</strong><br/>
+                  ${companyAddress}<br/>
+                  Tel: ${companyPhone}
                 </div>
-                <table class="items-table">
-                  <thead>
+                <div class="client-box">
+                  <strong>Client :</strong> ${sale.customers?.name || sale.customer_name || 'Comptoir'}<br/>
+                  ${sale.customers?.contact_info || ''}
+                </div>
+              </div>
+
+              <table class="items-table">
+                <thead>
+                  <tr>
+                    <th>Désignation</th>
+                    <th style="text-align: center">Qté</th>
+                    <th style="text-align: right">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${items.map(item => `
                     <tr>
-                      <th>Désignation</th>
-                      <th style="text-align: center">Qté</th>
-                      <th style="text-align: right">Total</th>
+                      <td>${item.name}</td>
+                      <td align="center">${item.quantity}</td>
+                      <td align="right">${Number(item.total).toLocaleString()}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    ${items.map(item => `
-                      <tr>
-                        <td>${item.name}</td>
-                        <td align="center">${item.quantity}</td>
-                        <td align="right">${Number(item.total).toLocaleString()}</td>
-                      </tr>
-                    `).join('')}
-                  </tbody>
-                </table>
-                <div class="total-section">
-                  <span>NET A PAYER</span>
-                  <span style="font-size: 26px; font-weight: 800;">${Number(sale.total_amount).toLocaleString()} ${currency}</span>
-                </div>
-                <div style="margin-top: 20px; font-size: 13px;">
-                   <strong>Notes:</strong> ${notes || 'N/A'}<br/>
-                   <strong>Conditions:</strong> ${conditions}<br/>
-                </div>
-                <div style="margin-top: 40px; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 20px; color: #64748b; font-size: 13px;">
-                   ${footerText}
-                </div>
+                  `).join('')}
+                </tbody>
+              </table>
+
+              <div class="total-area">
+                <div style="font-size: 0.9rem; color: #64748b;">Total Net à Payer</div>
+                <div class="total-amount">${Number(sale.total_amount).toLocaleString()} ${currency}</div>
+              </div>
+
+              <div class="footer">
+                <div style="font-weight: bold; color: #475569; margin-bottom: 5px;">${conditions}</div>
+                <div>${notes ? notes + '<br/>' : ''}${footerText}</div>
               </div>
             </div>
+
             <script>
               window.onload = function() {
-                setTimeout(() => { window.print(); window.close(); }, 500);
+                setTimeout(() => { window.print(); window.close(); }, 700);
               };
             </script>
           </body>
