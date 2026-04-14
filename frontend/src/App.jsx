@@ -240,13 +240,13 @@ export default function App() {
 
     switch (currentPage) {
       case 'dashboard': return <Dashboard onNavigate={setCurrentPage} />;
-      case 'pos': return <POS />;
-      case 'products': return <Products />;
-      case 'stock': return <Stock />;
-      case 'sales': return <Sales />;
+      case 'pos': return <POS addToast={addToast} />;
+      case 'products': return <Products addToast={addToast} />;
+      case 'stock': return <Stock addToast={addToast} />;
+      case 'sales': return <Sales addToast={addToast} />;
       case 'purchases': return <Purchases />;
-      case 'finance': return <FinanceModule />;
-      case 'contacts': return <Contacts />;
+      case 'finance': return <FinanceModule addToast={addToast} />;
+      case 'contacts': return <Contacts addToast={addToast} />;
       case 'settings': return <SettingsPage currentUser={currentUser} />;
       case 'subscription': return <Subscription />;
       case 'users': return <UsersManager />;
@@ -893,7 +893,7 @@ const Dashboard = ({ onNavigate }) => {
 
 
 // Composant POS existant conservé identique
-const POS = () => {
+const POS = ({ addToast }) => {
   const [products] = useFetch('/products', []);
   const [contacts] = useFetch('/contacts', { customers: [], suppliers: [] });
   const [cart, setCart] = useState([]);
@@ -1201,7 +1201,7 @@ const POS = () => {
   );
 };
 
-const Products = () => {
+const Products = ({ addToast }) => {
   const [products, , setProducts] = useFetch('/products', []);
   const [showAdd, setShowAdd] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
@@ -1605,7 +1605,7 @@ const Products = () => {
   );
 };
 
-const Stock = () => {
+const Stock = ({ addToast }) => {
   const [stock, , setStock] = useFetch('/stock', []);
   const [products] = useFetch('/products', []);
   const [showAdd, setShowAdd] = useState(false);
@@ -1819,7 +1819,7 @@ const Stock = () => {
   );
 };
 
-const Sales = () => {
+const Sales = ({ addToast }) => {
   const getHeaders = (extra = {}) => {
     const user = JSON.parse(localStorage.getItem('kameo_current_user') || '{}');
     const activeCompany = localStorage.getItem('kameo_active_company_id');
@@ -2994,7 +2994,7 @@ const Purchases = () => {
   );
 };
 
-const Contacts = () => {
+const Contacts = ({ addToast }) => {
   const [contacts, , setContacts] = useFetch('/contacts', { customers: [], suppliers: [] });
   const [showAdd, setShowAdd] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -3847,7 +3847,7 @@ const Subscription = ({ companyPlanId, companyNextBilling }) => {
   );
 };
 
-const FinanceModule = () => {
+const FinanceModule = ({ addToast }) => {
   const [fin, finLoading, setFin] = useFetch('/finance/summary', { totalRecettes: 0, totalDepenses: 0, balance: 0, history: [] });
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState('RECETTE'); // RECETTE or DEPENSE
