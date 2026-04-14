@@ -950,6 +950,12 @@ const POS = ({ addToast }) => {
   const handleCheckout = async () => {
     if (cart.length === 0) return;
     setIsProcessing(true);
+
+    // Calculer les valeurs finales pour éviter les décalages si le panier a changé
+    const finalPaid = paymentMode === 'payer' ? total : Number(paidAmount || 0);
+    const finalRemaining = paymentMode === 'payer' ? 0 : Math.max(0, total - finalPaid);
+    const finalStatus = paymentMode === 'payer' ? 'paid' : (paymentMode === 'partiel' ? (finalRemaining <= 0 ? 'paid' : 'partial') : 'pending');
+
     try {
       const response = await fetch(`${API_URL}/sales`, {
         method: 'POST',
@@ -958,9 +964,9 @@ const POS = ({ addToast }) => {
         body: JSON.stringify({
           cart,
           totalAmount: total,
-          paidAmount: Number(paidAmount || 0),
-          remainingAmount: remainingAmount,
-          status: paymentStatus,
+          paidAmount: finalPaid,
+          remainingAmount: finalRemaining,
+          status: finalStatus,
           customerId: selectedCustomerId
         })
       });
