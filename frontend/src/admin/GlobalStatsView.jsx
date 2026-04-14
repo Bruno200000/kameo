@@ -54,7 +54,7 @@ const GlobalStatsView = () => {
               </tr>
             </thead>
             <tbody>
-              {(!data.unpaidCompanies || data.unpaidCompanies.length === 0) ? (
+              {(!Array.isArray(data.unpaidCompanies) || data.unpaidCompanies.length === 0) ? (
                 <tr><td colSpan="4" style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>Tous les abonnements sont à jour.</td></tr>
               ) : (
                 data.unpaidCompanies.map(c => (

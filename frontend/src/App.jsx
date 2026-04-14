@@ -1899,7 +1899,7 @@ const Sales = () => {
 
       const data = await res.json();
       if (data.success) {
-        setSales(sales.map(s => s.id === sale.id ? data.sale : s));
+        setSales((Array.isArray(sales) ? sales : []).map(s => s.id === sale.id ? data.sale : s));
         setSelectedSale(data.sale);
         closePaymentDialog();
         addToast('Succès', 'Règlement enregistré avec succès.', 'success');
@@ -1989,7 +1989,7 @@ const Sales = () => {
           paid_amount: initialPaid,
           remaining_amount: initialRemaining,
           status: formData.status,
-          sale_items: formData.items.map(item => ({
+          sale_items: (Array.isArray(formData.items) ? formData.items : []).map(item => ({
             product_id: item.productId,
             quantity: Number(item.quantity),
             unit_price: Number(item.unitPrice)
@@ -2043,19 +2043,19 @@ const Sales = () => {
     const notes = s.invoice_notes || '';
 
     // Préparer les items de la facture
-    const items = sale.sale_items && sale.sale_items.length > 0 
+    const items = (Array.isArray(sale.sale_items) && sale.sale_items.length > 0)
       ? sale.sale_items.map(item => ({
           name: item.products?.name || 'Produit',
           quantity: item.quantity,
           unit_price: item.unit_price,
-          total: item.quantity * item.unit_price
+          total: Number(item.quantity || 0) * Number(item.unit_price || 0)
         }))
-      : (sale.cart && sale.cart.length > 0
+      : (Array.isArray(sale.cart) && sale.cart.length > 0
           ? sale.cart.map(item => ({
               name: item.name,
               quantity: item.cartQuantity,
               unit_price: item.selling_price,
-              total: item.cartQuantity * item.selling_price
+              total: Number(item.cartQuantity || 0) * Number(item.selling_price || 0)
             }))
           : [{ name: 'Vente globale', quantity: 1, unit_price: sale.total_amount, total: sale.total_amount }]
         );
@@ -2349,7 +2349,7 @@ const Sales = () => {
       status: sale.status || 'paid',
       customerId: sale.customer_id || '',
       saleDate: new Date().toISOString().split('T')[0],
-      items: sale.sale_items ? sale.sale_items.map(item => ({
+      items: Array.isArray(sale.sale_items) ? sale.sale_items.map(item => ({
         productId: item.product_id || '',
         quantity: item.quantity || 1,
         unitPrice: item.unit_price || 0
@@ -2420,7 +2420,7 @@ const Sales = () => {
               </button>
             </div>
             
-            {formData.items.length > 0 ? (
+            {Array.isArray(formData.items) && formData.items.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {formData.items.map((item, idx) => (
                   <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: '10px', alignItems: 'center' }}>
@@ -2503,7 +2503,7 @@ const Sales = () => {
             <table className="data-table">
               <thead><tr><th>Date</th><th>Référence Facture</th><th>Client</th><th>Vendeur</th><th>Montant de Vente</th><th>Statut</th><th>Actions</th></tr></thead>
               <tbody>
-                {filteredSales.map(s => (
+                {(Array.isArray(filteredSales) ? filteredSales : []).map(s => (
                   <tr key={s.id} className="table-row-hover">
                     <td>{new Date(s.sale_date).toLocaleString()}</td>
                     <td
@@ -2582,7 +2582,7 @@ const Sales = () => {
 
             <h4 style={{ borderBottom: '1px solid #eee', paddingBottom: '8px' }}>Articles vendus</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
-              {selectedSale.sale_items?.map((item, idx) => (
+              {(Array.isArray(selectedSale.sale_items) ? selectedSale.sale_items : []).map((item, idx) => (
                 <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
                   <div style={{ width: '40px', height: '40px', backgroundColor: '#f1f5f9', borderRadius: '6px', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {getCleanImageUrl(item.products?.image_url) ? (
