@@ -77,7 +77,7 @@ const supabaseFetch = async (resourcePath, options = {}, req = null) => {
       headers: {
         ...supabaseHeaders,
         ...(options.headers || {}),
-        ...((options.method === 'POST' || options.method === 'PATCH') && companyId ? { 'Prefer': 'return=representation' } : {})
+        ...((options.method === 'POST' || options.method === 'PATCH') && effectiveCompanyId ? { 'Prefer': 'return=representation' } : {})
       },
       body: finalBody
     });
@@ -290,12 +290,10 @@ router.get('/products', async (req, res) => {
 
 router.post('/products', async (req, res) => {
   try {
-    const user = JSON.parse(req.headers['x-user-data'] || '{}');
-    const companyId = req.headers['x-company-id'] || user.company_id;
     const prodRes = await supabaseFetch('products', {
       method: 'POST',
       headers: { 'Prefer': 'return=representation' },
-      body: JSON.stringify({ ...req.body, company_id: companyId, alert_threshold: 5 })
+      body: JSON.stringify({ ...req.body, alert_threshold: 5 })
     }, req);
     if (prodRes && prodRes.length > 0) res.json({ success: true, product: prodRes[0] });
     else res.status(500).json({ error: "Echec insertion" });
@@ -367,22 +365,11 @@ router.get('/sales', async (req, res) => {
 
 router.post('/sales', async (req, res) => {
   try {
-    const user = JSON.parse(req.headers['x-user-data'] || '{}');
-    const headerCompanyId = req.headers['x-company-id'];
-    
-    // Utiliser la même logique stricte que supabaseFetch
-    const companyId = (headerCompanyId !== undefined && headerCompanyId !== null && headerCompanyId !== "") 
-      ? headerCompanyId 
-      : (user.role !== 'superadmin' ? user.company_id : null);
-
-    if (!companyId) throw new Error("Veuillez sélectionner une entreprise pour cette vente.");
-
     const { cart, customerId, totalAmount, paidAmount, remainingAmount, paymentMode, status, ...otherData } = req.body;
 
     // Créer la vente sans le cart, avec mapping camelCase -> snake_case
     const saleToCreate = {
       ...otherData,
-      company_id: companyId,
       customer_id: customerId || null,
       total_amount: totalAmount,
       paid_amount: paidAmount,
@@ -456,11 +443,8 @@ router.get('/purchases', async (req, res) => {
 router.post('/purchases', async (req, res) => {
   try {
     const { totalAmount, reference, supplierName, status, supplierId, productId, quantity } = req.body;
-    const user = JSON.parse(req.headers['x-user-data'] || '{}');
-    const companyId = req.headers['x-company-id'] || user.company_id;
 
     const newPurchase = {
-      company_id: companyId,
       supplier_id: supplierId || null,
       supplier_name: supplierName || null,
       reference: reference || null,
@@ -545,12 +529,10 @@ router.get('/stock', async (req, res) => {
 
 router.post('/stock', async (req, res) => {
   try {
-    const user = JSON.parse(req.headers['x-user-data'] || '{}');
-    const companyId = req.headers['x-company-id'] || user.company_id;
     const moveRes = await supabaseFetch('stock_movements', {
       method: 'POST',
       headers: { 'Prefer': 'return=representation' },
-      body: JSON.stringify({ ...req.body, company_id: companyId })
+      body: JSON.stringify(req.body)
     }, req);
 
     // Mise à jour de la quantité produit associée
@@ -623,13 +605,11 @@ router.get('/contacts', async (req, res) => {
 
 router.post('/contacts', async (req, res) => {
   try {
-    const user = JSON.parse(req.headers['x-user-data'] || '{}');
-    const companyId = req.headers['x-company-id'] || user.company_id;
     const table = req.body.type === 'fournisseur' ? 'suppliers' : 'customers';
     const cRes = await supabaseFetch(table, {
       method: 'POST',
       headers: { 'Prefer': 'return=representation' },
-      body: JSON.stringify({ ...req.body, company_id: companyId })
+      body: JSON.stringify(req.body)
     }, req);
     res.json({ success: true, contact: cRes[0] });
   } catch (err) { res.status(500).json({ error: err.message }); }
