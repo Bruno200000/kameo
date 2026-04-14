@@ -126,28 +126,36 @@ export default function App() {
   const [productsData] = useFetch('/products', []);
   const [salesData] = useFetch('/sales', []);
 
-  // Calcul des alertes en temps réel
-  const stockAlerts = productsData.filter(p => p.quantity <= (p.alert_threshold || 5)).map(p => ({
-    id: `stock-${p.id}`,
-    type: 'STOCK',
-    icon: <AlertTriangle size={16} color="#f59e0b" />,
-    title: 'Stock critique',
-    desc: `${p.name} - ${p.quantity} restants`,
-    company: p.companies?.name,
-    color: '#fffbeb',
-    page: 'products'
-  }));
+  // Déterminer si on doit afficher les notifications (Superadmin en vue globale = Non)
+  const activeCompanyId = localStorage.getItem('kameo_active_company_id');
+  const showNotificationsOnCompany = (currentUser?.role !== 'superadmin') || (activeCompanyId && activeCompanyId !== "");
 
-  const unpaidAlerts = salesData.filter(s => s.status !== 'paid').map(s => ({
-    id: `sale-${s.id}`,
-    type: 'PAYMENT',
-    icon: <DollarSign size={16} color="#3b82f6" />,
-    title: 'Paiement en attente',
-    desc: `Vente #${s.id.slice(0, 5)} - Reste: ${s.total_amount - (s.paid_amount || 0)} F`,
-    company: s.companies?.name,
-    color: '#eff6ff',
-    page: 'sales'
-  }));
+  // Calcul des alertes en temps réel (uniquement si une entreprise est sélectionnée ou si staff)
+  const stockAlerts = showNotificationsOnCompany 
+    ? productsData.filter(p => p.quantity <= (p.alert_threshold || 5)).map(p => ({
+        id: `stock-${p.id}`,
+        type: 'STOCK',
+        icon: <AlertTriangle size={16} color="#f59e0b" />,
+        title: 'Stock critique',
+        desc: `${p.name} - ${p.quantity} restants`,
+        company: p.companies?.name,
+        color: '#fffbeb',
+        page: 'products'
+      }))
+    : [];
+
+  const unpaidAlerts = showNotificationsOnCompany
+    ? salesData.filter(s => s.status !== 'paid').map(s => ({
+        id: `sale-${s.id}`,
+        type: 'PAYMENT',
+        icon: <DollarSign size={16} color="#3b82f6" />,
+        title: 'Paiement en attente',
+        desc: `Vente #${s.id.slice(0, 5)} - Reste: ${s.total_amount - (s.paid_amount || 0)} F`,
+        company: s.companies?.name,
+        color: '#eff6ff',
+        page: 'sales'
+      }))
+    : [];
 
   const allNotifications = [...stockAlerts, ...unpaidAlerts];
 
