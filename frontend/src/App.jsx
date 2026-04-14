@@ -132,27 +132,31 @@ export default function App() {
   const isGlobalView = !activeCompanyId || activeCompanyId === "";
   const showBusinessNotifications = (currentUser?.role !== 'superadmin') || !isGlobalView;
 
-  // Alertes d'abonnement pour le Superadmin en vue globale
+  // Récupérer le nom de l'entreprise active pour le titre des notifications
+  const actualCompanyIdForName = (activeCompanyId && activeCompanyId !== "") ? activeCompanyId : (currentUser?.company_id || null);
+  const activeCompanyName = Array.isArray(companiesData) ? companiesData.find(c => c.id === actualCompanyIdForName)?.name : null;
+
+  // Alertes d'abonnement pour le Superadmin en vue globale (Anonymisées selon demande)
   const subscriptionAlerts = (currentUser?.role === 'superadmin' && isGlobalView && Array.isArray(companiesData))
     ? companiesData.filter(c => c.subscription_status !== 'active').map(c => ({
         id: `sub-${c.id}`,
         type: 'SUBSCRIPTION',
         icon: <AlertCircle size={16} color="#ef4444" />,
-        title: 'Abonnement impayé',
-        desc: `L'entreprise ${c.name} est suspendue`,
+        title: 'Abonnement à régulariser',
+        desc: `Un compte est suspendu sur la plateforme`,
         color: '#fef2f2',
         page: 'admin'
       }))
     : [];
 
-  // Calcul des alertes en temps réel (uniquement si une entreprise est sélectionnée ou si staff)
+  // Calcul des alertes en temps réel (Titre = Nom de la compagnie sélectionnée)
   const stockAlerts = showBusinessNotifications 
     ? productsData.filter(p => p.quantity <= (p.alert_threshold || 5)).map(p => ({
         id: `stock-${p.id}`,
         type: 'STOCK',
         icon: <AlertTriangle size={16} color="#f59e0b" />,
-        title: 'Stock critique',
-        desc: `${p.name} - ${p.quantity} restants`,
+        title: activeCompanyName || 'Stock critique',
+        desc: `Stock bas: ${p.name} (${p.quantity} restants)`,
         color: '#fffbeb',
         page: 'products'
       }))
@@ -163,8 +167,8 @@ export default function App() {
         id: `sale-${s.id}`,
         type: 'PAYMENT',
         icon: <DollarSign size={16} color="#3b82f6" />,
-        title: 'Paiement en attente',
-        desc: `Vente #${s.id.slice(0, 5)} - Reste: ${s.total_amount - (s.paid_amount || 0)} F`,
+        title: activeCompanyName || 'Paiement en attente',
+        desc: `Facture #${s.id.slice(0, 5)} - Reste: ${s.total_amount - (s.paid_amount || 0)} F`,
         color: '#eff6ff',
         page: 'sales'
       }))
