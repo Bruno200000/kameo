@@ -775,7 +775,7 @@ export default function App() {
                             }}
                             title="Synchroniser cet élément"
                           >
-                            <CloudUpload size={14} /> Envoyer
+                            <UploadCloud size={14} /> Envoyer
                           </button>
                         </div>
                       </div>
