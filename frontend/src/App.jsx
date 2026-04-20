@@ -128,6 +128,7 @@ export default function App() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
+  const [showOfflineModal, setShowOfflineModal] = useState(false);
 
   useEffect(() => {
     const updateOnlineStatus = () => setIsOnline(navigator.onLine);
@@ -538,20 +539,25 @@ export default function App() {
             <h1 className="page-title">{getPageTitle()}</h1>
           </div>
           <div className="topbar-right">
-            <span style={{ 
-              display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold',
-              color: isOnline ? '#10b981' : '#ef4444', 
-              backgroundColor: isOnline ? '#ecfdf5' : '#fef2f2' 
-            }}>
+            <span 
+              onClick={() => offlineQueueCount > 0 && setShowOfflineModal(true)}
+              style={{ 
+                display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold',
+                color: isOnline ? '#10b981' : '#ef4444', 
+                backgroundColor: isOnline ? '#ecfdf5' : '#fef2f2',
+                cursor: offlineQueueCount > 0 ? 'pointer' : 'default'
+              }}
+              title={offlineQueueCount > 0 ? "Voir l'historique hors-ligne" : ""}
+            >
               {isOnline ? <CloudUpload size={16} /> : <CloudOff size={16} />} 
               {isOnline ? 'En ligne' : 'Hors ligne'}
             </span>
             
-            {isOnline && offlineQueueCount > 0 && (
+            {offlineQueueCount > 0 && (
               <button 
-                onClick={syncOfflineData}
+                onClick={() => setShowOfflineModal(true)}
                 style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '20px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, boxShadow: '0 2px 4px rgba(59,130,246,0.3)' }}
-                title="Envoyer les données hors-ligne"
+                title="Détails hors-ligne"
               >
                 <CloudUpload size={16} /> Sync ({offlineQueueCount})
               </button>
@@ -687,6 +693,82 @@ export default function App() {
       )}
 
       {/* Modern Notifications Container */}
+      {showOfflineModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+          <div className="card" style={{ width: '90%', maxWidth: '600px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px', borderBottom: '1px solid #e2e8f0' }}>
+              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <CloudOff size={22} color="#64748b" />
+                Historique Hors-Ligne ({offlineQueueCount})
+              </h3>
+              <button onClick={() => setShowOfflineModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}><X size={20} /></button>
+            </div>
+            
+            <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
+              {offlineQueueCount === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8' }}>
+                  <CheckCircle size={48} style={{ marginBottom: '15px', color: '#10b981', opacity: 0.5 }} />
+                  <p style={{ fontSize: '1.1rem', margin: '0 0 10px' }}>Tout est synchronisé !</p>
+                  <p style={{ fontSize: '0.9rem', margin: 0 }}>Aucune donnée en attente d'envoi.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {getOfflineQueue().map(req => {
+                    let label = "Modification";
+                    let infos = "Données inconnues";
+                    try {
+                      if (req.url.includes('/sales')) label = "Nouvelle Vente";
+                      if (req.url.includes('/products')) label = req.options.method === 'POST' ? "Nouveau Produit" : "Modification Produit";
+                      if (req.url.includes('/contacts')) label = "Nouveau Client";
+                      if (req.options && req.options.body) {
+                         const body = JSON.parse(req.options.body);
+                         if (body.total_amount) infos = `Montant : ${body.total_amount} F`;
+                         if (body.name) infos = body.name;
+                      }
+                    } catch(e){}
+                    return (
+                      <div key={req.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                        <div>
+                          <div style={{ fontWeight: 600, color: '#1e293b', marginBottom: '4px' }}>{label}</div>
+                          <div style={{ fontSize: '0.85rem', color: '#64748b' }}>{infos}</div>
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center' }}>
+                          <Clock size={12} style={{ marginRight: '4px' }} />
+                          {new Date(req.timestamp).toLocaleTimeString()}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            
+            <div style={{ padding: '20px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '12px', backgroundColor: '#f8fafc', borderBottomLeftRadius: '12px', borderBottomRightRadius: '12px' }}>
+              <button 
+                onClick={() => setShowOfflineModal(false)}
+                className="secondary-btn"
+              >
+                Fermer
+              </button>
+              {offlineQueueCount > 0 && (
+                <button 
+                  onClick={async () => {
+                    await syncOfflineData();
+                    if (isOnline) setShowOfflineModal(false);
+                  }}
+                  disabled={!isOnline}
+                  className="primary-btn"
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: isOnline ? '#3b82f6' : '#94a3b8', borderColor: isOnline ? '#3b82f6' : '#94a3b8' }}
+                >
+                  <CloudUpload size={16} /> 
+                  {isOnline ? 'Synchroniser tout' : 'Connexion requise'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="toast-container">
         {toasts.map(t => (
           <div key={t.id} className={`toast toast-${t.type} ${t.fading ? 'toast-fade-out' : ''}`}>
