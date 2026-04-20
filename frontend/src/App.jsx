@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Grid, ShoppingCart, Package, Layers, FileText, Truck,
   Users, Settings, CreditCard, PenTool, X, Menu, Bell, Plus,
-  DollarSign, Box, AlertTriangle, ArrowUpRight, Image as ImageIcon,
+  DollarSign, Box, AlertTriangle, ArrowUpRight, Image as ImageIcon, Download,
   Edit2, Trash2, LogOut, UserPlus, Search, Filter, CheckCircle, Clock, Smartphone, Mail, TrendingUp, TrendingDown, Wallet, ArrowRightLeft, Shield, PlusCircle, Check, Printer, Building, AlertCircle
 } from 'lucide-react';
 
@@ -98,6 +98,26 @@ export default function App() {
   const [globalSearch, setGlobalSearch] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [toasts, setToasts] = useState([]);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setDeferredPrompt(null);
+      }
+    }
+  };
 
   const addToast = (title, message, type = 'info') => {
     const id = Date.now();
@@ -448,6 +468,21 @@ export default function App() {
             <h1 className="page-title">{getPageTitle()}</h1>
           </div>
           <div className="topbar-right">
+            {deferredPrompt && (
+              <button 
+                onClick={handleInstallClick}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px',
+                  backgroundColor: '#f8fafc', color: '#3b82f6', border: '1px solid #bfdbfe',
+                  borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem',
+                  boxShadow: '0 2px 4px rgba(59, 130, 246, 0.1)'
+                }}
+                title="Installer sur le bureau"
+              >
+                <Download size={16} /> <span className="hide-on-mobile">Installer l'App</span>
+              </button>
+            )}
+            
             <CompanySwitcher currentUser={currentUser} />
             
             <div style={{ position: 'relative' }}>
