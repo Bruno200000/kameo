@@ -42,11 +42,10 @@ const supabaseFetch = async (resourcePath, options = {}, req = null) => {
     : (userData?.role !== 'superadmin' ? userData?.company_id : null);
 
   // Exclure les tables qui n'ont pas de colonne company_id
-  const isExcluded = resourcePath.includes('companies') || 
-                   resourcePath.includes('platform_settings') || 
-                   resourcePath.includes('sale_items') || 
-                   resourcePath.includes('purchase_items');
-  const isUserPath = resourcePath.includes('users');
+  // Déterminer la table de base pour savoir si on applique le filtre
+  const baseTable = resourcePath.split(/[?\/]/)[0];
+  const isExcluded = ['companies', 'platform_settings', 'sale_items', 'purchase_items'].includes(baseTable);
+  const isUserPath = baseTable === 'users';
 
   // Si Superadmin en vue globale, on peut accepter un company_id direct dans le body pour les créations
   if (!effectiveCompanyId && (options.method === 'POST' || options.method === 'PATCH') && !isExcluded) {
