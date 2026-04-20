@@ -37,7 +37,7 @@ const supabaseFetch = async (resourcePath, options = {}, req = null) => {
   }
 
   // Déterminer l'ID de l'entreprise cible (Switcher > User profile)
-  const effectiveCompanyId = (rawCompanyId !== undefined && rawCompanyId !== null && rawCompanyId !== "") 
+  let effectiveCompanyId = (rawCompanyId !== undefined && rawCompanyId !== null && rawCompanyId !== "") 
     ? rawCompanyId 
     : (userData?.role !== 'superadmin' ? userData?.company_id : null);
 
@@ -47,6 +47,16 @@ const supabaseFetch = async (resourcePath, options = {}, req = null) => {
                    resourcePath.includes('sale_items') || 
                    resourcePath.includes('purchase_items');
   const isUserPath = resourcePath.includes('users');
+
+  // Si Superadmin en vue globale, on peut accepter un company_id direct dans le body pour les créations
+  if (!effectiveCompanyId && (options.method === 'POST' || options.method === 'PATCH') && !isExcluded) {
+    try {
+      const parsedBody = JSON.parse(options.body || '{}');
+      if (parsedBody && parsedBody.company_id) {
+        effectiveCompanyId = parsedBody.company_id;
+      }
+    } catch (e) { }
+  }
 
   // Appliquer le filtre de lecture (GET)
   if (effectiveCompanyId && !isExcluded && !isUserPath) {

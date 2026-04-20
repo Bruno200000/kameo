@@ -273,14 +273,14 @@ export default function App() {
 
   const renderContent = () => {
     // Protection de la route Admin
-    if (currentPage === 'admin' && currentUser.role !== 'superadmin') {
+    if (['admin', 'users'].includes(currentPage) && currentUser.role !== 'superadmin') {
       return <div style={{ padding: '40px', textAlign: 'center' }}><h2>Accès Refusé</h2><p>Vous n'avez pas les droits pour accéder à cette section.</p></div>;
     }
 
     switch (currentPage) {
       case 'dashboard': return <Dashboard onNavigate={setCurrentPage} />;
-      case 'pos': return <POS addToast={addToast} />;
-      case 'products': return <Products addToast={addToast} />;
+      case 'pos': return <POS addToast={addToast} currentUser={currentUser} companiesData={companiesData} />;
+      case 'products': return <Products addToast={addToast} currentUser={currentUser} companiesData={companiesData} />;
       case 'stock': return <Stock addToast={addToast} />;
       case 'sales': return <Sales addToast={addToast} />;
       case 'purchases': return <Purchases />;
@@ -407,12 +407,6 @@ export default function App() {
               <p className="nav-section">ADMINISTRATION</p>
               <NavItem icon={<Users size={18} />} label="Utilisateurs" active={currentPage === 'users'} onClick={() => setCurrentPage('users')} />
               <NavItem icon={<Shield size={18} />} label="Gestion Plateforme" active={currentPage === 'admin'} onClick={() => setCurrentPage('admin')} />
-            </>
-          )}
-          {currentUser.role === 'admin' && (
-            <>
-              <p className="nav-section">ADMINISTRATION</p>
-              <NavItem icon={<Users size={18} />} label="Utilisateurs" active={currentPage === 'users'} onClick={() => setCurrentPage('users')} />
             </>
           )}
         </nav>
@@ -932,7 +926,8 @@ const Dashboard = ({ onNavigate }) => {
 
 
 // Composant POS existant conservé identique
-const POS = ({ addToast }) => {
+const POS = ({ addToast, currentUser, companiesData }) => {
+  const activeCompanyId = localStorage.getItem('kameo_active_company_id');
   const [products] = useFetch('/products', []);
   const [contacts] = useFetch('/contacts', { customers: [], suppliers: [] });
   const [cart, setCart] = useState([]);
@@ -1023,6 +1018,22 @@ const POS = ({ addToast }) => {
     setIsProcessing(false);
   };
 
+  if (currentUser?.role === 'superadmin' && (!activeCompanyId || activeCompanyId === "")) {
+    return (
+      <div style={{ padding: '40px', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '12px', border: '2px dashed #cbd5e1' }}>
+        <Building size={48} style={{ color: '#64748b', marginBottom: '20px' }} />
+        <h2 style={{ color: '#1e293b', marginBottom: '10px' }}>Sélection d'entreprise requise</h2>
+        <p style={{ color: '#64748b', maxWidth: '500px', margin: '0 auto 20px' }}>
+          En tant que Superadmin, vous devez sélectionner une entreprise spécifique dans le menu en haut pour accéder à la caisse (POS). 
+          Chaque vente doit être rattachée à une entité fiscale précise.
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <CompanySwitcher currentUser={currentUser} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="pos-layout" style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
       <div className="card" style={{ flex: '1 1 300px', padding: 'var(--pos-padding, 20px)', minWidth: '300px' }}>
@@ -1041,6 +1052,7 @@ const POS = ({ addToast }) => {
                 )}
               </div>
               <h4 style={{ margin: '0 0 5px 0', fontSize: '0.9rem', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</h4>
+              {(!activeCompanyId || activeCompanyId === "") && <div style={{ fontSize: '0.75rem', color: '#6366f1', marginBottom: '5px', fontWeight: 600 }}>{p.companies?.name}</div>}
               <p style={{ margin: 0, fontWeight: 'bold', color: '#3b82f6' }}>{p.selling_price} F</p>
             </div>
           ))}
@@ -1131,6 +1143,11 @@ const POS = ({ addToast }) => {
             <span style={{ fontWeight: '500', color: '#64748b' }}>Total :</span>
             <span style={{ fontWeight: 'bold', color: '#1e293b' }}>{total} F</span>
           </div>
+          {(!activeCompanyId || activeCompanyId === "") && (
+            <div style={{ padding: '8px', backgroundColor: '#fff1f2', borderRadius: '6px', marginBottom: '15px' }}>
+              <p style={{ margin: 0, fontSize: '0.75rem', color: '#be123c', textAlign: 'center', fontWeight: 600 }}>Attention: Pas d'entreprise sélectionnée</p>
+            </div>
+          )}
 
           {/* Boutons de mode de paiement */}
           <div style={{ display: 'flex', gap: '8px', marginBottom: '15px' }}>
@@ -1246,7 +1263,7 @@ const POS = ({ addToast }) => {
   );
 };
 
-const Products = ({ addToast }) => {
+const Products = ({ addToast, currentUser, companiesData }) => {
   const [products, , setProducts] = useFetch('/products', []);
   const [showAdd, setShowAdd] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
@@ -1257,7 +1274,7 @@ const Products = ({ addToast }) => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [editingProductId, setEditingProductId] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [formData, setFormData] = useState({ name: '', reference: '', selling_price: '', purchase_price: '', quantity: '', category: 'Outillage', image_url: '' });
+  const [formData, setFormData] = useState({ name: '', reference: '', selling_price: '', purchase_price: '', quantity: '', category: 'Outillage', image_url: '', company_id: '' });
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
@@ -1316,7 +1333,7 @@ const Products = ({ addToast }) => {
         addToast('Succès', 'Produit ajouté avec succès !', 'success');
         setProducts([data.product, ...products]);
         setShowAdd(false);
-        setFormData({ name: '', reference: '', selling_price: '', purchase_price: '', quantity: '', category: 'Outillage', image_url: '' });
+        setFormData({ name: '', reference: '', selling_price: '', purchase_price: '', quantity: '', category: 'Outillage', image_url: '', company_id: '' });
       } else {
         addToast('Erreur', data.error || 'L\'insertion du produit a échoué', 'error');
       }
@@ -1335,7 +1352,8 @@ const Products = ({ addToast }) => {
       purchase_price: product.purchase_price || '',
       quantity: product.quantity || '',
       category: product.category || 'Outillage',
-      image_url: product.image_url || ''
+      image_url: product.image_url || '',
+      company_id: product.company_id || ''
     });
     setShowAdd(false);
     setShowEdit(true);
@@ -1370,7 +1388,7 @@ const Products = ({ addToast }) => {
         setProducts(products.map(p => (p.id === editingProductId ? resData.product : p)));
         setShowEdit(false);
         setEditingProductId(null);
-        setFormData({ name: '', reference: '', selling_price: '', purchase_price: '', quantity: '', category: 'Outillage', image_url: '' });
+        setFormData({ name: '', reference: '', selling_price: '', purchase_price: '', quantity: '', category: 'Outillage', image_url: '', company_id: '' });
       } else {
         addToast('Erreur', resData.error || 'Mise à jour échouée', 'error');
       }
@@ -1444,6 +1462,15 @@ const Products = ({ addToast }) => {
               <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#475569', fontWeight: 600 }}>Stock initial</label>
               <input type="number" name="quantity" value={formData.quantity} onChange={handleChange} placeholder="0" className="large-input" style={{ width: '100%', borderColor: '#cbd5e1' }} />
             </div>
+            {currentUser?.role === 'superadmin' && (
+              <div>
+                <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#475569', fontWeight: 600 }}>Entreprise Propriétaire *</label>
+                <select name="company_id" value={formData.company_id || ''} onChange={handleChange} className="filter-select" style={{ width: '100%', borderColor: '#cbd5e1' }}>
+                  <option value="">-- Sélectionner une entreprise --</option>
+                  {(companiesData || []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+            )}
             <div style={{ gridColumn: '1 / -1' }}>
               <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#475569', fontWeight: 600 }}>Image du produit</label>
               <div style={{ display: 'flex', gap: '15px', alignItems: 'center', backgroundColor: 'white', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
@@ -1524,6 +1551,15 @@ const Products = ({ addToast }) => {
               <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#475569', fontWeight: 600 }}>Stock</label>
               <input type="number" name="quantity" value={formData.quantity} onChange={handleChange} className="large-input" style={{ width: '100%', borderColor: '#fcd34d' }} />
             </div>
+            {currentUser?.role === 'superadmin' && (
+              <div>
+                <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#475569', fontWeight: 600 }}>Propriétaire</label>
+                <select name="company_id" value={formData.company_id || ''} onChange={handleChange} className="filter-select" style={{ width: '100%', borderColor: '#fcd34d' }}>
+                  <option value="">-- Sélectionner --</option>
+                  {(companiesData || []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+            )}
             <div style={{ gridColumn: '1 / -1' }}>
               <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#475569', fontWeight: 600 }}>Image du produit</label>
               <div style={{ display: 'flex', gap: '15px', alignItems: 'center', backgroundColor: 'white', padding: '10px', borderRadius: '8px', border: '1px solid #fcd34d' }}>
@@ -1619,7 +1655,7 @@ const Products = ({ addToast }) => {
       <div className="card mt-4">
         <div className="table-responsive">
           <table className="data-table">
-            <thead><tr><th>Image</th><th>Référence & Nom</th><th>Catégorie</th><th>Prix Achat</th><th>Prix Vente</th><th>Stock</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Image</th><th>Référence & Nom</th>{(!activeCompanyId || activeCompanyId === "") && <th>Compagnie</th>}<th>Catégorie</th><th>Prix Achat</th><th>Prix Vente</th><th>Stock</th><th>Actions</th></tr></thead>
             <tbody>
               {filteredProducts.length === 0 ? <tr><td colSpan="7" style={{ textAlign: 'center', padding: '40px' }}><Package size={48} color="#cbd5e1" style={{ opacity: 0.5, margin: '0 auto 10px' }} /><p style={{ color: '#94a3b8' }}>Aucun produit correspondant</p></td></tr> : ""}
               {filteredProducts.map(p => (
@@ -1634,6 +1670,7 @@ const Products = ({ addToast }) => {
                     </div>
                   </td>
                   <td><strong>{p.name}</strong><br /><span className="sub-text" style={{ fontSize: '0.8rem', color: '#64748b' }}>{p.reference || 'N/A'}</span></td>
+                  {(!activeCompanyId || activeCompanyId === "") && <td><span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#6366f1' }}>{p.companies?.name || 'Inconnue'}</span></td>}
                   <td><span style={{ backgroundColor: '#e2e8f0', padding: '4px 8px', borderRadius: '4px', fontSize: '0.85rem', color: '#475569' }}>{p.category || 'Général'}</span></td>
                   <td style={{ color: '#64748b' }}>{p.purchase_price || 0} F</td>
                   <td style={{ fontWeight: 600, color: '#3b82f6' }}>{p.selling_price} F</td>
