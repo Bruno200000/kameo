@@ -538,11 +538,14 @@ export default function App() {
             <h1 className="page-title">{getPageTitle()}</h1>
           </div>
           <div className="topbar-right">
-            {!isOnline && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ef4444', backgroundColor: '#fef2f2', padding: '6px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold' }}>
-                <CloudOff size={16} /> Hors Ligne
-              </span>
-            )}
+            <span style={{ 
+              display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold',
+              color: isOnline ? '#10b981' : '#ef4444', 
+              backgroundColor: isOnline ? '#ecfdf5' : '#fef2f2' 
+            }}>
+              {isOnline ? <CloudUpload size={16} /> : <CloudOff size={16} />} 
+              {isOnline ? 'En ligne' : 'Hors ligne'}
+            </span>
             
             {isOnline && offlineQueueCount > 0 && (
               <button 
