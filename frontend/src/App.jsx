@@ -171,6 +171,34 @@ export default function App() {
     }
   };
 
+  const syncSingleRequest = async (id) => {
+    if (!isOnline) {
+      addToast('Erreur', 'Connexion requise pour synchroniser.', 'error');
+      return;
+    }
+    const queue = getOfflineQueue();
+    const req = queue.find(r => r.id === id);
+    if (!req) return;
+
+    try {
+      addToast('Sync', 'Envoi en cours...', 'info');
+      const res = await fetch(req.url, req.options);
+      if (res.ok) {
+        dequeueRequest(id);
+        const updatedQueue = getOfflineQueue();
+        setOfflineQueueCount(updatedQueue.length);
+        addToast('Succès', 'Élément synchronisé.', 'success');
+        if (updatedQueue.length === 0) {
+          setTimeout(() => window.location.reload(), 1000);
+        }
+      } else {
+        addToast('Erreur', 'La synchronisation a échoué (Serveur).', 'error');
+      }
+    } catch (err) {
+      addToast('Erreur', 'Impossible de joindre le serveur.', 'error');
+    }
+  };
+
   useEffect(() => {
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
@@ -727,14 +755,28 @@ export default function App() {
                       }
                     } catch(e){}
                     return (
-                      <div key={req.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                        <div>
+                      <div key={req.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ flex: 1 }}>
                           <div style={{ fontWeight: 600, color: '#1e293b', marginBottom: '4px' }}>{label}</div>
                           <div style={{ fontSize: '0.85rem', color: '#64748b' }}>{infos}</div>
                         </div>
-                        <div style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center' }}>
-                          <Clock size={12} style={{ marginRight: '4px' }} />
-                          {new Date(req.timestamp).toLocaleTimeString()}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                          <div style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center' }}>
+                            <Clock size={12} style={{ marginRight: '4px' }} />
+                            {new Date(req.timestamp).toLocaleTimeString()}
+                          </div>
+                          <button 
+                            onClick={() => syncSingleRequest(req.id)}
+                            disabled={!isOnline}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: isOnline ? '#ecfdf5' : '#f1f5f9',
+                              color: isOnline ? '#059669' : '#94a3b8', border: '1px solid ' + (isOnline ? '#10b981' : '#e2e8f0'),
+                              padding: '5px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600, cursor: isOnline ? 'pointer' : 'default'
+                            }}
+                            title="Synchroniser cet élément"
+                          >
+                            <CloudUpload size={14} /> Envoyer
+                          </button>
                         </div>
                       </div>
                     );
