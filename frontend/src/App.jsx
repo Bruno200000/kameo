@@ -166,8 +166,7 @@ export default function App() {
     }
     setOfflineQueueCount(getOfflineQueue().length);
     if (successCount > 0) {
-      addToast('Succès', `${successCount} éléments synchronisés avec la base de données.`, 'success');
-      setTimeout(() => window.location.reload(), 1500);
+      addToast('Succès', `${successCount} éléments synchronisés.`, 'success');
     }
   };
 
@@ -188,14 +187,11 @@ export default function App() {
         const updatedQueue = getOfflineQueue();
         setOfflineQueueCount(updatedQueue.length);
         addToast('Succès', 'Élément synchronisé.', 'success');
-        if (updatedQueue.length === 0) {
-          setTimeout(() => window.location.reload(), 1000);
-        }
       } else {
-        addToast('Erreur', 'La synchronisation a échoué (Serveur).', 'error');
+        addToast('Erreur', 'Échec serveur.', 'error');
       }
     } catch (err) {
-      addToast('Erreur', 'Impossible de joindre le serveur.', 'error');
+      addToast('Erreur', 'Serveur injoignable.', 'error');
     }
   };
 
@@ -744,21 +740,35 @@ export default function App() {
                   {getOfflineQueue().map(req => {
                     let label = "Modification";
                     let infos = "Données inconnues";
+                    let details = [];
                     try {
                       if (req.url.includes('/sales')) label = "Nouvelle Vente";
                       if (req.url.includes('/products')) label = req.options.method === 'POST' ? "Nouveau Produit" : "Modification Produit";
                       if (req.url.includes('/contacts')) label = "Nouveau Client";
+                      
                       if (req.options && req.options.body) {
                          const body = JSON.parse(req.options.body);
-                         if (body.total_amount) infos = `Montant : ${body.total_amount} F`;
+                         if (body.total_amount) infos = `Total : ${body.total_amount} F`;
                          if (body.name) infos = body.name;
+                         
+                         // Extraire les produits pour les ventes
+                         if (body.cart && Array.isArray(body.cart)) {
+                           details = body.cart.map(item => `${item.name} (${item.cartQuantity}x)`);
+                         } else if (body.sale_items && Array.isArray(body.sale_items)) {
+                           details = body.sale_items.map(item => `Ligne produit (${item.quantity}x)`);
+                         }
                       }
                     } catch(e){}
                     return (
                       <div key={req.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontWeight: 600, color: '#1e293b', marginBottom: '4px' }}>{label}</div>
-                          <div style={{ fontSize: '0.85rem', color: '#64748b' }}>{infos}</div>
+                          <div style={{ fontSize: '0.85rem', color: '#1e40af', fontWeight: 500, marginBottom: '2px' }}>{infos}</div>
+                          {details.length > 0 && (
+                            <div style={{ fontSize: '0.75rem', color: '#64748b', backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '4px', marginTop: '6px' }}>
+                              {details.join(', ')}
+                            </div>
+                          )}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                           <div style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center' }}>
