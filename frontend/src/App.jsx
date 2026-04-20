@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Grid, ShoppingCart, Package, Layers, FileText, Truck,
   Users, Settings, CreditCard, PenTool, X, Menu, Bell, Plus,
-  DollarSign, Box, AlertTriangle, ArrowUpRight, Image as ImageIcon, Download, CloudOff, CloudUpload,
+  DollarSign, Box, AlertTriangle, ArrowUpRight, Image as ImageIcon, Download, CloudOff, UploadCloud,
   Edit2, Trash2, LogOut, UserPlus, Search, Filter, CheckCircle, Clock, Smartphone, Mail, TrendingUp, TrendingDown, Wallet, ArrowRightLeft, Shield, PlusCircle, Check, Printer, Building, AlertCircle
 } from 'lucide-react';
 
@@ -549,7 +549,7 @@ export default function App() {
               }}
               title={offlineQueueCount > 0 ? "Voir l'historique hors-ligne" : ""}
             >
-              {isOnline ? <CloudUpload size={16} /> : <CloudOff size={16} />} 
+              {isOnline ? <UploadCloud size={16} /> : <CloudOff size={16} />} 
               {isOnline ? 'En ligne' : 'Hors ligne'}
             </span>
             
@@ -559,7 +559,7 @@ export default function App() {
                 style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '20px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, boxShadow: '0 2px 4px rgba(59,130,246,0.3)' }}
                 title="Détails hors-ligne"
               >
-                <CloudUpload size={16} /> Sync ({offlineQueueCount})
+                <UploadCloud size={16} /> Sync ({offlineQueueCount})
               </button>
             )}
 
@@ -760,7 +760,7 @@ export default function App() {
                   className="primary-btn"
                   style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: isOnline ? '#3b82f6' : '#94a3b8', borderColor: isOnline ? '#3b82f6' : '#94a3b8' }}
                 >
-                  <CloudUpload size={16} /> 
+                  <UploadCloud size={16} /> 
                   {isOnline ? 'Synchroniser tout' : 'Connexion requise'}
                 </button>
               )}
