@@ -277,6 +277,10 @@ export default function App() {
       return <div style={{ padding: '40px', textAlign: 'center' }}><h2>Accès Refusé</h2><p>Vous n'avez pas les droits pour accéder à cette section.</p></div>;
     }
 
+    if (['settings', 'subscription'].includes(currentPage) && !['superadmin', 'admin'].includes(currentUser.role)) {
+      return <div style={{ padding: '40px', textAlign: 'center' }}><h2>Accès Refusé</h2><p>Vous n'avez pas les droits pour accéder à cette section.</p></div>;
+    }
+
     switch (currentPage) {
       case 'dashboard': return <Dashboard onNavigate={setCurrentPage} />;
       case 'pos': return <POS addToast={addToast} currentUser={currentUser} companiesData={companiesData} />;
@@ -399,8 +403,12 @@ export default function App() {
           <NavItem icon={<Wallet size={18} />} label="Finance (Trésorerie)" active={currentPage === 'finance'} onClick={() => setCurrentPage('finance')} />
           <p className="nav-section">GESTION</p>
           <NavItem icon={<Users size={18} />} label="Contacts" active={currentPage === 'contacts'} onClick={() => setCurrentPage('contacts')} />
-          <NavItem icon={<Settings size={18} />} label="Paramètres" active={currentPage === 'settings'} onClick={() => setCurrentPage('settings')} />
-          <NavItem icon={<CreditCard size={18} />} label="Abonnement" active={currentPage === 'subscription'} onClick={() => setCurrentPage('subscription')} />
+          {(currentUser.role === 'superadmin' || currentUser.role === 'admin') && (
+            <>
+              <NavItem icon={<Settings size={18} />} label="Paramètres" active={currentPage === 'settings'} onClick={() => setCurrentPage('settings')} />
+              <NavItem icon={<CreditCard size={18} />} label="Abonnement" active={currentPage === 'subscription'} onClick={() => setCurrentPage('subscription')} />
+            </>
+          )}
 
           {currentUser.role === 'superadmin' && (
             <>
