@@ -1272,6 +1272,7 @@ const POS = ({ addToast, currentUser, companiesData }) => {
 };
 
 const Products = ({ addToast, currentUser, companiesData }) => {
+  const activeCompanyId = localStorage.getItem('kameo_active_company_id');
   const [products, , setProducts] = useFetch('/products', []);
   const [showAdd, setShowAdd] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
