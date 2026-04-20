@@ -36,10 +36,10 @@ const supabaseFetch = async (resourcePath, options = {}, req = null) => {
     try { userData = JSON.parse(req.headers['x-user-data']); } catch (e) { }
   }
 
-  // Déterminer l'ID de l'entreprise cible (Switcher > User profile)
-  let effectiveCompanyId = (rawCompanyId !== undefined && rawCompanyId !== null && rawCompanyId !== "") 
-    ? rawCompanyId 
-    : (userData?.role !== 'superadmin' ? userData?.company_id : null);
+  // Déterminer l'ID de l'entreprise cible (Switcher uniquement pour Superadmin, sinon profil forcé)
+  let effectiveCompanyId = (userData?.role === 'superadmin') 
+    ? (rawCompanyId || null) 
+    : (userData?.company_id || null);
 
   // Exclure les tables qui n'ont pas de colonne company_id
   // Déterminer la table de base pour savoir si on applique le filtre
