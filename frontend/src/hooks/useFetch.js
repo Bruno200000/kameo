@@ -2,8 +2,20 @@ import { useState, useEffect } from 'react';
 
 const API_URL = import.meta.env.VITE_API_URL || 
   (window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : '/api');
-const fetchCache = new Map();
-const CACHE_TTL_MS = 45 * 1000;
+const localCache = {
+  get: (endpoint) => {
+    try {
+      const stored = localStorage.getItem(`k_cache_${endpoint}`);
+      return stored ? JSON.parse(stored) : null;
+    } catch (e) { return null; }
+  },
+  set: (endpoint, value) => {
+    try {
+      localStorage.setItem(`k_cache_${endpoint}`, JSON.stringify(value));
+    } catch (e) {}
+  }
+};
+const CACHE_TTL_MS = 60 * 1000;
 
 const parseResponseSafely = async (res) => {
   const contentType = (res.headers.get('content-type') || '').toLowerCase();
@@ -17,9 +29,9 @@ const parseResponseSafely = async (res) => {
 export const useFetch = (endpoint, initialData, skip = false) => {
   const [data, setData] = useState(() => {
     if (skip) return initialData;
-    const cached = fetchCache.get(endpoint);
+    const cached = localCache.get(endpoint);
     if (!cached) return initialData;
-    if (Date.now() - cached.ts > CACHE_TTL_MS) return initialData;
+    if (Date.now() - cached.ts > CACHE_TTL_MS && navigator.onLine) return initialData;
     return cached.data;
   });
   const [loading, setLoading] = useState(!skip);
@@ -30,8 +42,8 @@ export const useFetch = (endpoint, initialData, skip = false) => {
       return;
     }
 
-    const cached = fetchCache.get(endpoint);
-    if (cached && Date.now() - cached.ts <= CACHE_TTL_MS) {
+    const cached = localCache.get(endpoint);
+    if (cached && (Date.now() - cached.ts <= CACHE_TTL_MS || !navigator.onLine)) {
       setData(cached.data);
       setLoading(false);
       return;
@@ -59,7 +71,7 @@ export const useFetch = (endpoint, initialData, skip = false) => {
       .then((json) => {
         if (json !== null) {
           setData(json);
-          fetchCache.set(endpoint, { data: json, ts: Date.now() });
+          localCache.set(endpoint, { data: json, ts: Date.now() });
         }
       })
       .catch((err) => {
@@ -76,7 +88,7 @@ export const useFetch = (endpoint, initialData, skip = false) => {
   const setDataAndCache = (nextValue) => {
     setData((prev) => {
       const nextData = typeof nextValue === 'function' ? nextValue(prev) : nextValue;
-      fetchCache.set(endpoint, { data: nextData, ts: Date.now() });
+      localCache.set(endpoint, { data: nextData, ts: Date.now() });
       return nextData;
     });
   };

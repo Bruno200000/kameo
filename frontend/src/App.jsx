@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Grid, ShoppingCart, Package, Layers, FileText, Truck,
   Users, Settings, CreditCard, PenTool, X, Menu, Bell, Plus,
-  DollarSign, Box, AlertTriangle, ArrowUpRight, Image as ImageIcon, Download,
+  DollarSign, Box, AlertTriangle, ArrowUpRight, Image as ImageIcon, Download, CloudOff, CloudUpload,
   Edit2, Trash2, LogOut, UserPlus, Search, Filter, CheckCircle, Clock, Smartphone, Mail, TrendingUp, TrendingDown, Wallet, ArrowRightLeft, Shield, PlusCircle, Check, Printer, Building, AlertCircle
 } from 'lucide-react';
 
@@ -12,6 +12,33 @@ import { useFetch, API_URL } from './hooks/useFetch';
 import { StatCard } from './components/StatCard';
 import SalesChart from './components/SalesChart';
 import LoginPage from './pages/LoginPage';
+import { getOfflineQueue, enqueueRequest, dequeueRequest } from './utils/offlineManager';
+
+const performApiFetch = async (url, options) => {
+  const isModification = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(options?.method);
+  if (!navigator.onLine && isModification) {
+    enqueueRequest(url, options);
+    window.dispatchEvent(new Event('offline_queue_updated'));
+    return new Response(JSON.stringify({ success: true, fake_offline: true, message: "Enregistré hors-ligne", product: { id: Date.now() }, sale: { id: Date.now() } }), {
+      status: 200,
+      headers: new Headers({'content-type': 'application/json'})
+    });
+  }
+  try {
+    const res = await performApiFetch(url, options);
+    return res;
+  } catch (err) {
+    if (isModification) {
+      enqueueRequest(url, options);
+      window.dispatchEvent(new Event('offline_queue_updated'));
+      return new Response(JSON.stringify({ success: true, fake_offline: true, message: "Réseau indisponible. Enregistré hors-ligne", product: { id: Date.now() }, sale: { id: Date.now() } }), {
+        status: 200,
+        headers: new Headers({'content-type': 'application/json'})
+      });
+    }
+    throw err;
+  }
+};
 
 const INVOICE_PREFS_KEY = 'kameo_invoice_preferences';
 
@@ -99,6 +126,49 @@ export default function App() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [toasts, setToasts] = useState([]);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [offlineQueueCount, setOfflineQueueCount] = useState(0);
+
+  useEffect(() => {
+    const updateOnlineStatus = () => setIsOnline(navigator.onLine);
+    const updateQueueCount = () => setOfflineQueueCount(getOfflineQueue().length);
+    
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    window.addEventListener('offline_queue_updated', updateQueueCount);
+    
+    updateQueueCount();
+
+    return () => {
+      window.removeEventListener('online', updateOnlineStatus);
+      window.removeEventListener('offline', updateOnlineStatus);
+      window.removeEventListener('offline_queue_updated', updateQueueCount);
+    };
+  }, []);
+
+  const syncOfflineData = async () => {
+    if (!isOnline) return addToast('Erreur', 'Vous devez être en ligne pour synchroniser.', 'error');
+    const queue = getOfflineQueue();
+    if (queue.length === 0) return;
+    
+    let successCount = 0;
+    addToast('Synchronisation', `Envoi de ${queue.length} éléments...`, 'info');
+    
+    for (const req of queue) {
+      try {
+        const res = await performApiFetch(req.url, req.options);
+        if (res.ok) {
+          dequeueRequest(req.id);
+          successCount++;
+        }
+      } catch (err) { }
+    }
+    setOfflineQueueCount(getOfflineQueue().length);
+    if (successCount > 0) {
+      addToast('Succès', `${successCount} éléments synchronisés avec la base de données.`, 'success');
+      setTimeout(() => window.location.reload(), 1500);
+    }
+  };
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e) => {
@@ -223,7 +293,7 @@ export default function App() {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const res = await fetch(`${API_URL}/settings`, {
+        const res = await performApiFetch(`${API_URL}/settings`, {
           headers: getHeaders()
         });
         if (!res.ok) return;
@@ -368,7 +438,7 @@ export default function App() {
 
   const handleLogout = async () => {
     try {
-      await fetch(`${API_URL}/auth/logout`, {
+      await performApiFetch(`${API_URL}/auth/logout`, {
         method: 'POST',
         headers: { 'X-Company-Id': currentUser?.company_id || '' }
       });
@@ -468,6 +538,22 @@ export default function App() {
             <h1 className="page-title">{getPageTitle()}</h1>
           </div>
           <div className="topbar-right">
+            {!isOnline && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ef4444', backgroundColor: '#fef2f2', padding: '6px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                <CloudOff size={16} /> Hors Ligne
+              </span>
+            )}
+            
+            {isOnline && offlineQueueCount > 0 && (
+              <button 
+                onClick={syncOfflineData}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '20px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, boxShadow: '0 2px 4px rgba(59,130,246,0.3)' }}
+                title="Envoyer les données hors-ligne"
+              >
+                <CloudUpload size={16} /> Sync ({offlineQueueCount})
+              </button>
+            )}
+
             {deferredPrompt && (
               <button 
                 onClick={handleInstallClick}
@@ -1034,7 +1120,7 @@ const POS = ({ addToast, currentUser, companiesData }) => {
     const finalStatus = paymentMode === 'payer' ? 'paid' : (paymentMode === 'partiel' ? (finalRemaining <= 0 ? 'paid' : 'partial') : 'pending');
 
     try {
-      const response = await fetch(`${API_URL}/sales`, {
+      const response = await performApiFetch(`${API_URL}/sales`, {
         method: 'POST',
         credentials: 'include',
         headers: getHeaders({ 'Content-Type': 'application/json' }),
@@ -1329,7 +1415,7 @@ const Products = ({ addToast, currentUser, companiesData }) => {
 
     setIsUploading(true);
     try {
-      const res = await fetch(`${API_URL}/upload`, {
+      const res = await performApiFetch(`${API_URL}/upload`, {
         method: 'POST',
         headers: getHeaders(),
         body: uploadFormData,
@@ -1362,7 +1448,7 @@ const Products = ({ addToast, currentUser, companiesData }) => {
     if (!formData.name || !formData.selling_price) return addToast('Erreur', "Le nom et le prix de vente sont requis.", 'error');
     setIsSaving(true);
     try {
-      const res = await fetch(`${API_URL}/products`, {
+      const res = await performApiFetch(`${API_URL}/products`, {
         method: 'POST',
         headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
@@ -1416,7 +1502,7 @@ const Products = ({ addToast, currentUser, companiesData }) => {
     if (!formData.name || !formData.selling_price) return addToast('Attention', "Le nom et le prix de vente sont requis.", 'warning');
     setIsSaving(true);
     try {
-      const res = await fetch(`${API_URL}/products/${editingProductId}`, {
+      const res = await performApiFetch(`${API_URL}/products/${editingProductId}`, {
         method: 'PATCH',
         headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
@@ -1446,7 +1532,7 @@ const Products = ({ addToast, currentUser, companiesData }) => {
     const ok = window.confirm(`Supprimer le produit "${product.name}" ?`);
     if (!ok) return;
     try {
-      const res = await fetch(`${API_URL}/products/${product.id}`, {
+      const res = await performApiFetch(`${API_URL}/products/${product.id}`, {
         method: 'DELETE',
         headers: getHeaders()
       });
@@ -1760,7 +1846,7 @@ const Stock = ({ addToast }) => {
   const handleDelete = async (id) => {
     if (!window.confirm("Supprimer ce mouvement ? Le stock du produit sera automatiquement ajusté pour revenir à son état précédent.")) return;
     try {
-      const res = await fetch(`${API_URL}/stock/${id}`, { method: 'DELETE', headers: getHeaders() });
+      const res = await performApiFetch(`${API_URL}/stock/${id}`, { method: 'DELETE', headers: getHeaders() });
       if (res.ok) {
         setStock(stock.filter(s => s.id !== id));
         addToast('Succès', 'Mouvement supprimé et stock synchronisé', 'success');
@@ -1787,7 +1873,7 @@ const Stock = ({ addToast }) => {
       const url = editingMovement ? `${API_URL}/stock/${editingMovement.id}` : `${API_URL}/stock`;
       const method = editingMovement ? 'PATCH' : 'POST';
       
-      const res = await fetch(url, {
+      const res = await performApiFetch(url, {
         method,
         headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
@@ -2002,7 +2088,7 @@ const Sales = ({ addToast }) => {
     setIsPaying(true);
 
     try {
-      const res = await fetch(`${API_URL}/sales/${sale.id}/payment`, {
+      const res = await performApiFetch(`${API_URL}/sales/${sale.id}/payment`, {
         method: 'POST',
         headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
@@ -2105,7 +2191,7 @@ const Sales = ({ addToast }) => {
     }
 
     try {
-      const res = await fetch(`${API_URL}/sales`, {
+      const res = await performApiFetch(`${API_URL}/sales`, {
         method: 'POST',
         headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
@@ -2833,7 +2919,7 @@ const Purchases = () => {
         status: formData.status
       };
 
-      const res = await fetch(url, {
+      const res = await performApiFetch(url, {
         method: method,
         headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(dbPayload)
@@ -3139,7 +3225,7 @@ const Contacts = ({ addToast }) => {
     if (!formData.name) return addToast('Attention', "Le nom est requis.", 'warning');
     setIsSaving(true);
     try {
-      const res = await fetch(`${API_URL}/contacts`, {
+      const res = await performApiFetch(`${API_URL}/contacts`, {
         method: 'POST',
         headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(formData)
@@ -3291,7 +3377,7 @@ const SettingsPage = ({ currentUser }) => {
    const toggle2FA = async () => {
      const nextVal = !securityData.two_factor_enabled;
      try {
-       const res = await fetch(`${API_URL}/auth/security-status`, {
+       const res = await performApiFetch(`${API_URL}/auth/security-status`, {
          method: 'PATCH',
          headers: getHeaders({ 'Content-Type': 'application/json' }),
          body: JSON.stringify({ two_factor_enabled: nextVal })
@@ -3330,7 +3416,7 @@ const SettingsPage = ({ currentUser }) => {
     e.preventDefault();
     setIsSaving(true);
     try {
-      const res = await fetch(`${API_URL}/settings`, {
+      const res = await performApiFetch(`${API_URL}/settings`, {
         method: 'POST',
         headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(settings)
@@ -3361,7 +3447,7 @@ const SettingsPage = ({ currentUser }) => {
     setIsUploadingLogo(true);
 
     try {
-      const res = await fetch(`${API_URL}/upload`, {
+      const res = await performApiFetch(`${API_URL}/upload`, {
         method: 'POST',
         headers: getHeaders(),
         body: uploadFormData
@@ -3392,7 +3478,7 @@ const SettingsPage = ({ currentUser }) => {
     try {
       const savedUser = localStorage.getItem('kameo_current_user');
       const userId = savedUser ? JSON.parse(savedUser).id : null;
-      const res = await fetch(`${API_URL}/auth/password`, {
+      const res = await performApiFetch(`${API_URL}/auth/password`, {
         method: 'PATCH',
         headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ currentPassword: pwdData.current, newPassword: pwdData.next, userId })
@@ -3809,7 +3895,7 @@ const Subscription = ({ companyPlanId, companyNextBilling }) => {
 
     // Demande de validation par superadmin
     try {
-      const res = await fetch(`${API_URL}/subscription/request`, {
+      const res = await performApiFetch(`${API_URL}/subscription/request`, {
         method: 'POST',
         headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ plan_id: selectedPlan === 'Pro' ? 'pro' : 'trial' })
@@ -4057,7 +4143,7 @@ const FinanceModule = ({ addToast }) => {
   );
 
   const refreshData = async () => {
-    const res = await fetch(`${API_URL}/finance/summary`, {
+    const res = await performApiFetch(`${API_URL}/finance/summary`, {
       headers: getHeaders()
     });
     const d = await res.json();
@@ -4087,7 +4173,7 @@ const FinanceModule = ({ addToast }) => {
         ? { totalAmount: formData.amount, status: 'paid' }
         : { totalAmount: formData.amount, supplierName: formData.label || 'Divers' };
 
-      const res = await fetch(`${API_URL}${endpoint}`, {
+      const res = await performApiFetch(`${API_URL}${endpoint}`, {
         method: 'POST',
         headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(body)
