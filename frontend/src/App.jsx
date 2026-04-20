@@ -4144,7 +4144,7 @@ const Subscription = ({ companyPlanId, companyNextBilling }) => {
         )}
       </div>
 
-      {subscriptionInfo.plan !== 'Pro' && (
+      {(!(subscriptionInfo.plan === 'Pro' && !isExpired)) && (
         <div style={{ display: 'flex', gap: '30px', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
           {/* Basic */}
           <div className="card" style={{ flex: '1 1 320px', maxWidth: '350px', padding: '40px 30px', border: '1px solid #e2e8f0', borderTop: '5px solid #94a3b8', borderRadius: '16px', backgroundColor: '#f8fafc', transition: 'transform 0.3s', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
@@ -4446,7 +4446,7 @@ const FinanceModule = ({ addToast }) => {
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
           <div className="card" style={{ width: '90%', maxWidth: '400px', padding: '30px' }}>
             <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#1e293b' }}>
-              {modalType === 'RECETTE' ? 'âž• Enregistrer une Recette' : 'âž– Enregistrer une Dépense'}
+              {modalType === 'RECETTE' ? '➕ Enregistrer une Recette' : '➖ Enregistrer une Dépense'}
             </h3>
 
             <div style={{ marginBottom: '15px' }}>
