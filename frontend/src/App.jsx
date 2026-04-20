@@ -25,7 +25,7 @@ const performApiFetch = async (url, options) => {
     });
   }
   try {
-    const res = await performApiFetch(url, options);
+    const res = await fetch(url, options);
     return res;
   } catch (err) {
     if (isModification) {
@@ -157,7 +157,7 @@ export default function App() {
     
     for (const req of queue) {
       try {
-        const res = await performApiFetch(req.url, req.options);
+        const res = await fetch(req.url, req.options);
         if (res.ok) {
           dequeueRequest(req.id);
           successCount++;
