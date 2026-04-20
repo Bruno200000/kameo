@@ -2184,6 +2184,37 @@ const Sales = ({ addToast }) => {
   const [paymentError, setPaymentError] = useState('');
   const [isPaying, setIsPaying] = useState(false);
   const [paymentDialog, setPaymentDialog] = useState({ open: false, sale: null, amount: '' });
+  const [offlineSales, setOfflineSales] = useState([]);
+
+  useEffect(() => {
+    const loadOfflineSales = () => {
+      const queue = getOfflineQueue();
+      // Filtrer les requêtes de vente (POST /sales)
+      const salesQueue = queue.filter(req => req.url.includes('/sales') && req.options.method === 'POST');
+      const formatted = salesQueue.map(req => {
+        let body = {};
+        try { body = JSON.parse(req.options.body); } catch(e){}
+        return {
+          id: req.id,
+          sale_date: req.timestamp, // Utiliser le timestamp de création locale
+          total_amount: body.totalAmount,
+          paid_amount: body.paidAmount,
+          remaining_amount: body.remainingAmount,
+          status: body.status,
+          customer_name: body.customerName,
+          cart: body.cart, // Injecter le panier pour que l'impression fonctionne
+          is_offline: true,
+          created_by_name: 'Caisse Locale'
+        };
+      });
+      setOfflineSales(formatted);
+    };
+    loadOfflineSales();
+    window.addEventListener('offline_queue_updated', loadOfflineSales);
+    return () => window.removeEventListener('offline_queue_updated', loadOfflineSales);
+  }, []);
+
+  const mergedSales = [...offlineSales, ...(Array.isArray(sales) ? sales : [])];
 
   const openPaymentDialog = (sale) => {
     const remainingAmount = Number(sale.remaining_amount ?? (Number(sale.total_amount || 0) - Number(sale.paid_amount || 0)));
@@ -2293,7 +2324,7 @@ const Sales = ({ addToast }) => {
     }));
   };
 
-  const filteredSales = sales.filter((s) => {
+  const filteredSales = mergedSales.filter((s) => {
     const ref = String(s.id || '').toLowerCase();
     const date = new Date(s.sale_date).toLocaleString().toLowerCase();
     const textOk = ref.includes(searchTerm.toLowerCase()) || date.includes(searchTerm.toLowerCase());
@@ -2841,6 +2872,13 @@ const Sales = ({ addToast }) => {
                       <span className={s.status === 'paid' ? "status-badge success" : "status-badge warning"} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                         <CheckCircle size={12} /> {s.status === 'paid' ? 'Payé' : 'En attente'}
                       </span>
+                      {s.is_offline && (
+                        <div style={{ marginTop: '4px' }}>
+                          <span className="status-badge" style={{ backgroundColor: '#eff6ff', color: '#1e40af', fontSize: '0.65rem', border: '1px solid #bfdbfe', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                            <UploadCloud size={10} /> HORS-LIGNE
+                          </span>
+                        </div>
+                      )}
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
