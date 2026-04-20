@@ -203,7 +203,12 @@ router.patch('/auth/security-status', async (req, res) => {
 // Réglages Entreprise
 router.get('/settings', async (req, res) => {
   try {
-    const companyId = req.headers['x-company-id'];
+    let userData = {};
+    try { userData = JSON.parse(req.headers['x-user-data'] || '{}'); } catch (e) { }
+    let companyId = req.headers['x-company-id'];
+    if (userData?.role !== 'superadmin' && userData?.company_id) {
+      companyId = userData.company_id;
+    }
     if (!companyId) return res.json({});
     // On filtre explicitement par ID pour être sûr de récupérer la bonne entreprise
     const data = await supabaseFetch(`companies?id=eq.${companyId}&select=*&limit=1`, {}, req);
@@ -220,7 +225,12 @@ router.get('/settings', async (req, res) => {
 
 router.post('/settings', async (req, res) => {
   try {
-    const companyId = req.headers['x-company-id'];
+    let userData = {};
+    try { userData = JSON.parse(req.headers['x-user-data'] || '{}'); } catch (e) { }
+    let companyId = req.headers['x-company-id'];
+    if (userData?.role !== 'superadmin' && userData?.company_id) {
+      companyId = userData.company_id;
+    }
     if (!companyId) return res.status(400).json({ error: "ID Entreprise manquant" });
 
     // On nettoie le body pour ne pas envoyer de champs protégés/système à Supabase
