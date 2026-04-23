@@ -361,7 +361,24 @@ router.post('/products', async (req, res) => {
       headers: { 'Prefer': 'return=representation' },
       body: JSON.stringify({ ...req.body, alert_threshold: 5 })
     }, req);
-    if (prodRes && prodRes.length > 0) res.json({ success: true, product: prodRes[0] });
+    if (prodRes && prodRes.length > 0) {
+      const product = prodRes[0];
+      res.json({ success: true, product });
+
+      // Si quantité initiale > 0, créer un mouvement de stock
+      if (Number(req.body.quantity) > 0) {
+        await supabaseFetch('stock_movements', {
+          method: 'POST',
+          body: JSON.stringify({
+            product_id: product.id,
+            movement_type: 'IN',
+            quantity: Number(req.body.quantity),
+            stock_after: Number(req.body.quantity),
+            reason: 'Initialisation stock (Création produit)'
+          })
+        }, req);
+      }
+    }
     else res.status(500).json({ error: "Echec insertion" });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -455,7 +472,7 @@ router.post('/sales', async (req, res) => {
     if (saleRes && saleRes.length > 0) {
       const saleId = saleRes[0].id;
 
-      // Créer les sale_items si cart est présent
+      // 1. Créer les sale_items si cart est présent
       if (cart && Array.isArray(cart) && cart.length > 0) {
         const saleItems = cart.map(item => ({
           sale_id: saleId,
@@ -465,12 +482,41 @@ router.post('/sales', async (req, res) => {
           total: (item.cartQuantity || 1) * (item.selling_price || item.price)
         }));
 
-        // Créer tous les sale_items en une requête
         await supabaseFetch('sale_items', {
           method: 'POST',
           headers: { 'Prefer': 'return=minimal' },
           body: JSON.stringify(saleItems)
         }, req);
+
+        // 2. Mettre à jour le stock et créer les mouvements
+        for (const item of cart) {
+          try {
+            // Récupérer le stock actuel
+            const prodData = await supabaseFetch(`products?id=eq.${item.id}&select=quantity`, {}, req);
+            const currentQty = (prodData && prodData[0]) ? prodData[0].quantity : 0;
+            const newQty = currentQty - item.cartQuantity;
+
+            // Mettre à jour la quantité
+            await supabaseFetch(`products?id=eq.${item.id}`, {
+              method: 'PATCH',
+              body: JSON.stringify({ quantity: Math.max(0, newQty) })
+            }, req);
+
+            // Créer le mouvement de stock
+            await supabaseFetch('stock_movements', {
+              method: 'POST',
+              body: JSON.stringify({
+                product_id: item.id,
+                movement_type: 'OUT',
+                quantity: -item.cartQuantity,
+                stock_after: Math.max(0, newQty),
+                reason: `Vente #${saleId.split('-')[0]}${status === 'partial' ? ' (Paiement partiel)' : ''}`
+              })
+            }, req);
+          } catch (err) {
+            console.error(`Erreur mise à jour stock pour produit ${item.id}:`, err.message);
+          }
+        }
       }
 
       res.json({ success: true, sale_id: saleId });
@@ -554,6 +600,7 @@ router.post('/purchases', async (req, res) => {
             product_id: productId,
             movement_type: 'IN',
             quantity: qty,
+            stock_after: currentQty + qty,
             reason: `Achat #${purchaseId.split('-')[0]} (${reference || 'Sans ref'})`
           })
         }, req);
@@ -602,11 +649,27 @@ router.post('/stock', async (req, res) => {
       body: JSON.stringify(req.body)
     }, req);
 
+    const moveId = moveRes[0].id;
+
     // Mise à jour de la quantité produit associée
     const prod = await supabaseFetch(`products?id=eq.${req.body.product_id}&select=quantity`, {}, req);
     if (prod && prod.length > 0) {
-      const newQty = req.body.movement_type === 'IN' ? prod[0].quantity + Number(req.body.quantity) : prod[0].quantity - Number(req.body.quantity);
-      await supabaseFetch(`products?id=eq.${req.body.product_id}`, { method: 'PATCH', body: JSON.stringify({ quantity: Math.max(0, newQty) }) }, req);
+      const currentQty = prod[0].quantity;
+      const newQty = req.body.movement_type === 'IN' ? currentQty + Number(req.body.quantity) : currentQty - Number(req.body.quantity);
+      const finalQty = Math.max(0, newQty);
+
+      await supabaseFetch(`products?id=eq.${req.body.product_id}`, { 
+        method: 'PATCH', 
+        body: JSON.stringify({ quantity: finalQty }) 
+      }, req);
+
+      // Mettre à jour le mouvement avec le stock_after
+      await supabaseFetch(`stock_movements?id=eq.${moveId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ stock_after: finalQty })
+      }, req);
+
+      moveRes[0].stock_after = finalQty;
     }
     res.json({ success: true, movement: moveRes[0] });
   } catch (err) { res.status(500).json({ error: err.message }); }
