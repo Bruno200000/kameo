@@ -2159,7 +2159,7 @@ const Stock = ({ addToast, currentUser }) => {
                           }}
                           title="Modifier le mouvement"
                         >
-                          <Edit3 size={14} />
+                          <Edit2 size={14} />
                         </button>
                         <button
                           onClick={() => handleDelete(s.id)}
