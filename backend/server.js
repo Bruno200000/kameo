@@ -323,6 +323,21 @@ app.post('/api/products', async (req, res) => {
     }
 
     res.json({ success: true, product: prodRes[0] });
+    
+    // Si quantité initiale > 0, créer un mouvement de stock
+    if (Number(quantity) > 0) {
+      await supabaseFetch('stock_movements', {
+        method: 'POST',
+        body: JSON.stringify({
+          company_id: companyId,
+          product_id: prodRes[0].id,
+          movement_type: 'IN',
+          quantity: Number(quantity),
+          stock_after: Number(quantity),
+          reason: 'Initialisation stock (Création produit)'
+        })
+      });
+    }
   } catch (err) {
     res.status(500).json({ error: "Erreur lors de l'ajout: " + err.message });
   }
@@ -485,6 +500,7 @@ app.post('/api/sales', async (req, res) => {
             product_id: item.id,
             movement_type: 'OUT',
             quantity: -item.cartQuantity,
+            stock_after: currentQty - item.cartQuantity,
             reason: `Vente #${saleId.split('-')[0]}${status === 'partial' ? ' (Paiement partiel)' : ''}`
           })
         });
@@ -618,6 +634,7 @@ app.post('/api/purchases', async (req, res) => {
             product_id: productId,
             movement_type: 'IN',
             quantity: qty,
+            stock_after: currentQty + qty,
             reason: `Achat #${purchaseId.split('-')[0]} (${reference || 'Sans ref'})`
           })
         });
@@ -707,10 +724,20 @@ app.post('/api/stock', async (req, res) => {
       if (movement_type === 'IN') newQty += Number(quantity);
       else newQty -= Number(quantity);
       
+      const finalQty = newQty < 0 ? 0 : newQty;
+      
       await supabaseFetch(`products?id=eq.${product_id}`, {
         method: 'PATCH',
-        body: JSON.stringify({ quantity: newQty < 0 ? 0 : newQty })
+        body: JSON.stringify({ quantity: finalQty })
       });
+
+      // Mettre à jour le mouvement avec le stock final calculé
+      await supabaseFetch(`stock_movements?id=eq.${moveRes[0].id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ stock_after: finalQty })
+      });
+      
+      moveRes[0].stock_after = finalQty;
     }
 
     res.json({ success: true, movement: moveRes[0] });

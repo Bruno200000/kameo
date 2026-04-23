@@ -400,7 +400,7 @@ export default function App() {
       case 'dashboard': return <Dashboard onNavigate={setCurrentPage} />;
       case 'pos': return <POS addToast={addToast} currentUser={currentUser} companiesData={companiesData} />;
       case 'products': return <Products addToast={addToast} currentUser={currentUser} companiesData={companiesData} />;
-      case 'stock': return <Stock addToast={addToast} />;
+      case 'stock': return <Stock addToast={addToast} currentUser={currentUser} />;
       case 'sales': return <Sales addToast={addToast} />;
       case 'purchases': return <Purchases />;
       case 'finance': return <FinanceModule addToast={addToast} />;
@@ -1693,7 +1693,11 @@ const Products = ({ addToast, currentUser, companiesData }) => {
           <input type="text" placeholder="Rechercher un produit..." className="large-input" style={{ paddingLeft: 40 }} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
           <select className="filter-select" value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}><option value="all">Toutes les catégories</option><option value="Outillage">Outillage</option><option value="Quincaillerie">Quincaillerie</option><option value="Peinture">Peinture</option><option value="Général">Général</option></select>
         </div>
-        <button className="primary-btn" onClick={() => setShowAdd(!showAdd)}><Plus size={16} /> Nouveau Produit</button>
+        {(currentUser?.role === 'admin' || currentUser?.role === 'superadmin') && (
+          <button className="primary-btn" onClick={() => setShowAdd(!showAdd)}>
+            <Plus size={16} /> Nouveau Produit
+          </button>
+        )}
       </div>
 
       {showAdd && (
@@ -1950,8 +1954,12 @@ const Products = ({ addToast, currentUser, companiesData }) => {
                   <td>
                     <div style={{ display: 'flex', gap: 5 }}>
                       <button className="secondary-btn" style={{ padding: '4px 8px', fontSize: '0.75rem' }} onClick={() => handleShowDetail(p)}>Détails</button>
-                      <button className="icon-btn" title="Modifier" onClick={() => handleEditOpen(p)}><Edit2 size={16} /></button>
-                      <button className="icon-btn" title="Supprimer" style={{ color: '#ef4444' }} onClick={() => handleDelete(p)}><Trash2 size={16} /></button>
+                      {(currentUser?.role === 'admin' || currentUser?.role === 'superadmin') && (
+                        <>
+                          <button className="icon-btn" title="Modifier" onClick={() => handleEditOpen(p)}><Edit2 size={16} /></button>
+                          <button className="icon-btn" title="Supprimer" style={{ color: '#ef4444' }} onClick={() => handleDelete(p)}><Trash2 size={16} /></button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -1964,7 +1972,7 @@ const Products = ({ addToast, currentUser, companiesData }) => {
   );
 };
 
-const Stock = ({ addToast }) => {
+const Stock = ({ addToast, currentUser }) => {
   const [stock, , setStock] = useFetch('/stock', []);
   const [products] = useFetch('/products', []);
   const [showAdd, setShowAdd] = useState(false);
@@ -1992,8 +2000,7 @@ const Stock = ({ addToast }) => {
   };
 
 
-  // Récupérer currentUser depuis le contexte global
-  const currentUser = JSON.parse(localStorage.getItem('kameo_auth') || '{}');
+  // Utiliser le currentUser passé par prop
   console.log('currentUser dans Stock:', currentUser);
   const productNamesById = products.reduce((acc, p) => ({ ...acc, [p.id]: p.name }), {});
   const filteredStock = stock.filter((s) => {
@@ -2047,7 +2054,11 @@ const Stock = ({ addToast }) => {
           <input type="text" placeholder="Produit, raison..." className="large-input" style={{ paddingLeft: 40 }} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
           <select className="filter-select" value={typeFilter} onChange={e => setTypeFilter(e.target.value)}><option value="ALL">Tous les types</option><option value="IN">Entrées</option><option value="OUT">Sorties</option></select>
         </div>
-        <button className="primary-btn" onClick={() => setShowAdd(!showAdd)} style={{ backgroundColor: '#8b5cf6', borderColor: '#8b5cf6' }}><Layers size={16} /> Déclarer un mouvement</button>
+        {(currentUser?.role === 'admin' || currentUser?.role === 'superadmin') && (
+          <button className="primary-btn" onClick={() => setShowAdd(!showAdd)} style={{ backgroundColor: '#8b5cf6', borderColor: '#8b5cf6' }}>
+            <Layers size={16} /> Déclarer un mouvement
+          </button>
+        )}
       </div>
 
       {showAdd && (
@@ -2112,7 +2123,7 @@ const Stock = ({ addToast }) => {
       ) : filteredStock.length > 0 ? (
         <div className="card mt-4">
           <table className="data-table">
-            <thead><tr><th>Date & Heure</th><th>Type de Mouvement</th><th>Produit</th><th>Stock Actuel</th><th>Justificatif / Raison</th><th>Quantité Modifiée</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Date & Heure</th><th>Type</th><th>Produit</th><th>Stock Après</th><th>Raison</th><th>Quantité</th><th>Actions</th></tr></thead>
             <tbody>
               {filteredStock.map(s => (
                 <tr key={s.id} className="table-row-hover">
@@ -2124,12 +2135,12 @@ const Stock = ({ addToast }) => {
                     </span>
                   </td>
                   <td style={{ fontFamily: 'monospace', color: '#64748b', fontSize: '0.85rem' }}>
-                    <div style={{ fontWeight: '500', marginBottom: '2px' }}>
+                    <div style={{ fontWeight: '500' }}>
                       {s.products?.name || productNamesById[s.product_id] || (s.product_id ? `${s.product_id.substring(0, 8)}...` : 'N/A')}
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: '600', backgroundColor: '#dcfce7', padding: '2px 6px', borderRadius: '4px', display: 'inline-block' }}>
-                      Stock: {s.products?.quantity || 'N/A'}
-                    </div>
+                  </td>
+                  <td style={{ fontWeight: '600', color: '#1e40af' }}>
+                    {s.stock_after !== null && s.stock_after !== undefined ? `${s.stock_after} unités` : '-'}
                   </td>
                   <td>{s.reason || '-'}</td>
                   <td style={{ fontWeight: 'bold', color: s.movement_type === 'OUT' ? '#ef4444' : '#10b981', fontSize: '1.1rem' }}>{s.movement_type === 'OUT' ? '-' : '+'}{s.quantity}</td>

@@ -129,6 +129,7 @@ CREATE TABLE stock_movements (
     user_id UUID REFERENCES users(id) ON DELETE SET NULL,
     movement_type VARCHAR(50) NOT NULL, -- IN (Achat), OUT (Vente), ADJUSTMENT
     quantity INTEGER NOT NULL, -- Positif ou négatif
+    stock_after INTEGER, -- Stock après le mouvement
     reason TEXT,
     movement_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
