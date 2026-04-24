@@ -2360,25 +2360,41 @@ const Sales = ({ addToast }) => {
   });
 
   const handleSave = async () => {
-    const total = formData.items.length > 0 
-      ? formData.items.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.unitPrice)), 0)
-      : (Number(formData.totalAmount) || 0);
-
-    if (!total || total <= 0) return addToast('Attention', "Le montant total est requis.", 'warning');
-
-    // Validation des prix de vente vs prix d'achat
-    if (formData.items.length > 0) {
-      for (const item of formData.items) {
-        const product = (products || []).find(p => p.id === item.productId);
-        const pPrice = product ? Number(product.purchase_price || 0) : 0;
-        const sPrice = Number(item.unitPrice || 0);
-        
-        if (sPrice < pPrice) {
-          addToast('Attention', `Le prix de "${product?.name || 'produit'}" (${sPrice} F) ne peut pas être inférieur au prix d'achat (${pPrice} F).`, 'warning');
-          return;
+    const hasItems = formData.items && formData.items.length > 0;
+    
+    let calculatedTotal = 0;
+    if (hasItems) {
+      // Vérifier que chaque article a un produit sélectionné et un prix valide
+      for (let i = 0; i < formData.items.length; i++) {
+        const item = formData.items[i];
+        if (!item.productId) {
+          return addToast('Attention', `Veuillez sélectionner un produit pour l'article n°${i + 1}.`, 'warning');
         }
+        
+        const q = parseFloat(String(item.quantity).replace(',', '.')) || 0;
+        const p = parseFloat(String(item.unitPrice).replace(',', '.')) || 0;
+
+        // Validation du prix de vente vs prix d'achat
+        const product = (products || []).find(prod => prod.id === item.productId);
+        const purchasePrice = product ? Number(product.purchase_price || 0) : 0;
+        if (p < purchasePrice) {
+          return addToast('Attention', `Le prix de "${product?.name || 'produit'}" (${p} F) ne peut pas être inférieur au prix d'achat (${purchasePrice} F).`, 'warning');
+        }
+
+        calculatedTotal += (q * p);
       }
+    } else {
+      calculatedTotal = parseFloat(String(formData.totalAmount).replace(',', '.')) || 0;
     }
+
+    if (calculatedTotal <= 0) {
+      const errorMsg = hasItems 
+        ? "Le total calculé des articles est de 0 F. Veuillez vérifier vos prix et quantités." 
+        : "Le montant total est requis.";
+      return addToast('Attention', errorMsg, 'warning');
+    }
+
+    const total = calculatedTotal;
 
     setIsSaving(true);
 
