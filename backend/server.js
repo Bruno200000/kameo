@@ -438,8 +438,7 @@ app.post('/api/sales', async (req, res) => {
       paid_amount: paid,
       remaining_amount: Number.isFinite(Number(remaining)) ? remaining : (total - paid),
       status: status || 'paid',
-      customer_id: customerId || null,
-      customer_name: customerName || null
+      customer_id: customerId || null
     };
 
     // Ajouter la date seulement si fournie (facture manuelle)

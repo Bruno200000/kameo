@@ -451,15 +451,14 @@ router.post('/sales', async (req, res) => {
     const user = JSON.parse(req.headers['x-user-data'] || '{}');
     const { 
       cart, 
-      customerId, customerName,
+      customerId,
       totalAmount, paidAmount, remainingAmount, 
       paymentMode, status, sale_date
     } = req.body;
 
-    // Créer la vente avec mapping strict camelCase -> snake_case (aucun champ inconnu)
+    // Mapping strict camelCase -> snake_case (seuls les champs existants en BDD)
     const saleToCreate = {
       customer_id: customerId || null,
-      customer_name: customerName || null,
       total_amount: Number(totalAmount) || 0,
       paid_amount: Number(paidAmount) || 0,
       remaining_amount: Number(remainingAmount) || 0,
@@ -468,7 +467,7 @@ router.post('/sales', async (req, res) => {
       created_by: user.id || null
     };
 
-    // Ajouter la date si fournie (facture manuelle), sinon laisser Supabase mettre la date courante
+    // Ajouter la date seulement si fournie (facture manuelle)
     if (sale_date) saleToCreate.sale_date = sale_date;
 
     const saleRes = await supabaseFetch('sales', {
