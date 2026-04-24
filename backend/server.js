@@ -406,12 +406,12 @@ app.get('/api/sales', async (req, res) => {
 // Enregistrer une nouvelle  Vente depuis le POS
 app.post('/api/sales', async (req, res) => {
   try {
-    const { cart, totalAmount, paidAmount, remainingAmount, status, customerId } = req.body;
+    const { cart, totalAmount, paidAmount, remainingAmount, status, customerId, customerName, sale_date } = req.body;
     
     // 1. Obtenir ou créer l'entreprise par défaut
     const companyId = await getOrCreateCompanyId();
 
-    // 2. Insérer la vente et demander un retour complet (return=representation)
+    // 2. Insérer la vente
     const total = Number(totalAmount) || 0;
     let paid = Number(paidAmount) || 0;
     let remaining = Number(remainingAmount);
@@ -428,7 +428,6 @@ app.post('/api/sales', async (req, res) => {
       }
       if (remaining < 0) remaining = 0;
     } else {
-      // Par défaut on traite comme payé si statut non reconnu
       paid = total;
       remaining = 0;
     }
@@ -439,8 +438,13 @@ app.post('/api/sales', async (req, res) => {
       paid_amount: paid,
       remaining_amount: Number.isFinite(Number(remaining)) ? remaining : (total - paid),
       status: status || 'paid',
-      customer_id: customerId || null // Ajout du client optionnel
+      customer_id: customerId || null,
+      customer_name: customerName || null
     };
+
+    // Ajouter la date seulement si fournie (facture manuelle)
+    if (sale_date) saleData.sale_date = sale_date;
+
     const saleRes = await supabaseFetch('sales', {
       method: 'POST',
       headers: { 'Prefer': 'return=representation' },
