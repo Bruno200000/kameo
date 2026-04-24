@@ -1230,16 +1230,8 @@ const POS = ({ addToast, currentUser, companiesData }) => {
   const removeFromCart = (id) => setCart(prev => prev.filter(item => item.id !== id));
 
   const updatePrice = (id, newPrice) => {
-    const numPrice = Number(newPrice) || 0;
-    const item = cart.find(item => item.id === id);
-
-    if (item && numPrice < (item.purchase_price || 0)) {
-      addToast('Erreur', `Le prix de vente (${numPrice} F) ne peut pas être inférieur au prix d'achat (${item.purchase_price} F).`, 'error');
-      return;
-    }
-
     setCart(prev =>
-      prev.map(item => item.id === id ? { ...item, selling_price: numPrice } : item)
+      prev.map(item => item.id === id ? { ...item, selling_price: newPrice } : item)
     );
   };
 
@@ -1249,6 +1241,17 @@ const POS = ({ addToast, currentUser, companiesData }) => {
 
   const handleCheckout = async () => {
     if (cart.length === 0) return;
+    
+    // Validation des prix de vente vs prix d'achat
+    for (const item of cart) {
+      const sPrice = Number(item.selling_price || 0);
+      const pPrice = Number(item.purchase_price || 0);
+      if (sPrice < pPrice) {
+        addToast('Attention', `Le prix de vente de "${item.name}" (${sPrice} F) ne peut pas être inférieur au prix d'achat (${pPrice} F).`, 'warning');
+        return;
+      }
+    }
+
     setIsProcessing(true);
 
     // Calculer les valeurs finales pour éviter les décalages si le panier a changé
@@ -2332,7 +2335,10 @@ const Sales = ({ addToast }) => {
     
     if (field === 'productId') {
       const p = (products || []).find(x => x.id === value);
-      if (p) newItems[idx].unitPrice = p.selling_price;
+      if (p) {
+        newItems[idx].unitPrice = p.selling_price;
+        newItems[idx].purchasePrice = p.purchase_price;
+      }
     }
     
     setFormData(prev => ({ ...prev, items: newItems }));
@@ -2354,12 +2360,27 @@ const Sales = ({ addToast }) => {
   });
 
   const handleSave = async () => {
-    if (!formData.totalAmount) return addToast('Attention', "Le montant total est requis.", 'warning');
-    setIsSaving(true);
-
     const total = formData.items.length > 0 
       ? formData.items.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.unitPrice)), 0)
       : (Number(formData.totalAmount) || 0);
+
+    if (!total || total <= 0) return addToast('Attention', "Le montant total est requis.", 'warning');
+
+    // Validation des prix de vente vs prix d'achat
+    if (formData.items.length > 0) {
+      for (const item of formData.items) {
+        const product = (products || []).find(p => p.id === item.productId);
+        const pPrice = product ? Number(product.purchase_price || 0) : 0;
+        const sPrice = Number(item.unitPrice || 0);
+        
+        if (sPrice < pPrice) {
+          addToast('Attention', `Le prix de "${product?.name || 'produit'}" (${sPrice} F) ne peut pas être inférieur au prix d'achat (${pPrice} F).`, 'warning');
+          return;
+        }
+      }
+    }
+
+    setIsSaving(true);
 
     let initialPaid = 0;
     let initialRemaining = total;
@@ -2370,22 +2391,25 @@ const Sales = ({ addToast }) => {
     }
 
     try {
+      // Préparer le panier pour le backend (format compatible POS)
+      const cartForBackend = (Array.isArray(formData.items) ? formData.items : []).map(item => ({
+        id: item.productId,
+        cartQuantity: Number(item.quantity),
+        selling_price: Number(item.unitPrice)
+      }));
+
       const res = await performApiFetch(`${API_URL}/sales`, {
         method: 'POST',
         headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           sale_date: new Date(formData.saleDate).toISOString(),
-          customer_id: formData.customerId || null,
-          customer_name: formData.customerName,
-          total_amount: total,
-          paid_amount: initialPaid,
-          remaining_amount: initialRemaining,
+          customerId: formData.customerId || null,
+          customerName: formData.customerName,
+          totalAmount: total,
+          paidAmount: initialPaid,
+          remainingAmount: initialRemaining,
           status: formData.status,
-          sale_items: (Array.isArray(formData.items) ? formData.items : []).map(item => ({
-            product_id: item.productId,
-            quantity: Number(item.quantity),
-            unit_price: Number(item.unitPrice)
-          }))
+          cart: cartForBackend
         })
       });
       const resData = await res.json();
@@ -2401,7 +2425,7 @@ const Sales = ({ addToast }) => {
           items: []
         });
         setShowAdd(false);
-        // Obtenir la nouvelle vente ajoutée (pour affichage dynamique instantané)
+        // Obtenir la nouvelle vente ajoutée
         const newSale = {
           id: resData.sale_id,
           sale_date: new Date().toISOString(),
@@ -2797,30 +2821,41 @@ const Sales = ({ addToast }) => {
             {Array.isArray(formData.items) && formData.items.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {formData.items.map((item, idx) => (
-                  <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: '10px', alignItems: 'center' }}>
-                    <select 
-                      value={item.productId} 
-                      onChange={e => updateManualItem(idx, 'productId', e.target.value)}
-                      className="filter-select"
-                      style={{ width: '100%' }}
-                    >
-                      <option value="">Sélectionner un produit</option>
-                      {(Array.isArray(products) ? products : []).map(p => <option key={p.id} value={p.id}>{p.name} ({p.selling_price} F)</option>)}
-                    </select>
-                    <input 
-                      type="number" 
-                      placeholder="Qté" 
-                      value={item.quantity} 
-                      onChange={e => updateManualItem(idx, 'quantity', e.target.value)}
-                      className="large-input"
-                    />
-                    <input 
-                      type="number" 
-                      placeholder="Prix Unit." 
-                      value={item.unitPrice} 
-                      onChange={e => updateManualItem(idx, 'unitPrice', e.target.value)}
-                      className="large-input"
-                    />
+                  <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: '10px', alignItems: 'flex-end' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '0.7rem', color: '#065f46', marginBottom: '2px' }}>Produit</span>
+                      <select 
+                        value={item.productId} 
+                        onChange={e => updateManualItem(idx, 'productId', e.target.value)}
+                        className="filter-select"
+                        style={{ width: '100%' }}
+                      >
+                        <option value="">Sélectionner un produit</option>
+                        {(Array.isArray(products) ? products : []).map(p => <option key={p.id} value={p.id}>{p.name} ({p.selling_price} F)</option>)}
+                      </select>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '0.7rem', color: '#065f46', marginBottom: '2px' }}>Quantité</span>
+                      <input 
+                        type="number" 
+                        placeholder="Qté" 
+                        value={item.quantity} 
+                        onChange={e => updateManualItem(idx, 'quantity', e.target.value)}
+                        className="large-input"
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '0.7rem', color: '#065f46', marginBottom: '2px' }}>Prix Unit.</span>
+                      <input 
+                        type="number" 
+                        placeholder="Prix Unit." 
+                        value={item.unitPrice} 
+                        onChange={e => updateManualItem(idx, 'unitPrice', e.target.value)}
+                        className="large-input"
+                        style={{ width: '100%' }}
+                      />
+                    </div>
                     <button 
                       onClick={() => removeManualItem(idx)}
                       style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}
