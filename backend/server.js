@@ -406,9 +406,9 @@ app.get('/api/sales', async (req, res) => {
 // Enregistrer une nouvelle  Vente depuis le POS
 app.post('/api/sales', async (req, res) => {
   try {
-    const { cart, totalAmount, paidAmount, remainingAmount, status, customerId, customerName, sale_date } = req.body;
+    const { cart, totalAmount, paidAmount, remainingAmount, status, customerId, sale_date } = req.body;
     
-    // 1. Obtenir ou créer l'entreprise par défaut
+    // 1. Obtenir l'entreprise
     const companyId = await getOrCreateCompanyId();
 
     // 2. Insérer la vente
@@ -417,19 +417,14 @@ app.post('/api/sales', async (req, res) => {
     let remaining = Number(remainingAmount);
 
     if (status === 'paid') {
-      paid = total;
-      remaining = 0;
+      paid = total; remaining = 0;
     } else if (status === 'pending') {
-      paid = 0;
-      remaining = total;
+      paid = 0; remaining = total;
     } else if (status === 'partial') {
-      if (!Number.isFinite(remaining)) {
-        remaining = total - paid;
-      }
+      if (!Number.isFinite(remaining)) remaining = total - paid;
       if (remaining < 0) remaining = 0;
     } else {
-      paid = total;
-      remaining = 0;
+      paid = total; remaining = 0;
     }
 
     const saleData = {
@@ -438,7 +433,8 @@ app.post('/api/sales', async (req, res) => {
       paid_amount: paid,
       remaining_amount: Number.isFinite(Number(remaining)) ? remaining : (total - paid),
       status: status || 'paid',
-      customer_id: customerId || null
+      customer_id: customerId || null,
+      cart: (cart && cart.length > 0) ? cart : null  // Stocker le panier en JSONB
     };
 
     // Ajouter la date seulement si fournie (facture manuelle)

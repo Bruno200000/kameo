@@ -453,21 +453,21 @@ router.post('/sales', async (req, res) => {
       cart, 
       customerId,
       totalAmount, paidAmount, remainingAmount, 
-      paymentMode, status, sale_date
+      status, sale_date
     } = req.body;
 
-    // Mapping strict camelCase -> snake_case (seuls les champs existants en BDD)
+    // Mapping strict vers les colonnes exactes de la table sales
     const saleToCreate = {
       customer_id: customerId || null,
       total_amount: Number(totalAmount) || 0,
       paid_amount: Number(paidAmount) || 0,
       remaining_amount: Number(remainingAmount) || 0,
-      payment_mode: paymentMode || null,
       status: status || 'paid',
-      created_by: user.id || null
+      created_by: user.id || null,
+      cart: (cart && cart.length > 0) ? cart : null  // Stocker le panier en JSONB
     };
 
-    // Ajouter la date seulement si fournie (facture manuelle)
+    // Ajouter la date seulement si fournie
     if (sale_date) saleToCreate.sale_date = sale_date;
 
     const saleRes = await supabaseFetch('sales', {
