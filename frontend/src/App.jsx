@@ -2389,9 +2389,9 @@ const Sales = ({ addToast }) => {
 
     if (calculatedTotal <= 0) {
       const errorMsg = hasItems 
-        ? "Le total calculé des articles est de 0 F. Veuillez vérifier vos prix et quantités." 
-        : "Le montant total est requis.";
-      return addToast('Attention', errorMsg, 'warning');
+        ? "Impossible d'enregistrer : Le total cumulé des articles est de 0 F. Veuillez vérifier les prix et quantités." 
+        : "Désolé, le montant total de la facture est manquant ou nul. Veuillez le saisir.";
+      return addToast('Erreur de Saisie', errorMsg, 'warning');
     }
 
     const total = calculatedTotal;
