@@ -396,7 +396,7 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
 // Ventes
 app.get('/api/sales', async (req, res) => {
   try {
-    const data = await supabaseFetch('sales?select=*&order=sale_date.desc');
+    const data = await supabaseFetch('sales?select=*,customers(name),sale_items(product_id,quantity,unit_price,products(name,image_url))&order=sale_date.desc');
     res.json(data || []);
   } catch (err) {
     res.status(500).json({ error: "Erreur serveur interne" });
@@ -406,7 +406,7 @@ app.get('/api/sales', async (req, res) => {
 // Enregistrer une nouvelle  Vente depuis le POS
 app.post('/api/sales', async (req, res) => {
   try {
-    const { cart, totalAmount, paidAmount, remainingAmount, status, customerId, sale_date } = req.body;
+    const { cart, totalAmount, paidAmount, remainingAmount, status, customerId, customerName, sale_date } = req.body;
     
     // 1. Obtenir l'entreprise
     const companyId = await getOrCreateCompanyId();
@@ -434,6 +434,7 @@ app.post('/api/sales', async (req, res) => {
       remaining_amount: Number.isFinite(Number(remaining)) ? remaining : (total - paid),
       status: status || 'paid',
       customer_id: customerId || null,
+      customer_name: customerName || null,
       cart: (cart && cart.length > 0) ? cart : null  // Stocker le panier en JSONB
     };
 
@@ -506,7 +507,10 @@ app.post('/api/sales', async (req, res) => {
       }
     }
 
-    res.json({ success: true, sale_id: saleId });
+    // 5. Récupérer la vente complète avec les jointures pour le frontend
+    const fullSale = await supabaseFetch(`sales?id=eq.${saleId}&select=*,customers(name),sale_items(product_id,quantity,unit_price,products(name,image_url))`);
+    
+    res.json({ success: true, sale: (fullSale && fullSale.length > 0) ? fullSale[0] : { id: saleId } });
   } catch (err) {
     console.error("Erreur Checkout:", err.message);
     res.status(500).json({ error: "Erreur enregistrement de la vente: " + err.message });
@@ -560,7 +564,10 @@ app.post('/api/sales/:id/payment', async (req, res) => {
 
     if (!saleRes || saleRes.length === 0) return res.status(500).json({ error: "Echec mise à jour du paiement" });
     
-    res.json({ success: true, sale: saleRes[0] });
+    // Récupérer la vente mise à jour avec toutes ses relations
+    const fullSale = await supabaseFetch(`sales?id=eq.${id}&select=*,customers(name),sale_items(product_id,quantity,unit_price,products(name,image_url))`);
+    
+    res.json({ success: true, sale: (fullSale && fullSale.length > 0) ? fullSale[0] : saleRes[0] });
   } catch (err) {
     console.error('Error in payment update:', err);
     res.status(500).json({ error: "Erreur lors du paiement: " + err.message });

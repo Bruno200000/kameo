@@ -451,7 +451,7 @@ router.post('/sales', async (req, res) => {
     const user = JSON.parse(req.headers['x-user-data'] || '{}');
     const { 
       cart, 
-      customerId,
+      customerId, customerName,
       totalAmount, paidAmount, remainingAmount, 
       status, sale_date
     } = req.body;
@@ -459,6 +459,7 @@ router.post('/sales', async (req, res) => {
     // Mapping strict vers les colonnes exactes de la table sales
     const saleToCreate = {
       customer_id: customerId || null,
+      customer_name: customerName || null,
       total_amount: Number(totalAmount) || 0,
       paid_amount: Number(paidAmount) || 0,
       remaining_amount: Number(remainingAmount) || 0,
@@ -526,7 +527,10 @@ router.post('/sales', async (req, res) => {
         }
       }
 
-      res.json({ success: true, sale_id: saleId });
+      // 3. Récupérer la vente complète avec les jointures pour le frontend
+      const fullSale = await supabaseFetch(`sales?id=eq.${saleId}&select=*,companies(name),customers(name),sale_items(product_id,quantity,unit_price,products(name,image_url))`, {}, req);
+      
+      res.json({ success: true, sale: (fullSale && fullSale.length > 0) ? fullSale[0] : { id: saleId } });
     } else {
       res.status(500).json({ error: "Echec insertion" });
     }
@@ -548,7 +552,10 @@ router.post('/sales/:id/payment', async (req, res) => {
       headers: { 'Prefer': 'return=representation' },
       body: JSON.stringify({ paid_amount: newPaid, status: newStatus || (newPaid >= existing[0].total_amount ? 'paid' : 'partial') })
     }, req);
-    res.json({ success: true, sale: updated[0] });
+    // Récupérer la vente mise à jour avec toutes ses relations
+    const fullSale = await supabaseFetch(`sales?id=eq.${req.params.id}&select=*,companies(name),customers(name),sale_items(product_id,quantity,unit_price,products(name,image_url))`, {}, req);
+    
+    res.json({ success: true, sale: (fullSale && fullSale.length > 0) ? fullSale[0] : updated[0] });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

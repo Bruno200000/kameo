@@ -2442,13 +2442,15 @@ const Sales = ({ addToast }) => {
         });
         setShowAdd(false);
         // Obtenir la nouvelle vente ajoutée
-        const newSale = {
+        const newSale = resData.sale || {
           id: resData.sale_id,
           sale_date: new Date().toISOString(),
           total_amount: total,
           paid_amount: initialPaid,
           remaining_amount: initialRemaining,
-          status: formData.status
+          status: formData.status,
+          customer_name: formData.customerName,
+          customers: formData.customerId ? { name: formData.customerName } : null
         };
         setSales([newSale, ...sales]);
       } else {
@@ -2937,7 +2939,7 @@ const Sales = ({ addToast }) => {
                     >
                       FAC-{s.id.substring(0, 8).toUpperCase()}
                     </td>
-                    <td>{s.customers?.name || 'Client de passage'}</td>
+                    <td>{s.customers?.name || s.customer_name || 'Client de passage'}</td>
                     <td style={{ fontSize: '0.85rem', color: '#64748b' }}>{s.created_by_name || 'Système'}</td>
                     <td style={{ fontWeight: 'bold', color: '#10b981' }}>+ {s.total_amount} F</td>
                     <td>
@@ -3000,7 +3002,7 @@ const Sales = ({ addToast }) => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px', backgroundColor: '#f8fafc', padding: '15px', borderRadius: '10px' }}>
               <div><strong>Référence :</strong> FAC-{String(selectedSale.id).substring(0, 8).toUpperCase()}</div>
               <div><strong>Date :</strong> {new Date(selectedSale.sale_date).toLocaleString()}</div>
-              <div><strong>Client :</strong> {selectedSale.customers?.name || 'Client de passage'}</div>
+              <div><strong>Client :</strong> {selectedSale.customers?.name || selectedSale.customer_name || 'Client de passage'}</div>
               <div><strong>Vendeur :</strong> {selectedSale.created_by_name || 'Système'}</div>
               <div><strong>Montant Total :</strong> {Number(selectedSale.total_amount || 0).toLocaleString()} F</div>
               <div><strong>Montant Payé :</strong> {(selectedSale.status === 'paid' ? selectedSale.total_amount : (selectedSale.paid_amount || 0)).toLocaleString()} F</div>
