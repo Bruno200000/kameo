@@ -266,7 +266,7 @@ router.post('/settings', async (req, res) => {
 // Dashboard
 router.get('/dashboard/stats', async (req, res) => {
   try {
-    const salesData = await supabaseFetch('sales?select=total_amount,sale_date&status=eq.paid', {}, req);
+    const salesData = await supabaseFetch('sales?select=total_amount,paid_amount,sale_date', {}, req);
     const productsData = await supabaseFetch('products?select=quantity,selling_price,alert_threshold', {}, req);
     const customersData = await supabaseFetch('customers?select=id', {}, req);
 
@@ -280,7 +280,7 @@ router.get('/dashboard/stats', async (req, res) => {
 
     if (salesData) {
       salesData.forEach(s => {
-        const amount = Number(s.total_amount || 0);
+        const amount = Number(s.paid_amount || 0); // Utiliser le montant réellement payé
         const d = new Date(s.sale_date);
         const saleDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
         const dayStr = saleDay.toISOString().split('T')[0];
@@ -334,12 +334,12 @@ router.get('/dashboard/stats', async (req, res) => {
 // Finance
 router.get('/finance/summary', async (req, res) => {
   try {
-    const sales = await supabaseFetch('sales?select=total_amount,sale_date,status&order=sale_date.desc', {}, req) || [];
+    const sales = await supabaseFetch('sales?select=total_amount,paid_amount,sale_date,status&order=sale_date.desc', {}, req) || [];
     const purchases = await supabaseFetch('purchases?select=total_amount,purchase_date,status&order=purchase_date.desc', {}, req) || [];
-    const totalRecettes = sales.filter(s => s.status === 'paid').reduce((sum, s) => sum + Number(s.total_amount), 0);
+    const totalRecettes = sales.reduce((sum, s) => sum + Number(s.paid_amount || 0), 0);
     const totalDepenses = purchases.reduce((sum, p) => sum + Number(p.total_amount), 0);
     const history = [
-      ...sales.map(s => ({ id: s.id, type: 'RECETTE', amount: s.total_amount, date: s.sale_date, label: 'Vente' })),
+      ...sales.map(s => ({ id: s.id, type: 'RECETTE', amount: s.paid_amount, date: s.sale_date, label: 'Vente' })),
       ...purchases.map(p => ({ id: p.id, type: 'DEPENSE', amount: p.total_amount, date: p.purchase_date, label: 'Achat' }))
     ].sort((a, b) => new Date(b.date) - new Date(a.date));
     res.json({ totalRecettes, totalDepenses, balance: totalRecettes - totalDepenses, history: history.slice(0, 20) });

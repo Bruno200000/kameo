@@ -199,7 +199,7 @@ app.patch('/api/admin/config', async (req, res) => {
 // Dashboard Stats
 app.get('/api/dashboard/stats', async (req, res) => {
   try {
-    const salesData = await supabaseFetch('sales?select=total_amount,sale_date&status=eq.paid');
+    const salesData = await supabaseFetch('sales?select=total_amount,paid_amount,sale_date');
     const productsData = await supabaseFetch('products?select=quantity,selling_price,alert_threshold');
     const customersData = await supabaseFetch('customers?select=id');
 
@@ -210,7 +210,7 @@ app.get('/api/dashboard/stats', async (req, res) => {
     
     if (salesData && Array.isArray(salesData)) {
       salesData.forEach(s => {
-        const amount = Number(s.total_amount || 0);
+        const amount = Number(s.paid_amount || 0); // Utiliser le montant réellement payé
         const d = new Date(s.sale_date);
         const saleDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
         const dayStr = saleDay.toISOString().split('T')[0];
@@ -260,15 +260,15 @@ app.get('/api/dashboard/stats', async (req, res) => {
 // Finance Summary
 app.get('/api/finance/summary', async (req, res) => {
   try {
-    const sales = await supabaseFetch('sales?select=total_amount,sale_date,status&order=sale_date.desc') || [];
+    const sales = await supabaseFetch('sales?select=total_amount,paid_amount,sale_date,status&order=sale_date.desc') || [];
     const purchases = await supabaseFetch('purchases?select=total_amount,purchase_date,status&order=purchase_date.desc') || [];
     
-    const totalRecettes = sales.filter(s => s.status === 'paid').reduce((sum, s) => sum + Number(s.total_amount), 0);
+    const totalRecettes = sales.reduce((sum, s) => sum + Number(s.paid_amount || 0), 0);
     const totalDepenses = purchases.reduce((sum, p) => sum + Number(p.total_amount), 0);
     
     // Fusionner pour un historique complet
     const history = [
-      ...sales.map(s => ({ id: s.id, type: 'RECETTE', amount: s.total_amount, date: s.sale_date, label: 'Vente' })),
+      ...sales.map(s => ({ id: s.id, type: 'RECETTE', amount: s.paid_amount, date: s.sale_date, label: 'Vente' })),
       ...purchases.map(p => ({ id: p.id, type: 'DEPENSE', amount: p.total_amount, date: p.purchase_date, label: 'Achat' }))
     ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
