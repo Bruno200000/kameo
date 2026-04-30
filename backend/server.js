@@ -527,7 +527,7 @@ app.post('/api/sales/:id/payment', async (req, res) => {
     console.log('Payment data:', req.body);
 
     // Récupérer les valeurs actuelles pour calculer les totaux
-    const existingSales = await supabaseFetch(`sales?id=eq.${id}&select=paid_amount,remaining_amount,status`);
+    const existingSales = await supabaseFetch(`sales?id=eq.${id}&select=paid_amount,remaining_amount,total_amount,status`);
     if (!existingSales || existingSales.length === 0) {
       return res.status(404).json({ error: 'Vente non trouvée' });
     }
@@ -544,8 +544,9 @@ app.post('/api/sales/:id/payment', async (req, res) => {
       return res.status(400).json({ error: 'Montant du paiement dépasse le reste à payer' });
     }
 
-    const computedRemaining = Number.isFinite(Number(newRemainingAmount)) ? Number(newRemainingAmount) : currentRemaining - Number(paymentAmount);
+    const total = Number(existingSale.total_amount || 0);
     const computedPaid = currentPaid + Number(paymentAmount);
+    const computedRemaining = total - computedPaid;
     const computedStatus = newStatus || (computedRemaining <= 0 ? 'paid' : 'partial');
 
     const updateData = {

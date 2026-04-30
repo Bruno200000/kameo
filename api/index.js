@@ -546,11 +546,18 @@ router.post('/sales/:id/payment', async (req, res) => {
     const existing = await supabaseFetch(`sales?id=eq.${req.params.id}&select=paid_amount,total_amount`, {}, req);
     if (!existing || existing.length === 0) return res.status(404).json({ error: 'Vente non trouvée' });
 
+    const total = Number(existing[0].total_amount);
     const newPaid = Number(existing[0].paid_amount) + Number(paymentAmount);
+    const newRemaining = total - newPaid;
+    
     const updated = await supabaseFetch(`sales?id=eq.${req.params.id}`, {
       method: 'PATCH',
       headers: { 'Prefer': 'return=representation' },
-      body: JSON.stringify({ paid_amount: newPaid, status: newStatus || (newPaid >= existing[0].total_amount ? 'paid' : 'partial') })
+      body: JSON.stringify({ 
+        paid_amount: newPaid, 
+        remaining_amount: newRemaining,
+        status: newStatus || (newRemaining <= 0 ? 'paid' : 'partial') 
+      })
     }, req);
     // Récupérer la vente mise à jour avec toutes ses relations
     const fullSale = await supabaseFetch(`sales?id=eq.${req.params.id}&select=*,companies(name),customers(name),sale_items(product_id,quantity,unit_price,products(name,image_url))`, {}, req);
