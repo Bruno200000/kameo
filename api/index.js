@@ -104,6 +104,28 @@ const supabaseFetch = async (resourcePath, options = {}, req = null) => {
   }
 };
 
+const resolveCustomerId = async ({ customerId, customerName, req }) => {
+  if (customerId) return customerId;
+
+  const name = String(customerName || '').trim();
+  if (!name) return null;
+
+  const existing = await supabaseFetch(
+    `customers?select=id&name=eq.${encodeURIComponent(name)}&limit=1`,
+    {},
+    req
+  );
+  if (existing && existing.length > 0) return existing[0].id;
+
+  const created = await supabaseFetch('customers', {
+    method: 'POST',
+    headers: { 'Prefer': 'return=representation' },
+    body: JSON.stringify({ name })
+  }, req);
+
+  return created && created.length > 0 ? created[0].id : null;
+};
+
 app.use(cors({
   origin: true,
   credentials: true,
@@ -441,7 +463,7 @@ router.post('/upload', upload.single('image'), async (req, res) => {
 // Ventes
 router.get('/sales', async (req, res) => {
   try {
-    const data = await supabaseFetch('sales?select=*,companies(name),customers(name),sale_items(product_id,quantity,unit_price,products(name,image_url))&order=sale_date.desc', {}, req);
+    const data = await supabaseFetch('sales?select=*,companies(name),customers(name,contact_info),sale_items(product_id,quantity,unit_price,total,products(name,image_url))&order=sale_date.desc', {}, req);
     res.json(data || []);
   } catch (err) { res.status(500).json({ error: "Erreur" }); }
 });
@@ -456,16 +478,16 @@ router.post('/sales', async (req, res) => {
       status, sale_date
     } = req.body;
 
+    const resolvedCustomerId = await resolveCustomerId({ customerId, customerName, req });
+
     // Mapping strict vers les colonnes exactes de la table sales
     const saleToCreate = {
-      customer_id: customerId || null,
-      customer_name: customerName || null,
+      customer_id: resolvedCustomerId,
       total_amount: Number(totalAmount) || 0,
       paid_amount: Number(paidAmount) || 0,
       remaining_amount: Number(remainingAmount) || 0,
       status: status || 'paid',
-      created_by: user.id || null,
-      cart: (cart && cart.length > 0) ? cart : null  // Stocker le panier en JSONB
+      user_id: user.id || null
     };
 
     // Ajouter la date seulement si fournie
@@ -479,6 +501,16 @@ router.post('/sales', async (req, res) => {
 
     if (saleRes && saleRes.length > 0) {
       const saleId = saleRes[0].id;
+      const storedRemaining = Number(saleToCreate.remaining_amount || 0);
+
+      if (saleToCreate.status === 'partial' && resolvedCustomerId && storedRemaining > 0) {
+        const customerData = await supabaseFetch(`customers?id=eq.${resolvedCustomerId}&select=current_debt`, {}, req);
+        const currentDebt = Number(customerData?.[0]?.current_debt || 0);
+        await supabaseFetch(`customers?id=eq.${resolvedCustomerId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ current_debt: currentDebt + storedRemaining })
+        }, req);
+      }
 
       // 1. Créer les sale_items si cart est présent
       if (cart && Array.isArray(cart) && cart.length > 0) {
@@ -528,7 +560,7 @@ router.post('/sales', async (req, res) => {
       }
 
       // 3. Récupérer la vente complète avec les jointures pour le frontend
-      const fullSale = await supabaseFetch(`sales?id=eq.${saleId}&select=*,companies(name),customers(name),sale_items(product_id,quantity,unit_price,products(name,image_url))`, {}, req);
+      const fullSale = await supabaseFetch(`sales?id=eq.${saleId}&select=*,companies(name),customers(name,contact_info),sale_items(product_id,quantity,unit_price,total,products(name,image_url))`, {}, req);
       
       res.json({ success: true, sale: (fullSale && fullSale.length > 0) ? fullSale[0] : { id: saleId } });
     } else {
@@ -543,12 +575,17 @@ router.post('/sales', async (req, res) => {
 router.post('/sales/:id/payment', async (req, res) => {
   try {
     const { paymentAmount, newStatus } = req.body;
-    const existing = await supabaseFetch(`sales?id=eq.${req.params.id}&select=paid_amount,total_amount`, {}, req);
+    const existing = await supabaseFetch(`sales?id=eq.${req.params.id}&select=paid_amount,total_amount,remaining_amount,customer_id`, {}, req);
     if (!existing || existing.length === 0) return res.status(404).json({ error: 'Vente non trouvée' });
 
     const total = Number(existing[0].total_amount);
-    const newPaid = Number(existing[0].paid_amount) + Number(paymentAmount);
-    const newRemaining = total - newPaid;
+    const currentRemaining = Number(existing[0].remaining_amount ?? (total - Number(existing[0].paid_amount || 0)));
+    const amount = Number(paymentAmount);
+    if (!amount || amount <= 0) return res.status(400).json({ error: 'Montant du paiement invalide' });
+    if (amount > currentRemaining) return res.status(400).json({ error: 'Montant du paiement depasse le reste a payer' });
+
+    const newPaid = Number(existing[0].paid_amount || 0) + amount;
+    const newRemaining = Math.max(0, total - newPaid);
     
     const updated = await supabaseFetch(`sales?id=eq.${req.params.id}`, {
       method: 'PATCH',
@@ -559,8 +596,17 @@ router.post('/sales/:id/payment', async (req, res) => {
         status: newStatus || (newRemaining <= 0 ? 'paid' : 'partial') 
       })
     }, req);
+
+    if (existing[0].customer_id && amount > 0) {
+      const customerData = await supabaseFetch(`customers?id=eq.${existing[0].customer_id}&select=current_debt`, {}, req);
+      const currentDebt = Number(customerData?.[0]?.current_debt || 0);
+      await supabaseFetch(`customers?id=eq.${existing[0].customer_id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ current_debt: Math.max(0, currentDebt - amount) })
+      }, req);
+    }
     // Récupérer la vente mise à jour avec toutes ses relations
-    const fullSale = await supabaseFetch(`sales?id=eq.${req.params.id}&select=*,companies(name),customers(name),sale_items(product_id,quantity,unit_price,products(name,image_url))`, {}, req);
+    const fullSale = await supabaseFetch(`sales?id=eq.${req.params.id}&select=*,companies(name),customers(name,contact_info),sale_items(product_id,quantity,unit_price,total,products(name,image_url))`, {}, req);
     
     res.json({ success: true, sale: (fullSale && fullSale.length > 0) ? fullSale[0] : updated[0] });
   } catch (err) { res.status(500).json({ error: err.message }); }

@@ -2240,8 +2240,22 @@ const Sales = ({ addToast }) => {
 
   const mergedSales = [...offlineSales, ...(Array.isArray(sales) ? sales : [])];
 
+  const getSaleTotal = (sale) => Number(sale?.total_amount || 0);
+  const getSalePaid = (sale) => {
+    const total = getSaleTotal(sale);
+    if (sale?.status === 'paid') return total;
+    return Number(sale?.paid_amount || 0);
+  };
+  const getSaleRemaining = (sale) => {
+    if (sale?.status === 'paid') return 0;
+    const total = getSaleTotal(sale);
+    const paid = getSalePaid(sale);
+    return Math.max(0, Number(sale?.remaining_amount ?? (total - paid)));
+  };
+  const getSaleCustomerName = (sale) => sale?.customers?.name || sale?.customer_name || 'Client de passage';
+
   const openPaymentDialog = (sale) => {
-    const remainingAmount = Number(sale.remaining_amount ?? (Number(sale.total_amount || 0) - Number(sale.paid_amount || 0)));
+    const remainingAmount = getSaleRemaining(sale);
     setPaymentDialog({ open: true, sale, amount: remainingAmount > 0 ? String(remainingAmount) : '0' });
     setPaymentError('');
   };
@@ -2254,7 +2268,7 @@ const Sales = ({ addToast }) => {
   const executePayment = async () => {
     if (!paymentDialog.sale) return;
     const sale = paymentDialog.sale;
-    const remainingAmount = Number(sale.remaining_amount ?? (Number(sale.total_amount || 0) - Number(sale.paid_amount || 0)));
+    const remainingAmount = getSaleRemaining(sale);
     const amount = Number(paymentDialog.amount);
 
     if (!amount || amount <= 0) {
@@ -2482,7 +2496,7 @@ const Sales = ({ addToast }) => {
           name: item.products?.name || 'Produit',
           quantity: item.quantity,
           unit_price: item.unit_price,
-          total: Number(item.quantity || 0) * Number(item.unit_price || 0)
+          total: Number(item.total ?? (Number(item.quantity || 0) * Number(item.unit_price || 0)))
         }))
       : (Array.isArray(sale.cart) && sale.cart.length > 0
           ? sale.cart.map(item => ({
@@ -2494,10 +2508,10 @@ const Sales = ({ addToast }) => {
           : [{ name: 'Vente globale', quantity: 1, unit_price: sale.total_amount, total: sale.total_amount }]
         );
 
-    const paidAmount = Number(sale.paid_amount || 0);
     const totalAmount = Number(sale.total_amount || 0);
-    const rawRemaining = Number(sale.remaining_amount ?? (totalAmount - paidAmount));
+    const rawRemaining = sale.status === 'paid' ? 0 : Number(sale.remaining_amount ?? (totalAmount - Number(sale.paid_amount || 0)));
     const remainingAmount = Math.max(0, Math.round(rawRemaining * 100) / 100);
+    const paidAmount = remainingAmount <= 0 ? totalAmount : Number(sale.paid_amount || 0);
     const isCredit = remainingAmount > 0;
 
     // Déterminer un tampon unique pour éviter toute superposition
@@ -3002,11 +3016,11 @@ const Sales = ({ addToast }) => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px', backgroundColor: '#f8fafc', padding: '15px', borderRadius: '10px' }}>
               <div><strong>Référence :</strong> FAC-{String(selectedSale.id).substring(0, 8).toUpperCase()}</div>
               <div><strong>Date :</strong> {new Date(selectedSale.sale_date).toLocaleString()}</div>
-              <div><strong>Client :</strong> {selectedSale.customers?.name || selectedSale.customer_name || 'Client de passage'}</div>
+              <div><strong>Client :</strong> {getSaleCustomerName(selectedSale)}</div>
               <div><strong>Vendeur :</strong> {selectedSale.created_by_name || 'Système'}</div>
-              <div><strong>Montant Total :</strong> {Number(selectedSale.total_amount || 0).toLocaleString()} F</div>
-              <div><strong>Montant Payé :</strong> {(selectedSale.status === 'paid' ? selectedSale.total_amount : (selectedSale.paid_amount || 0)).toLocaleString()} F</div>
-              <div><strong>Reste à Payer :</strong> {(selectedSale.status === 'paid' ? 0 : (selectedSale.remaining_amount || 0)).toLocaleString()} F</div>
+              <div><strong>Montant Total :</strong> {getSaleTotal(selectedSale).toLocaleString()} F</div>
+              <div><strong>Montant Payé :</strong> {getSalePaid(selectedSale).toLocaleString()} F</div>
+              <div><strong>Reste à Payer :</strong> {getSaleRemaining(selectedSale).toLocaleString()} F</div>
               <div><strong>Statut :</strong>
                 <span className={selectedSale.status === 'paid' ? "status-badge success" : selectedSale.status === 'partial' ? "status-badge warning" : "status-badge error"} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                   {selectedSale.status === 'paid' ? 'Payé' : selectedSale.status === 'partial' ? 'Partiel' : 'En attente'}
@@ -3029,7 +3043,7 @@ const Sales = ({ addToast }) => {
                     <div style={{ fontWeight: 600 }}>{item.products?.name || 'Produit inconnu'}</div>
                     <div style={{ fontSize: '0.85rem', color: '#64748b' }}>{item.quantity} x {item.unit_price} F</div>
                   </div>
-                  <div style={{ fontWeight: 700 }}>{item.quantity * item.unit_price} F</div>
+                  <div style={{ fontWeight: 700 }}>{Number(item.total ?? (Number(item.quantity || 0) * Number(item.unit_price || 0))).toLocaleString()} F</div>
                 </div>
               ))}
             </div>

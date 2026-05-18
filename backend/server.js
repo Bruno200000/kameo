@@ -94,6 +94,26 @@ const getOrCreateCompanyId = async () => {
   throw new Error("Impossible de configurer l'entreprise.");
 };
 
+const resolveCustomerId = async ({ customerId, customerName, companyId }) => {
+  if (customerId) return customerId;
+
+  const name = String(customerName || '').trim();
+  if (!name) return null;
+
+  const existing = await supabaseFetch(
+    `customers?company_id=eq.${companyId}&name=eq.${encodeURIComponent(name)}&select=id&limit=1`
+  );
+  if (existing && existing.length > 0) return existing[0].id;
+
+  const created = await supabaseFetch('customers', {
+    method: 'POST',
+    headers: { 'Prefer': 'return=representation' },
+    body: JSON.stringify({ company_id: companyId, name })
+  });
+
+  return created && created.length > 0 ? created[0].id : null;
+};
+
 app.use(cors({
   origin: true,
   credentials: true,
@@ -396,7 +416,7 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
 // Ventes
 app.get('/api/sales', async (req, res) => {
   try {
-    const data = await supabaseFetch('sales?select=*,customers(name),sale_items(product_id,quantity,unit_price,products(name,image_url))&order=sale_date.desc');
+    const data = await supabaseFetch('sales?select=*,customers(name,contact_info),sale_items(product_id,quantity,unit_price,total,products(name,image_url))&order=sale_date.desc');
     res.json(data || []);
   } catch (err) {
     res.status(500).json({ error: "Erreur serveur interne" });
@@ -427,15 +447,15 @@ app.post('/api/sales', async (req, res) => {
       paid = total; remaining = 0;
     }
 
+    const resolvedCustomerId = await resolveCustomerId({ customerId, customerName, companyId });
+
     const saleData = {
       company_id: companyId,
       total_amount: total,
       paid_amount: paid,
       remaining_amount: Number.isFinite(Number(remaining)) ? remaining : (total - paid),
       status: status || 'paid',
-      customer_id: customerId || null,
-      customer_name: customerName || null,
-      cart: (cart && cart.length > 0) ? cart : null  // Stocker le panier en JSONB
+      customer_id: resolvedCustomerId
     };
 
     // Ajouter la date seulement si fournie (facture manuelle)
@@ -453,14 +473,14 @@ app.post('/api/sales', async (req, res) => {
     const saleId = saleRes[0].id;
 
     // 3. Si c'est un paiement partiel, créer une dette client
-    if (status === 'partial' && customerId && remainingAmount > 0) {
+    if (status === 'partial' && resolvedCustomerId && remaining > 0) {
       // Mettre à jour la dette du client
-      const customerData = await supabaseFetch(`customers?id=eq.${customerId}&select=current_debt`);
+      const customerData = await supabaseFetch(`customers?id=eq.${resolvedCustomerId}&select=current_debt`);
       const currentDebt = (customerData && customerData[0] && customerData[0].current_debt) || 0;
       
-      await supabaseFetch(`customers?id=eq.${customerId}`, {
+      await supabaseFetch(`customers?id=eq.${resolvedCustomerId}`, {
         method: 'PATCH',
-        body: JSON.stringify({ current_debt: currentDebt + remainingAmount })
+        body: JSON.stringify({ current_debt: Number(currentDebt) + remaining })
       });
     }
 
@@ -508,7 +528,7 @@ app.post('/api/sales', async (req, res) => {
     }
 
     // 5. Récupérer la vente complète avec les jointures pour le frontend
-    const fullSale = await supabaseFetch(`sales?id=eq.${saleId}&select=*,customers(name),sale_items(product_id,quantity,unit_price,products(name,image_url))`);
+    const fullSale = await supabaseFetch(`sales?id=eq.${saleId}&select=*,customers(name,contact_info),sale_items(product_id,quantity,unit_price,total,products(name,image_url))`);
     
     res.json({ success: true, sale: (fullSale && fullSale.length > 0) ? fullSale[0] : { id: saleId } });
   } catch (err) {
@@ -527,14 +547,15 @@ app.post('/api/sales/:id/payment', async (req, res) => {
     console.log('Payment data:', req.body);
 
     // Récupérer les valeurs actuelles pour calculer les totaux
-    const existingSales = await supabaseFetch(`sales?id=eq.${id}&select=paid_amount,remaining_amount,total_amount,status`);
+    const existingSales = await supabaseFetch(`sales?id=eq.${id}&select=paid_amount,remaining_amount,total_amount,status,customer_id`);
     if (!existingSales || existingSales.length === 0) {
       return res.status(404).json({ error: 'Vente non trouvée' });
     }
 
     const existingSale = existingSales[0];
     const currentPaid = Number(existingSale.paid_amount || 0);
-    const currentRemaining = Number(existingSale.remaining_amount || 0);
+    const total = Number(existingSale.total_amount || 0);
+    const currentRemaining = Number(existingSale.remaining_amount ?? (total - currentPaid));
 
     if (Number(paymentAmount) <= 0) {
       return res.status(400).json({ error: 'Montant du paiement invalide' });
@@ -544,9 +565,8 @@ app.post('/api/sales/:id/payment', async (req, res) => {
       return res.status(400).json({ error: 'Montant du paiement dépasse le reste à payer' });
     }
 
-    const total = Number(existingSale.total_amount || 0);
     const computedPaid = currentPaid + Number(paymentAmount);
-    const computedRemaining = total - computedPaid;
+    const computedRemaining = Math.max(0, total - computedPaid);
     const computedStatus = newStatus || (computedRemaining <= 0 ? 'paid' : 'partial');
 
     const updateData = {
@@ -566,7 +586,16 @@ app.post('/api/sales/:id/payment', async (req, res) => {
     if (!saleRes || saleRes.length === 0) return res.status(500).json({ error: "Echec mise à jour du paiement" });
     
     // Récupérer la vente mise à jour avec toutes ses relations
-    const fullSale = await supabaseFetch(`sales?id=eq.${id}&select=*,customers(name),sale_items(product_id,quantity,unit_price,products(name,image_url))`);
+    if (existingSale.customer_id && Number(paymentAmount) > 0) {
+      const customerData = await supabaseFetch(`customers?id=eq.${existingSale.customer_id}&select=current_debt`);
+      const currentDebt = Number(customerData?.[0]?.current_debt || 0);
+      await supabaseFetch(`customers?id=eq.${existingSale.customer_id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ current_debt: Math.max(0, currentDebt - Number(paymentAmount)) })
+      });
+    }
+
+    const fullSale = await supabaseFetch(`sales?id=eq.${id}&select=*,customers(name,contact_info),sale_items(product_id,quantity,unit_price,total,products(name,image_url))`);
     
     res.json({ success: true, sale: (fullSale && fullSale.length > 0) ? fullSale[0] : saleRes[0] });
   } catch (err) {
@@ -1160,4 +1189,3 @@ app.get('/api/admin/stats', async (req, res) => {
 app.listen(port, () => {
   console.log(`Serveur KAméo backend démarré sur : http://localhost:${port}`);
 });
-
