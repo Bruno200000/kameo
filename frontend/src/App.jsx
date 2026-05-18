@@ -1287,21 +1287,6 @@ const POS = ({ addToast, currentUser, companiesData }) => {
     setIsProcessing(false);
   };
 
-  if (currentUser?.role === 'superadmin' && (!activeCompanyId || activeCompanyId === "")) {
-    return (
-      <div style={{ padding: '40px', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '12px', border: '2px dashed #cbd5e1' }}>
-        <Building size={48} style={{ color: '#64748b', marginBottom: '20px' }} />
-        <h2 style={{ color: '#1e293b', marginBottom: '10px' }}>Sélection d'entreprise requise</h2>
-        <p style={{ color: '#64748b', maxWidth: '500px', margin: '0 auto 20px' }}>
-          En tant que Superadmin, vous devez sélectionner une entreprise spécifique dans le menu en haut pour accéder à la caisse (POS). 
-          Chaque vente doit être rattachée à une entité fiscale précise.
-        </p>
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <CompanySwitcher currentUser={currentUser} />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="pos-layout" style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
