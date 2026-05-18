@@ -802,11 +802,20 @@ router.get('/contacts', async (req, res) => {
 
 router.post('/contacts', async (req, res) => {
   try {
-    const table = req.body.type === 'fournisseur' ? 'suppliers' : 'customers';
+    const { type, name, contact_info, current_debt } = req.body;
+    if (!name) return res.status(400).json({ error: "Le nom est requis" });
+
+    const table = type === 'fournisseur' ? 'suppliers' : 'customers';
+    const contactToCreate = {
+      name,
+      contact_info: contact_info || null,
+      current_debt: Number(current_debt) || 0
+    };
+
     const cRes = await supabaseFetch(table, {
       method: 'POST',
       headers: { 'Prefer': 'return=representation' },
-      body: JSON.stringify(req.body)
+      body: JSON.stringify(contactToCreate)
     }, req);
     res.json({ success: true, contact: cRes[0] });
   } catch (err) { res.status(500).json({ error: err.message }); }
