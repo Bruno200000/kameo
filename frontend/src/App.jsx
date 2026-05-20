@@ -1314,7 +1314,7 @@ const POS = ({ addToast, currentUser, companiesData }) => {
                 )}
               </div>
               <h4 style={{ margin: '0 0 5px 0', fontSize: '0.9rem', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</h4>
-              {(!activeCompanyId || activeCompanyId === "") && <div style={{ fontSize: '0.75rem', color: '#6366f1', marginBottom: '5px', fontWeight: 600 }}>{p.companies?.name}</div>}
+              {/* Removed company name display per user request */}
               <p style={{ margin: 0, fontWeight: 'bold', color: '#3b82f6' }}>{p.selling_price} F</p>
             </div>
           ))}
@@ -1405,11 +1405,7 @@ const POS = ({ addToast, currentUser, companiesData }) => {
             <span style={{ fontWeight: '500', color: '#64748b' }}>Total :</span>
             <span style={{ fontWeight: 'bold', color: '#1e293b' }}>{total} F</span>
           </div>
-          {(!activeCompanyId || activeCompanyId === "") && (
-            <div style={{ padding: '8px', backgroundColor: '#fff1f2', borderRadius: '6px', marginBottom: '15px' }}>
-              <p style={{ margin: 0, fontSize: '0.75rem', color: '#be123c', textAlign: 'center', fontWeight: 600 }}>Attention: Pas d'entreprise sélectionnée</p>
-            </div>
-          )}
+          {/* Removed empty company warning per user request */}
 
           {/* Boutons de mode de paiement */}
           <div style={{ display: 'flex', gap: '8px', marginBottom: '15px' }}>
@@ -3135,6 +3131,143 @@ const Purchases = () => {
     quantity: '',
     status: 'pending'
   });
+  const filteredPurchases = purchases.filter((p) => {
+    const searchMatch = p.supplierName?.toLowerCase().includes(searchTerm.toLowerCase()) || p.reference?.toLowerCase().includes(searchTerm.toLowerCase());
+    return searchMatch;
+  });
+
+  const printPurchaseInvoice = (purchase) => {
+    let s = {};
+    try { s = JSON.parse(localStorage.getItem(INVOICE_PREFS_KEY) || '{}'); } catch(e){}
+    const invoicePrefix = 'BC';
+    const accentColor = s.invoice_color || '#2563eb';
+    const footerText = s.invoice_footer || 'Merci pour votre confiance.';
+    const logoUrl = s.invoice_logo || '';
+    const invoiceNumber = `${invoicePrefix}-${String(purchase.id || '').substring(0, 8).toUpperCase()}`;
+    const companyName = s.name || 'KAméo';
+    const companyPhone = s.phone || '-';
+    const companyAddress = s.address || '-';
+    const currency = s.currency || 'XOF';
+    
+    const items = (Array.isArray(purchase.purchase_items) && purchase.purchase_items.length > 0)
+      ? purchase.purchase_items.map(item => ({
+          name: item.products?.name || 'Produit',
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total: item.total || (item.quantity * item.unit_price)
+        }))
+      : [{ name: 'Achat global', quantity: Number(purchase.quantity) || 1, unit_price: Number(purchase.total_amount) / (Number(purchase.quantity) || 1), total: Number(purchase.total_amount) }];
+
+    const totalAmount = Number(purchase.total_amount || 0);
+
+    const printFrame = document.createElement('iframe');
+    printFrame.style.display = 'none';
+    document.body.appendChild(printFrame);
+    const printDocument = printFrame.contentWindow.document;
+
+    const logoHtml = logoUrl ? `<img src="${logoUrl}" alt="Logo" style="max-height: 80px; object-fit: contain; margin-bottom: 10px;" />` : '';
+
+    let html = `
+      <html>
+      <head>
+        <title>Bon de Commande ${invoiceNumber}</title>
+        <style>
+          body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 0; padding: 0; color: #333; }
+          .invoice-container { padding: 40px; max-width: 800px; margin: 0 auto; }
+          .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; border-bottom: 3px solid ${accentColor}; padding-bottom: 20px; }
+          .company-details { text-align: right; }
+          .invoice-title { font-size: 28px; color: ${accentColor}; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 2px; }
+          .details-section { display: flex; justify-content: space-between; margin-bottom: 40px; background: #f8fafc; padding: 20px; border-radius: 8px; }
+          .table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+          .table th { background-color: ${accentColor}; color: white; padding: 12px; text-align: left; }
+          .table td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
+          .totals { width: 300px; margin-left: auto; }
+          .total-row { display: flex; justify-content: space-between; padding: 8px 0; }
+          .total-row.grand-total { font-size: 20px; font-weight: bold; color: ${accentColor}; border-top: 2px solid #e2e8f0; padding-top: 15px; margin-top: 10px; }
+          .footer { margin-top: 50px; text-align: center; color: #64748b; font-size: 14px; border-top: 1px solid #e2e8f0; padding-top: 20px; }
+          @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="invoice-container">
+          <div class="header">
+            <div>
+              ${logoHtml}
+              <h1 class="invoice-title">BON DE COMMANDE</h1>
+              <p><strong>N° :</strong> ${invoiceNumber}</p>
+              <p><strong>Date :</strong> ${new Date(purchase.purchase_date || purchase.created_at).toLocaleDateString()}</p>
+            </div>
+            <div class="company-details">
+              <h3 style="margin: 0 0 5px 0;">${companyName}</h3>
+              <p style="margin: 0;">${companyAddress}</p>
+              <p style="margin: 0;">Tel: ${companyPhone}</p>
+            </div>
+          </div>
+          
+          <div class="details-section">
+            <div>
+              <h4 style="margin: 0 0 10px 0; color: #64748b;">FOURNISSEUR :</h4>
+              <p style="margin: 0; font-weight: bold; font-size: 18px;">${purchase.suppliers?.name || purchase.supplier_name || 'Fournisseur Anonyme'}</p>
+              <p style="margin: 5px 0 0 0;">Réf : ${purchase.reference || 'N/A'}</p>
+            </div>
+          </div>
+
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Désignation</th>
+                <th style="text-align: center;">Qté</th>
+                <th style="text-align: right;">P.U.</th>
+                <th style="text-align: right;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map(item => `
+                <tr>
+                  <td>${item.name}</td>
+                  <td style="text-align: center;">${item.quantity}</td>
+                  <td style="text-align: right;">${Number(item.unit_price).toLocaleString()} ${currency}</td>
+                  <td style="text-align: right; font-weight: bold;">${Number(item.total).toLocaleString()} ${currency}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+          <div class="totals">
+            <div class="total-row grand-total">
+              <span>TOTAL</span>
+              <span>${totalAmount.toLocaleString()} ${currency}</span>
+            </div>
+          </div>
+
+          <div class="footer">
+            <p>${footerText}</p>
+          </div>
+        </div>
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            }, 500);
+          }
+        </script>
+      </body>
+      </html>
+    `;
+
+    printDocument.open();
+    printDocument.write(html);
+    printDocument.close();
+
+    setTimeout(() => {
+      printFrame.contentWindow.focus();
+      printFrame.contentWindow.print();
+      setTimeout(() => { document.body.removeChild(printFrame); }, 1000);
+    }, 700);
+  };
   const [editingId, setEditingId] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
   const filteredPurchases = purchases.filter((p) => {
@@ -3159,9 +3292,9 @@ const Purchases = () => {
         totalAmount: formData.totalAmount,
         reference: formData.reference,
         supplierName: formData.supplierName,
-        supplierId: formData.supplierId,
-        productId: formData.productId,
-        quantity: formData.quantity,
+        supplierId: formData.supplierId || null,
+        productId: formData.productId || null,
+        quantity: formData.quantity || 1,
         status: formData.status
       };
 
@@ -3441,7 +3574,7 @@ const Purchases = () => {
                   Statut : {selectedPurchase.status === 'received' ? 'Marchandise Reçue' : 'En attente de livraison'}
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <button className="secondary-btn" onClick={() => window.print()} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><Printer size={16} /> Imprimer BC</button>
+                  <button className="secondary-btn" onClick={() => printPurchaseInvoice(selectedPurchase)} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><Printer size={16} /> Imprimer BC</button>
                   <button className="primary-btn" onClick={() => setSelectedPurchase(null)} style={{ backgroundColor: '#f59e0b', borderColor: '#f59e0b' }}>Fermer</button>
                 </div>
               </div>

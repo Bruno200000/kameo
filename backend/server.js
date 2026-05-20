@@ -156,6 +156,20 @@ app.patch('/api/auth/password', async (req, res) => {
   }
 });
 
+// Ping (présence en ligne)
+app.post('/api/auth/ping', async (req, res) => {
+  try {
+    const userHeader = req.headers['x-user-data'];
+    if (!userHeader) return res.status(401).json({ error: 'Non authentifié' });
+    const user = JSON.parse(userHeader);
+    await supabaseFetch(`users?id=eq.${user.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ last_login_at: new Date().toISOString() })
+    });
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: 'Erreur ping' }); }
+});
+
 // Authentification (Login)
 app.post('/api/auth/login', async (req, res) => {
   try {
