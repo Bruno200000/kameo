@@ -1186,6 +1186,307 @@ app.get('/api/admin/stats', async (req, res) => {
   }
 });
 
+// --- API DEVIS (QUOTES) ---
+app.get('/api/quotes', async (req, res) => {
+  try {
+    const data = await supabaseFetch('quotes?select=*,customers(name,contact_info),quote_items(product_id,quantity,unit_price,total,products(name,image_url))&order=quote_date.desc');
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: "Erreur lors de la récupération des devis" });
+  }
+});
+
+app.post('/api/quotes', async (req, res) => {
+  try {
+    const { cart, totalAmount, status, customerId, customerName, valid_until } = req.body;
+    const companyId = await getOrCreateCompanyId();
+    const resolvedCustomerId = await resolveCustomerId({ customerId, customerName, companyId });
+
+    const quoteData = {
+      company_id: companyId,
+      total_amount: Number(totalAmount) || 0,
+      status: status || 'draft',
+      customer_id: resolvedCustomerId,
+      valid_until: valid_until || null
+    };
+
+    const quoteRes = await supabaseFetch('quotes', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify(quoteData)
+    });
+
+    if (!quoteRes || quoteRes.length === 0) {
+      return res.status(500).json({ error: "Échec de l'insertion du devis" });
+    }
+    const quoteId = quoteRes[0].id;
+
+    if (cart && cart.length > 0) {
+      const quoteItems = cart.map(item => ({
+        quote_id: quoteId,
+        product_id: item.id,
+        quantity: item.cartQuantity,
+        unit_price: item.selling_price,
+        total: item.cartQuantity * item.selling_price
+      }));
+
+      await supabaseFetch('quote_items', {
+        method: 'POST',
+        body: JSON.stringify(quoteItems)
+      });
+    }
+
+    const fullQuote = await supabaseFetch(`quotes?id=eq.${quoteId}&select=*,customers(name,contact_info),quote_items(product_id,quantity,unit_price,total,products(name,image_url))`);
+    res.json({ success: true, quote: (fullQuote && fullQuote.length > 0) ? fullQuote[0] : quoteRes[0] });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur lors de la création du devis: " + err.message });
+  }
+});
+
+app.patch('/api/quotes/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = { ...req.body };
+
+    const updated = await supabaseFetch(`quotes?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify(updateData)
+    });
+
+    if (!updated || updated.length === 0) {
+      return res.status(404).json({ error: "Devis introuvable" });
+    }
+    res.json({ success: true, quote: updated[0] });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur lors de la modification du devis: " + err.message });
+  }
+});
+
+app.post('/api/quotes/:id/convert-to-order', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const quoteData = await supabaseFetch(`quotes?id=eq.${id}&select=*,quote_items(*)`);
+    if (!quoteData || quoteData.length === 0) {
+      return res.status(404).json({ error: "Devis introuvable" });
+    }
+    const quote = quoteData[0];
+
+    const orderData = {
+      company_id: quote.company_id,
+      customer_id: quote.customer_id,
+      user_id: quote.user_id,
+      quote_id: quote.id,
+      total_amount: quote.total_amount,
+      status: 'pending'
+    };
+
+    const orderRes = await supabaseFetch('orders', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify(orderData)
+    });
+
+    if (!orderRes || orderRes.length === 0) {
+      return res.status(500).json({ error: "Échec de l'insertion de la commande" });
+    }
+    const orderId = orderRes[0].id;
+
+    if (quote.quote_items && quote.quote_items.length > 0) {
+      const orderItems = quote.quote_items.map(item => ({
+        order_id: orderId,
+        product_id: item.product_id,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total: item.total
+      }));
+
+      await supabaseFetch('order_items', {
+        method: 'POST',
+        body: JSON.stringify(orderItems)
+      });
+    }
+
+    await supabaseFetch(`quotes?id=eq.${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'converted' })
+    });
+
+    res.json({ success: true, orderId });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur lors de la conversion en commande: " + err.message });
+  }
+});
+
+// --- API COMMANDES (ORDERS) ---
+app.get('/api/orders', async (req, res) => {
+  try {
+    const data = await supabaseFetch('orders?select=*,customers(name,contact_info),order_items(product_id,quantity,unit_price,total,products(name,image_url))&order=order_date.desc');
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: "Erreur lors de la récupération des commandes" });
+  }
+});
+
+app.post('/api/orders', async (req, res) => {
+  try {
+    const { cart, totalAmount, status, customerId, customerName } = req.body;
+    const companyId = await getOrCreateCompanyId();
+    const resolvedCustomerId = await resolveCustomerId({ customerId, customerName, companyId });
+
+    const orderData = {
+      company_id: companyId,
+      total_amount: Number(totalAmount) || 0,
+      status: status || 'pending',
+      customer_id: resolvedCustomerId
+    };
+
+    const orderRes = await supabaseFetch('orders', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify(orderData)
+    });
+
+    if (!orderRes || orderRes.length === 0) {
+      return res.status(500).json({ error: "Échec de l'insertion de la commande" });
+    }
+    const orderId = orderRes[0].id;
+
+    if (cart && cart.length > 0) {
+      const orderItems = cart.map(item => ({
+        order_id: orderId,
+        product_id: item.id,
+        quantity: item.cartQuantity,
+        unit_price: item.selling_price,
+        total: item.cartQuantity * item.selling_price
+      }));
+
+      await supabaseFetch('order_items', {
+        method: 'POST',
+        body: JSON.stringify(orderItems)
+      });
+    }
+
+    const fullOrder = await supabaseFetch(`orders?id=eq.${orderId}&select=*,customers(name,contact_info),order_items(product_id,quantity,unit_price,total,products(name,image_url))`);
+    res.json({ success: true, order: (fullOrder && fullOrder.length > 0) ? fullOrder[0] : orderRes[0] });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur lors de la création de la commande: " + err.message });
+  }
+});
+
+app.patch('/api/orders/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = { ...req.body };
+
+    const updated = await supabaseFetch(`orders?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify(updateData)
+    });
+
+    if (!updated || updated.length === 0) {
+      return res.status(404).json({ error: "Commande introuvable" });
+    }
+    res.json({ success: true, order: updated[0] });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur lors de la modification de la commande: " + err.message });
+  }
+});
+
+app.post('/api/orders/:id/convert-delivery', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const ordersData = await supabaseFetch(`orders?id=eq.${id}&select=*,order_items(*)`);
+    if (!ordersData || ordersData.length === 0) {
+      return res.status(404).json({ error: "Commande introuvable" });
+    }
+    const order = ordersData[0];
+    
+    if (order.status === 'delivered') {
+      return res.status(400).json({ error: "Cette commande a déjà été livrée (Bon de livraison déjà généré)" });
+    }
+
+    const deliveryNoteData = {
+      company_id: order.company_id,
+      customer_id: order.customer_id,
+      user_id: order.user_id,
+      order_id: order.id,
+      status: 'delivered'
+    };
+
+    const dnRes = await supabaseFetch('delivery_notes', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify(deliveryNoteData)
+    });
+
+    if (!dnRes || dnRes.length === 0) {
+      return res.status(500).json({ error: "Échec de la création du bon de livraison" });
+    }
+    const deliveryNoteId = dnRes[0].id;
+
+    if (order.order_items && order.order_items.length > 0) {
+      const dnItems = order.order_items.map(item => ({
+        delivery_note_id: deliveryNoteId,
+        product_id: item.product_id,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total: item.total
+      }));
+
+      await supabaseFetch('delivery_note_items', {
+        method: 'POST',
+        body: JSON.stringify(dnItems)
+      });
+
+      for (const item of order.order_items) {
+        if (item.product_id) {
+          const prodData = await supabaseFetch(`products?id=eq.${item.product_id}&select=quantity`);
+          const currentQty = (prodData && prodData[0]) ? prodData[0].quantity : 0;
+
+          await supabaseFetch(`products?id=eq.${item.product_id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ quantity: currentQty - item.quantity })
+          });
+
+          await supabaseFetch('stock_movements', {
+            method: 'POST',
+            body: JSON.stringify({
+              company_id: order.company_id,
+              product_id: item.product_id,
+              movement_type: 'OUT',
+              quantity: -item.quantity,
+              stock_after: currentQty - item.quantity,
+              reason: `Livraison Commande #${order.id.split('-')[0]}`
+            })
+          });
+        }
+      }
+    }
+
+    await supabaseFetch(`orders?id=eq.${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'delivered' })
+    });
+
+    res.json({ success: true, deliveryNoteId });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur lors de la conversion en bon de livraison: " + err.message });
+  }
+});
+
+// --- API BONS DE LIVRAISON (DELIVERY NOTES) ---
+app.get('/api/delivery-notes', async (req, res) => {
+  try {
+    const data = await supabaseFetch('delivery_notes?select=*,customers(name,contact_info),delivery_note_items(product_id,quantity,unit_price,total,products(name,image_url))&order=delivery_date.desc');
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: "Erreur lors de la récupération des bons de livraison" });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Serveur KAméo backend démarré sur : http://localhost:${port}`);
 });

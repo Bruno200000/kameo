@@ -3,7 +3,7 @@ import {
   Grid, ShoppingCart, Package, Layers, FileText, Truck,
   Users, Settings, CreditCard, PenTool, X, Menu, Bell, Plus,
   DollarSign, Box, AlertTriangle, ArrowUpRight, Image as ImageIcon, Download, CloudOff, UploadCloud,
-  Edit2, Trash2, LogOut, UserPlus, Search, Filter, CheckCircle, Clock, Smartphone, Mail, TrendingUp, TrendingDown, Wallet, ArrowRightLeft, Shield, PlusCircle, Check, Printer, Building, AlertCircle
+  Edit2, Trash2, LogOut, UserPlus, Search, Filter, CheckCircle, Clock, Smartphone, Mail, TrendingUp, TrendingDown, Wallet, ArrowRightLeft, Shield, PlusCircle, Check, Printer, Building, AlertCircle, FileCheck, ClipboardList
 } from 'lucide-react';
 
 import AdminPanel from './admin/AdminPanel';
@@ -402,6 +402,8 @@ export default function App() {
       case 'products': return <Products addToast={addToast} currentUser={currentUser} companiesData={companiesData} />;
       case 'stock': return <Stock addToast={addToast} currentUser={currentUser} />;
       case 'sales': return <Sales addToast={addToast} />;
+      case 'quotes': return <Quotes addToast={addToast} onNavigate={setCurrentPage} />;
+      case 'orders': return <Orders addToast={addToast} onNavigate={setCurrentPage} />;
       case 'purchases': return <Purchases />;
       case 'finance': return <FinanceModule addToast={addToast} />;
       case 'contacts': return <Contacts addToast={addToast} />;
@@ -420,6 +422,8 @@ export default function App() {
       products: "Catalogue Produits", 
       stock: "Mouvements de stock", 
       sales: "Ventes & Factures", 
+      quotes: "Gestion des Devis",
+      orders: "Gestion des Commandes",
       purchases: "Achats Fournisseurs", 
       finance: "Finance & Trésorerie", 
       contacts: "Annuaire Contacts", 
@@ -439,6 +443,8 @@ export default function App() {
     products: ["produits", "catalogue", "references", "stock produit"],
     stock: ["mouvements", "stock", "inventaire", "entree", "sortie"],
     sales: ["ventes", "factures", "invoice", "chiffre"],
+    quotes: ["devis", "proforma", "estimation", "quotes"],
+    orders: ["commandes", "orders", "livraison", "bon de livraison"],
     purchases: ["achats", "fournisseurs", "bon de commande", "depenses achat"],
     finance: ["finance", "tresorerie", "recettes", "depenses", "balance"],
     contacts: ["contacts", "clients", "fournisseurs", "annuaire"],
@@ -514,6 +520,8 @@ export default function App() {
           <NavItem icon={<Layers size={18} />} label="Mouvements" active={currentPage === 'stock'} onClick={() => setCurrentPage('stock')} />
           <p className="nav-section">FINANCES</p>
           <NavItem icon={<FileText size={18} />} label="Ventes & Factures" active={currentPage === 'sales'} onClick={() => setCurrentPage('sales')} />
+          <NavItem icon={<FileCheck size={18} />} label="Devis" active={currentPage === 'quotes'} onClick={() => setCurrentPage('quotes')} />
+          <NavItem icon={<ClipboardList size={18} />} label="Commandes" active={currentPage === 'orders'} onClick={() => setCurrentPage('orders')} />
           <NavItem icon={<Truck size={18} />} label="Achats" active={currentPage === 'purchases'} onClick={() => setCurrentPage('purchases')} />
           <NavItem icon={<Wallet size={18} />} label="Finance (Trésorerie)" active={currentPage === 'finance'} onClick={() => setCurrentPage('finance')} />
           <p className="nav-section">GESTION</p>
@@ -4599,6 +4607,1100 @@ const FinanceModule = ({ addToast }) => {
         </div>
       )}
     </div>
+  );
+};
+
+// ==========================================
+// 12. COMPOSANT QUOTES (DEVIS)
+// ==========================================
+export const Quotes = ({ addToast, onNavigate }) => {
+  const [quotes, , setQuotes] = useFetch('/quotes', []);
+  const [products] = useFetch('/products', []);
+  const [customers] = useFetch('/contacts?type=customer', []);
+  const [companySettings] = useFetch('/settings', { name: 'Mon entreprise', phone: '', address: '', currency: 'XOF' });
+  const [showAdd, setShowAdd] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedQuote, setSelectedQuote] = useState(null);
+
+  const [formData, setFormData] = useState({
+    customerId: '',
+    customerName: '',
+    valid_until: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    items: []
+  });
+
+  const addManualItem = () => {
+    setFormData(prev => ({
+      ...prev,
+      items: [...prev.items, { productId: '', quantity: 1, unitPrice: 0 }]
+    }));
+  };
+
+  const updateManualItem = (idx, field, value) => {
+    const newItems = [...formData.items];
+    newItems[idx] = { ...newItems[idx], [field]: value };
+    
+    if (field === 'productId') {
+      const p = (products || []).find(x => x.id === value);
+      if (p) {
+        newItems[idx].unitPrice = p.selling_price;
+      }
+    }
+    
+    setFormData(prev => ({ ...prev, items: newItems }));
+  };
+
+  const removeManualItem = (idx) => {
+    setFormData(prev => ({
+      ...prev,
+      items: prev.items.filter((_, i) => i !== idx)
+    }));
+  };
+
+  const calculateTotal = () => {
+    return formData.items.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.unitPrice)), 0);
+  };
+
+  const handleSave = async () => {
+    const hasItems = formData.items && formData.items.length > 0;
+    if (!hasItems) {
+      return addToast('Attention', "Veuillez ajouter au moins un produit.", 'warning');
+    }
+    
+    for (let i = 0; i < formData.items.length; i++) {
+      const item = formData.items[i];
+      if (!item.productId) {
+        return addToast('Attention', `Veuillez sélectionner un produit pour l'article n°${i + 1}.`, 'warning');
+      }
+    }
+
+    setIsSaving(true);
+    try {
+      const body = {
+        cart: formData.items.map(item => {
+          const product = products.find(p => p.id === item.productId);
+          return {
+            id: item.productId,
+            name: product ? product.name : '',
+            cartQuantity: Number(item.quantity),
+            selling_price: Number(item.unitPrice)
+          };
+        }),
+        totalAmount: calculateTotal(),
+        status: 'draft',
+        customerId: formData.customerId,
+        customerName: formData.customerName || 'Client de passage',
+        valid_until: formData.valid_until
+      };
+
+      const res = await performApiFetch(`${API_URL}/quotes`, {
+        method: 'POST',
+        headers: getHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(body)
+      });
+
+      const resData = await res.json();
+      if (resData.success) {
+        addToast('Succès', 'Devis créé avec succès.', 'success');
+        setQuotes([resData.quote, ...quotes]);
+        setShowAdd(false);
+        setFormData({
+          customerId: '',
+          customerName: '',
+          valid_until: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          items: []
+        });
+      } else {
+        addToast('Erreur', resData.error || 'Erreur lors de la création du devis', 'error');
+      }
+    } catch (err) {
+      addToast('Erreur', 'Erreur serveur', 'error');
+    }
+    setIsSaving(false);
+  };
+
+  const handleConvertToOrder = async (quoteId) => {
+    try {
+      const res = await performApiFetch(`${API_URL}/quotes/${quoteId}/convert-to-order`, {
+        method: 'POST',
+        headers: getHeaders()
+      });
+
+      const resData = await res.json();
+      if (resData.success) {
+        addToast('Succès', 'Le devis a été converti en Commande avec succès !', 'success');
+        setQuotes(quotes.map(q => q.id === quoteId ? { ...q, status: 'converted' } : q));
+        if (selectedQuote && selectedQuote.id === quoteId) {
+          setSelectedQuote({ ...selectedQuote, status: 'converted' });
+        }
+        onNavigate('orders');
+      } else {
+        addToast('Erreur', resData.error || 'Erreur lors de la conversion', 'error');
+      }
+    } catch (err) {
+      addToast('Erreur', 'Erreur lors de la conversion : ' + err.message, 'error');
+    }
+  };
+
+  const exportQuotesCSV = () => {
+    let csvContent = "\uFEFF";
+    csvContent += "Date;Référence;Client;Montant;Statut;Valide jusqu'au\n";
+    filteredQuotes.forEach(q => {
+      const ref = `DEV-${q.id.substring(0, 8).toUpperCase()}`;
+      const date = new Date(q.quote_date).toLocaleDateString('fr-FR');
+      const client = q.customers?.name || q.customer_name || 'Client de passage';
+      const montant = q.total_amount;
+      const status = q.status === 'draft' ? 'Brouillon' : q.status === 'sent' ? 'Envoyé' : q.status === 'accepted' ? 'Accepté' : q.status === 'rejected' ? 'Rejeté' : 'Converti';
+      const validUntil = q.valid_until ? new Date(q.valid_until).toLocaleDateString('fr-FR') : '-';
+      csvContent += `${date};${ref};${client};${montant};${status};${validUntil}\n`;
+    });
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Devis_Kameo_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const printQuote = (quote) => {
+    const s = companySettings || {};
+    const accentColor = s.invoice_color || '#2563eb';
+    const footerText = s.invoice_footer || 'Merci pour votre confiance.';
+    const logoUrl = s.invoice_logo || '';
+    const quoteNumber = `DEV-${String(quote.id || '').substring(0, 8).toUpperCase()}`;
+    const companyName = s.name || 'KAméo';
+    const companyPhone = s.phone || '-';
+    const companyAddress = s.address || '-';
+    const currency = s.currency || 'XOF';
+
+    const items = (Array.isArray(quote.quote_items) && quote.quote_items.length > 0)
+      ? quote.quote_items.map(item => ({
+          name: item.products?.name || 'Produit',
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total: Number(item.total ?? (Number(item.quantity || 0) * Number(item.unit_price || 0)))
+        }))
+      : [];
+
+    let statusStamp = '';
+    if (quote.status === 'converted') {
+      statusStamp = '<div class="paid-badge" style="border: 3px double #10b981; color: #10b981;">DEVIS CONVERTI</div>';
+    } else if (quote.valid_until && new Date(quote.valid_until) < new Date()) {
+      statusStamp = '<div class="paid-badge" style="border: 3px double #ef4444; color: #ef4444;">EXSPIRÉ</div>';
+    } else {
+      statusStamp = '<div class="paid-badge" style="border: 3px double #3b82f6; color: #3b82f6;">PROFORMA</div>';
+    }
+
+    const printFrame = document.createElement('iframe');
+    printFrame.style.display = 'none';
+    document.body.appendChild(printFrame);
+    const printDocument = printFrame.contentWindow.document;
+
+    const html = `
+      <html>
+        <head>
+          <title>Devis ${quoteNumber}</title>
+          <style>
+            @page { margin: 15mm; }
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; color: #1e293b; line-height: 1.5; }
+            .invoice-card { max-width: 800px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 4px; position: relative; border-top: 8px solid ${accentColor}; }
+            .paid-badge { position: absolute; top: 150px; right: 40px; border: 3px double; padding: 8px 18px; font-size: 1.1rem; font-weight: bold; transform: rotate(-10deg); border-radius: 8px; opacity: 0.85; }
+            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 20px; margin-bottom: 30px; }
+            .logo { max-height: 60px; max-width: 200px; object-fit: contain; }
+            .invoice-title { font-size: 1.8rem; font-weight: 800; color: #0f172a; margin: 0; }
+            .client-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; width: 280px; }
+            .items-table { width: 100%; border-collapse: collapse; margin-top: 30px; }
+            .items-table th { padding: 12px; text-align: left; background: #f1f5f9; color: #475569; border-bottom: 2px solid #cbd5e1; }
+            .items-table td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
+            .total-area { text-align: right; margin-top: 20px; }
+            .total-row { display: flex; justify-content: flex-end; gap: 20px; margin-bottom: 5px; }
+            .total-label { color: #64748b; font-size: 0.9rem; }
+            .total-amount { font-size: 1.3rem; font-weight: bold; color: ${accentColor}; }
+            .footer { margin-top: 50px; border-top: 1px solid #e2e8f0; padding-top: 20px; text-align: center; font-size: 0.8rem; color: #64748b; }
+          </style>
+        </head>
+        <body>
+          <div class="invoice-card">
+            ${statusStamp}
+            <div class="header">
+              ${logoUrl ? `<img src="${logoUrl}" class="logo" />` : '<div style="font-weight: 800; font-size: 1.5rem; color: ' + accentColor + ';">' + companyName + '</div>'}
+              <div>
+                <div class="invoice-title">DEVIS</div>
+                <div style="font-weight: bold; color: #475569; margin-top: 5px;">Réf: ${quoteNumber}</div>
+                <div style="font-size: 0.8rem; color: #64748b;">Créé le ${new Date(quote.quote_date).toLocaleDateString()}</div>
+                ${quote.valid_until ? `<div style="font-size: 0.8rem; color: #ef4444; font-weight: 600;">Valide jusqu'au ${new Date(quote.valid_until).toLocaleDateString()}</div>` : ''}
+              </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; gap: 20px; margin-bottom: 25px;">
+              <div style="font-size: 0.85rem;">
+                <strong>${companyName}</strong><br/>
+                ${companyAddress}<br/>
+                Tel: ${companyPhone}
+              </div>
+              <div class="client-box">
+                <strong>Destinataire :</strong> ${quote.customers?.name || quote.customer_name || 'Client de passage'}<br/>
+                ${quote.customers?.contact_info || ''}
+              </div>
+            </div>
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th>Désignation</th>
+                  <th style="text-align: center; width: 80px;">Qté</th>
+                  <th style="text-align: right; width: 120px;">P.U.</th>
+                  <th style="text-align: right; width: 120px;">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${items.map(item => `
+                  <tr>
+                    <td>${item.name}</td>
+                    <td align="center">${item.quantity}</td>
+                    <td align="right">${Number(item.unit_price).toLocaleString()}</td>
+                    <td align="right">${Number(item.total).toLocaleString()}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            <div class="total-area">
+              <div class="total-row">
+                <span class="total-label">Montant Total Devis</span>
+                <span class="total-amount">${Number(quote.total_amount).toLocaleString()} ${currency}</span>
+              </div>
+            </div>
+            <div class="footer">
+              <div>Ce document est une estimation commerciale valide pour la période indiquée ci-dessus.</div>
+              <div style="margin-top: 5px;">${footerText}</div>
+            </div>
+          </div>
+          <script>
+            window.onload = function() {
+              setTimeout(() => { window.print(); window.close(); }, 700);
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printDocument.open();
+    printDocument.write(html);
+    printDocument.close();
+
+    setTimeout(() => {
+      printFrame.contentWindow.focus();
+      printFrame.contentWindow.print();
+      setTimeout(() => { document.body.removeChild(printFrame); }, 1000);
+    }, 500);
+  };
+
+  const filteredQuotes = (quotes || []).filter(q => {
+    const ref = `DEV-${q.id.substring(0, 8).toUpperCase()}`.toLowerCase();
+    const client = (q.customers?.name || q.customer_name || '').toLowerCase();
+    const textOk = ref.includes(searchTerm.toLowerCase()) || client.includes(searchTerm.toLowerCase());
+    const statusOk = statusFilter === 'all' || q.status === statusFilter;
+    return textOk && statusOk;
+  });
+
+  return (
+    <>
+      <div className="page-top-actions">
+        <div className="search-filters">
+          <Search size={16} style={{ position: 'absolute', left: 15, top: 12, color: '#94a3b8' }} />
+          <input type="text" placeholder="Rechercher par N° devis ou client..." className="large-input" style={{ paddingLeft: 40 }} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+          <select className="filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+            <option value="all">Tous les statuts</option>
+            <option value="draft">Brouillon</option>
+            <option value="converted">Converti en commande</option>
+          </select>
+        </div>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button className="secondary-btn" onClick={exportQuotesCSV} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Download size={16} /> Exporter CSV</button>
+          <button className="primary-btn" onClick={() => setShowAdd(!showAdd)} style={{ backgroundColor: '#2563eb', borderColor: '#2563eb', color: 'white' }}><PlusCircle size={16} /> Nouveau Devis</button>
+        </div>
+      </div>
+
+      {showAdd && (
+        <div className="card mt-4" style={{ borderLeft: '4px solid #3b82f6', backgroundColor: '#eff6ff', padding: '25px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h3 style={{ margin: 0, color: '#1e40af' }}>Créer un nouveau devis</h3>
+            <button style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#1e40af' }} onClick={() => setShowAdd(false)}><X size={20} /></button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '25px' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#1e40af', fontWeight: 600 }}>Valide jusqu'au</label>
+              <input type="date" value={formData.valid_until} onChange={e => setFormData({ ...formData, valid_until: e.target.value })} className="large-input" style={{ width: '100%', borderColor: '#93c5fd' }} />
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#1e40af', fontWeight: 600 }}>Client (Sélectionner)</label>
+              <select 
+                value={formData.customerId} 
+                onChange={e => {
+                  const c = (customers || []).find(x => x.id === e.target.value);
+                  setFormData({ ...formData, customerId: e.target.value, customerName: c ? c.name : '' });
+                }} 
+                className="filter-select" 
+                style={{ width: '100%', borderColor: '#93c5fd' }}
+              >
+                <option value="">Client de passage / Autre</option>
+                {(Array.isArray(customers) ? customers : []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#1e40af', fontWeight: 600 }}>Nom du Client (si non répertorié)</label>
+              <input type="text" value={formData.customerName} onChange={e => setFormData({ ...formData, customerName: e.target.value })} placeholder="Ex: Client X" className="large-input" style={{ width: '100%', borderColor: '#93c5fd' }} />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '25px', backgroundColor: 'white', padding: '15px', borderRadius: '10px', border: '1px solid #bfdbfe' }}>
+            <div style={{ display: 'flex', justifycontent: 'space-between', alignItems: 'center', marginBottom: '15px', justifyContent: 'space-between' }}>
+              <h4 style={{ margin: 0, color: '#1e40af' }}>Articles du devis</h4>
+              <button onClick={addManualItem} className="secondary-btn" style={{ fontSize: '0.8rem', padding: '5px 10px' }}>+ Ajouter un article</button>
+            </div>
+            
+            {Array.isArray(formData.items) && formData.items.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {formData.items.map((item, idx) => (
+                  <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: '10px', alignItems: 'flex-end' }}>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: 3, fontSize: '0.8rem', color: '#64748b' }}>Produit</label>
+                      <select value={item.productId} onChange={e => updateManualItem(idx, 'productId', e.target.value)} className="filter-select" style={{ width: '100%' }}>
+                        <option value="">Sélectionner un produit</option>
+                        {(products || []).map(p => <option key={p.id} value={p.id}>{p.name} ({p.selling_price} F)</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: 3, fontSize: '0.8rem', color: '#64748b' }}>Quantité</label>
+                      <input type="number" min="1" value={item.quantity} onChange={e => updateManualItem(idx, 'quantity', e.target.value)} className="large-input" style={{ width: '100%' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: 3, fontSize: '0.8rem', color: '#64748b' }}>Prix unitaire (F)</label>
+                      <input type="number" value={item.unitPrice} onChange={e => updateManualItem(idx, 'unitPrice', e.target.value)} className="large-input" style={{ width: '100%' }} />
+                    </div>
+                    <button onClick={() => removeManualItem(idx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', paddingBottom: 10 }}><Trash2 size={18} /></button>
+                  </div>
+                ))}
+              </div>
+            ) : <p style={{ color: '#64748b', fontSize: '0.9rem', textAlign: 'center', padding: '15px' }}>Aucun article ajouté. Ajoutez des produits ci-dessus.</p>}
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#1e40af' }}>Total Devis : {calculateTotal().toLocaleString()} F</div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button className="secondary-btn" onClick={() => setShowAdd(false)}>Annuler</button>
+              <button className="primary-btn" onClick={handleSave} disabled={isSaving} style={{ backgroundColor: '#2563eb', borderColor: '#2563eb', color: 'white' }}>
+                {isSaving ? 'Création...' : 'Valider le Devis'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {filteredQuotes.length === 0 && !showAdd ? (
+        <div className="card mt-4" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '350px', border: '2px dashed #cbd5e1', backgroundColor: '#f8fafc', boxShadow: 'none' }}>
+          <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
+            <FileCheck size={36} color="#3b82f6" />
+          </div>
+          <h3 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '10px' }}>Aucun devis créé</h3>
+          <p style={{ color: '#64748b', maxWidth: '450px', textAlign: 'center', marginBottom: '30px', lineHeight: '1.6' }}>
+            Créez des devis commerciaux pour vos clients et convertissez-les en un clic en commandes fermes une fois acceptés.
+          </p>
+          <button className="primary-btn" onClick={() => setShowAdd(true)} style={{ backgroundColor: '#2563eb', borderColor: '#2563eb', color: 'white' }}><PlusCircle size={16} /> Nouveau Devis</button>
+        </div>
+      ) : filteredQuotes.length > 0 ? (
+        <div className="card mt-4">
+          <div className="table-responsive">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Référence</th>
+                  <th>Client</th>
+                  <th>Montant</th>
+                  <th>Validité</th>
+                  <th>Statut</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredQuotes.map(q => (
+                  <tr key={q.id} className="table-row-hover">
+                    <td>{new Date(q.quote_date).toLocaleDateString('fr-FR')}</td>
+                    <td style={{ color: '#2563eb', cursor: 'pointer', fontWeight: 600, textDecoration: 'underline' }} onClick={() => setSelectedQuote(q)}>
+                      DEV-{q.id.substring(0, 8).toUpperCase()}
+                    </td>
+                    <td>{q.customers?.name || q.customer_name || 'Client de passage'}</td>
+                    <td style={{ fontWeight: 'bold', color: '#1e293b' }}>{q.total_amount.toLocaleString()} F</td>
+                    <td>{q.valid_until ? new Date(q.valid_until).toLocaleDateString('fr-FR') : '-'}</td>
+                    <td>
+                      <span className={`status-badge ${q.status === 'converted' ? 'success' : 'warning'}`}>
+                        {q.status === 'converted' ? 'Converti' : 'Brouillon'}
+                      </span>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button className="secondary-btn" onClick={() => printQuote(q)} style={{ padding: '4px 8px', fontSize: '0.75rem' }}>PDF</button>
+                        <button className="secondary-btn" onClick={() => setSelectedQuote(q)} style={{ padding: '4px 8px', fontSize: '0.75rem' }}>Détails</button>
+                        {q.status !== 'converted' && (
+                          <button className="primary-btn" onClick={() => handleConvertToOrder(q.id)} style={{ padding: '4px 8px', fontSize: '0.75rem', backgroundColor: '#10b981', borderColor: '#10b981', color: 'white' }}>Convertir en commande</button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
+
+      {selectedQuote && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+          <div className="card" style={{ width: '90%', maxWidth: '600px', padding: '24px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0 }}>Détails du Devis</h3>
+              <button onClick={() => setSelectedQuote(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px', backgroundColor: '#f8fafc', padding: '15px', borderRadius: '10px' }}>
+              <div><strong>Référence :</strong> DEV-{String(selectedQuote.id).substring(0, 8).toUpperCase()}</div>
+              <div><strong>Date :</strong> {new Date(selectedQuote.quote_date).toLocaleDateString()}</div>
+              <div><strong>Validité :</strong> {selectedQuote.valid_until ? new Date(selectedQuote.valid_until).toLocaleDateString() : '-'}</div>
+              <div><strong>Client :</strong> {selectedQuote.customers?.name || selectedQuote.customer_name || 'Client de passage'}</div>
+              <div><strong>Montant Total :</strong> {selectedQuote.total_amount.toLocaleString()} F</div>
+              <div><strong>Statut :</strong>
+                <span className={`status-badge ${selectedQuote.status === 'converted' ? 'success' : 'warning'}`} style={{ marginLeft: 5 }}>
+                  {selectedQuote.status === 'converted' ? 'Converti en commande' : 'Brouillon'}
+                </span>
+              </div>
+            </div>
+            <h4 style={{ borderBottom: '1px solid #eee', paddingBottom: '8px' }}>Articles</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+              {(selectedQuote.quote_items || []).map((item, idx) => (
+                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600 }}>{item.products?.name || 'Produit inconnu'}</div>
+                    <div style={{ fontSize: '0.85rem', color: '#64748b' }}>{item.quantity} x {item.unit_price} F</div>
+                  </div>
+                  <div style={{ fontWeight: 700 }}>{(item.quantity * item.unit_price).toLocaleString()} F</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button className="secondary-btn" onClick={() => printQuote(selectedQuote)}>Imprimer / PDF</button>
+              {selectedQuote.status !== 'converted' && (
+                <button className="primary-btn" onClick={() => handleConvertToOrder(selectedQuote.id)} style={{ backgroundColor: '#10b981', borderColor: '#10b981', color: 'white' }}>Convertir en commande</button>
+              )}
+              <button className="secondary-btn" onClick={() => setSelectedQuote(null)}>Fermer</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
+// ==========================================
+// 13. COMPOSANT ORDERS (COMMANDES)
+// ==========================================
+export const Orders = ({ addToast, onNavigate }) => {
+  const [orders, , setOrders] = useFetch('/orders', []);
+  const [products] = useFetch('/products', []);
+  const [customers] = useFetch('/contacts?type=customer', []);
+  const [companySettings] = useFetch('/settings', { name: 'Mon entreprise', phone: '', address: '', currency: 'XOF' });
+  const [showAdd, setShowAdd] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedOrder, setSelectedOrder] = useState(null);
+
+  const [formData, setFormData] = useState({
+    customerId: '',
+    customerName: '',
+    items: []
+  });
+
+  const addManualItem = () => {
+    setFormData(prev => ({
+      ...prev,
+      items: [...prev.items, { productId: '', quantity: 1, unitPrice: 0 }]
+    }));
+  };
+
+  const updateManualItem = (idx, field, value) => {
+    const newItems = [...formData.items];
+    newItems[idx] = { ...newItems[idx], [field]: value };
+    
+    if (field === 'productId') {
+      const p = (products || []).find(x => x.id === value);
+      if (p) {
+        newItems[idx].unitPrice = p.selling_price;
+      }
+    }
+    
+    setFormData(prev => ({ ...prev, items: newItems }));
+  };
+
+  const removeManualItem = (idx) => {
+    setFormData(prev => ({
+      ...prev,
+      items: prev.items.filter((_, i) => i !== idx)
+    }));
+  };
+
+  const calculateTotal = () => {
+    return formData.items.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.unitPrice)), 0);
+  };
+
+  const handleSave = async () => {
+    const hasItems = formData.items && formData.items.length > 0;
+    if (!hasItems) {
+      return addToast('Attention', "Veuillez ajouter au moins un produit.", 'warning');
+    }
+    
+    for (let i = 0; i < formData.items.length; i++) {
+      const item = formData.items[i];
+      if (!item.productId) {
+        return addToast('Attention', `Veuillez sélectionner un produit pour l'article n°${i + 1}.`, 'warning');
+      }
+    }
+
+    setIsSaving(true);
+    try {
+      const body = {
+        cart: formData.items.map(item => {
+          const product = products.find(p => p.id === item.productId);
+          return {
+            id: item.productId,
+            name: product ? product.name : '',
+            cartQuantity: Number(item.quantity),
+            selling_price: Number(item.unitPrice)
+          };
+        }),
+        totalAmount: calculateTotal(),
+        status: 'pending',
+        customerId: formData.customerId,
+        customerName: formData.customerName || 'Client de passage'
+      };
+
+      const res = await performApiFetch(`${API_URL}/orders`, {
+        method: 'POST',
+        headers: getHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(body)
+      });
+
+      const resData = await res.json();
+      if (resData.success) {
+        addToast('Succès', 'Commande créée avec succès.', 'success');
+        setOrders([resData.order, ...orders]);
+        setShowAdd(false);
+        setFormData({
+          customerId: '',
+          customerName: '',
+          items: []
+        });
+      } else {
+        addToast('Erreur', resData.error || 'Erreur lors de la création de la commande', 'error');
+      }
+    } catch (err) {
+      addToast('Erreur', 'Erreur serveur', 'error');
+    }
+    setIsSaving(false);
+  };
+
+  const handleConvertDelivery = async (orderId) => {
+    try {
+      const res = await performApiFetch(`${API_URL}/orders/${orderId}/convert-delivery`, {
+        method: 'POST',
+        headers: getHeaders()
+      });
+
+      const resData = await res.json();
+      if (resData.success) {
+        addToast('Succès', 'Commande livrée et Bon de livraison généré avec succès ! Le stock a été mis à jour.', 'success');
+        
+        setOrders(orders.map(o => o.id === orderId ? { ...o, status: 'delivered' } : o));
+        if (selectedOrder && selectedOrder.id === orderId) {
+          setSelectedOrder({ ...selectedOrder, status: 'delivered' });
+        }
+        
+        const orderObj = orders.find(o => o.id === orderId) || selectedOrder;
+        if (orderObj) {
+          printDeliveryNote(orderObj);
+        }
+      } else {
+        addToast('Erreur', resData.error || 'Erreur lors de la livraison', 'error');
+      }
+    } catch (err) {
+      addToast('Erreur', 'Erreur lors de la livraison : ' + err.message, 'error');
+    }
+  };
+
+  const exportOrdersCSV = () => {
+    let csvContent = "\uFEFF";
+    csvContent += "Date;Référence;Client;Montant;Statut\n";
+    filteredOrders.forEach(o => {
+      const ref = `CMD-${o.id.substring(0, 8).toUpperCase()}`;
+      const date = new Date(o.order_date).toLocaleDateString('fr-FR');
+      const client = o.customers?.name || o.customer_name || 'Client de passage';
+      const montant = o.total_amount;
+      const status = o.status === 'pending' ? 'En attente' : o.status === 'delivered' ? 'Livré' : o.status === 'completed' ? 'Complété' : 'Annulé';
+      csvContent += `${date};${ref};${client};${montant};${status}\n`;
+    });
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Commandes_Kameo_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const printOrder = (order) => {
+    const s = companySettings || {};
+    const accentColor = s.invoice_color || '#2563eb';
+    const logoUrl = s.invoice_logo || '';
+    const footerText = s.invoice_footer || 'Merci pour votre confiance.';
+    const orderNumber = `CMD-${String(order.id || '').substring(0, 8).toUpperCase()}`;
+    const companyName = s.name || 'KAméo';
+    const companyPhone = s.phone || '-';
+    const companyAddress = s.address || '-';
+    const currency = s.currency || 'XOF';
+
+    const items = (Array.isArray(order.order_items) && order.order_items.length > 0)
+      ? order.order_items.map(item => ({
+          name: item.products?.name || 'Produit',
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total: Number(item.total ?? (Number(item.quantity || 0) * Number(item.unit_price || 0)))
+        }))
+      : [];
+
+    const printFrame = document.createElement('iframe');
+    printFrame.style.display = 'none';
+    document.body.appendChild(printFrame);
+    const printDocument = printFrame.contentWindow.document;
+
+    const html = `
+      <html>
+        <head>
+          <title>Commande ${orderNumber}</title>
+          <style>
+            @page { margin: 15mm; }
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; color: #1e293b; line-height: 1.5; }
+            .invoice-card { max-width: 800px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 4px; border-top: 8px solid ${accentColor}; }
+            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 20px; margin-bottom: 30px; }
+            .logo { max-height: 60px; max-width: 200px; object-fit: contain; }
+            .invoice-title { font-size: 1.8rem; font-weight: 800; color: #0f172a; margin: 0; }
+            .client-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; width: 280px; }
+            .items-table { width: 100%; border-collapse: collapse; margin-top: 30px; }
+            .items-table th { padding: 12px; text-align: left; background: #f1f5f9; color: #475569; border-bottom: 2px solid #cbd5e1; }
+            .items-table td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
+            .total-area { text-align: right; margin-top: 20px; }
+            .total-row { display: flex; justify-content: flex-end; gap: 20px; margin-bottom: 5px; }
+            .total-label { color: #64748b; font-size: 0.9rem; }
+            .total-amount { font-size: 1.3rem; font-weight: bold; color: ${accentColor}; }
+            .footer { margin-top: 50px; border-top: 1px solid #e2e8f0; padding-top: 20px; text-align: center; font-size: 0.8rem; color: #64748b; }
+          </style>
+        </head>
+        <body>
+          <div class="invoice-card">
+            <div class="header">
+              ${logoUrl ? `<img src="${logoUrl}" class="logo" />` : '<div style="font-weight: 800; font-size: 1.5rem; color: ' + accentColor + ';">' + companyName + '</div>'}
+              <div>
+                <div class="invoice-title">BON DE COMMANDE</div>
+                <div style="font-weight: bold; color: #475569; margin-top: 5px;">Réf: ${orderNumber}</div>
+                <div style="font-size: 0.8rem; color: #64748b;">Date: ${new Date(order.order_date).toLocaleDateString()}</div>
+                <div style="font-size: 0.8rem; font-weight: 600; color: ${order.status === 'delivered' ? '#10b981' : '#f59e0b'};">Statut: ${order.status === 'delivered' ? 'LIVRÉE' : 'EN ATTENTE'}</div>
+              </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; gap: 20px; margin-bottom: 25px;">
+              <div style="font-size: 0.85rem;">
+                <strong>${companyName}</strong><br/>
+                ${companyAddress}<br/>
+                Tel: ${companyPhone}
+              </div>
+              <div class="client-box">
+                <strong>Client :</strong> ${order.customers?.name || order.customer_name || 'Client de passage'}<br/>
+                ${order.customers?.contact_info || ''}
+              </div>
+            </div>
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th>Désignation</th>
+                  <th style="text-align: center; width: 80px;">Qté</th>
+                  <th style="text-align: right; width: 120px;">P.U.</th>
+                  <th style="text-align: right; width: 120px;">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${items.map(item => `
+                  <tr>
+                    <td>${item.name}</td>
+                    <td align="center">${item.quantity}</td>
+                    <td align="right">${Number(item.unit_price).toLocaleString()}</td>
+                    <td align="right">${Number(item.total).toLocaleString()}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            <div class="total-area">
+              <div class="total-row">
+                <span class="total-label">Montant Commande</span>
+                <span class="total-amount">${Number(order.total_amount).toLocaleString()} ${currency}</span>
+              </div>
+            </div>
+            <div class="footer">
+              <div>Ce document confirme l'enregistrement de la commande commerciale.</div>
+              <div style="margin-top: 5px;">${footerText}</div>
+            </div>
+          </div>
+          <script>
+            window.onload = function() {
+              setTimeout(() => { window.print(); window.close(); }, 700);
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printDocument.open();
+    printDocument.write(html);
+    printDocument.close();
+
+    setTimeout(() => {
+      printFrame.contentWindow.focus();
+      printFrame.contentWindow.print();
+      setTimeout(() => { document.body.removeChild(printFrame); }, 1000);
+    }, 500);
+  };
+
+  const printDeliveryNote = (order) => {
+    const s = companySettings || {};
+    const accentColor = s.invoice_color || '#10b981';
+    const logoUrl = s.invoice_logo || '';
+    const footerText = s.invoice_footer || 'Merci pour votre confiance.';
+    const blNumber = `BL-${String(order.id || '').substring(0, 8).toUpperCase()}`;
+    const orderNumber = `CMD-${String(order.id || '').substring(0, 8).toUpperCase()}`;
+    const companyName = s.name || 'KAméo';
+    const companyPhone = s.phone || '-';
+    const companyAddress = s.address || '-';
+
+    const items = (Array.isArray(order.order_items) && order.order_items.length > 0)
+      ? order.order_items.map(item => ({
+          name: item.products?.name || 'Produit',
+          quantity: item.quantity
+        }))
+      : [];
+
+    const printFrame = document.createElement('iframe');
+    printFrame.style.display = 'none';
+    document.body.appendChild(printFrame);
+    const printDocument = printFrame.contentWindow.document;
+
+    const html = `
+      <html>
+        <head>
+          <title>Bon de livraison ${blNumber}</title>
+          <style>
+            @page { margin: 15mm; }
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; color: #1e293b; line-height: 1.5; }
+            .invoice-card { max-width: 800px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 4px; border-top: 8px solid ${accentColor}; position: relative; }
+            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 20px; margin-bottom: 30px; }
+            .logo { max-height: 60px; max-width: 200px; object-fit: contain; }
+            .invoice-title { font-size: 1.8rem; font-weight: 800; color: #0f172a; margin: 0; }
+            .client-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; width: 280px; }
+            .items-table { width: 100%; border-collapse: collapse; margin-top: 30px; }
+            .items-table th { padding: 12px; text-align: left; background: #f1f5f9; color: #475569; border-bottom: 2px solid #cbd5e1; }
+            .items-table td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
+            .signature-area { display: flex; justify-content: space-between; margin-top: 60px; padding: 0 20px; }
+            .signature-box { width: 250px; text-align: center; }
+            .signature-line { height: 70px; border-bottom: 1px dashed #94a3b8; margin-bottom: 5px; }
+            .footer { margin-top: 50px; border-top: 1px solid #e2e8f0; padding-top: 20px; text-align: center; font-size: 0.8rem; color: #64748b; }
+          </style>
+        </head>
+        <body>
+          <div class="invoice-card">
+            <div class="header">
+              ${logoUrl ? `<img src="${logoUrl}" class="logo" />` : '<div style="font-weight: 800; font-size: 1.5rem; color: ' + accentColor + ';">' + companyName + '</div>'}
+              <div>
+                <div class="invoice-title">BON DE LIVRAISON</div>
+                <div style="font-weight: bold; color: #475569; margin-top: 5px;">Réf BL: ${blNumber}</div>
+                <div style="font-size: 0.85rem; color: #64748b; margin-top: 2px;">Réf Commande: ${orderNumber}</div>
+                <div style="font-size: 0.8rem; color: #64748b;">Date: ${new Date().toLocaleDateString()}</div>
+              </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; gap: 20px; margin-bottom: 25px;">
+              <div style="font-size: 0.85rem;">
+                <strong>${companyName}</strong><br/>
+                ${companyAddress}<br/>
+                Tel: ${companyPhone}
+              </div>
+              <div class="client-box">
+                <strong>Destinataire :</strong> ${order.customers?.name || order.customer_name || 'Client de passage'}<br/>
+                ${order.customers?.contact_info || ''}
+              </div>
+            </div>
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th>Désignation Produit</th>
+                  <th style="text-align: center; width: 150px;">Quantité Livrée</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${items.map(item => `
+                  <tr>
+                    <td>${item.name}</td>
+                    <td align="center" style="font-weight: bold; font-size: 1.1rem;">${item.quantity}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            <div class="signature-area">
+              <div class="signature-box">
+                <div style="font-weight: bold; text-decoration: underline; margin-bottom: 5px;">Pour l'entreprise</div>
+                <div class="signature-line"></div>
+                <div style="font-size: 0.8rem; color: #64748b;">Signature & Cachet</div>
+              </div>
+              <div class="signature-box">
+                <div style="font-weight: bold; text-decoration: underline; margin-bottom: 5px;">Pour le client (Réceptionnaire)</div>
+                <div class="signature-line"></div>
+                <div style="font-size: 0.8rem; color: #64748b;">Nom, Date & Signature</div>
+              </div>
+            </div>
+            <div class="footer">
+              <div>Veuillez vérifier les marchandises à la réception avant de signer le bon de livraison.</div>
+              <div style="margin-top: 5px;">${footerText}</div>
+            </div>
+          </div>
+          <script>
+            window.onload = function() {
+              setTimeout(() => { window.print(); window.close(); }, 700);
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printDocument.open();
+    printDocument.write(html);
+    printDocument.close();
+
+    setTimeout(() => {
+      printFrame.contentWindow.focus();
+      printFrame.contentWindow.print();
+      setTimeout(() => { document.body.removeChild(printFrame); }, 1000);
+    }, 500);
+  };
+
+  const filteredOrders = (orders || []).filter(o => {
+    const ref = `CMD-${o.id.substring(0, 8).toUpperCase()}`.toLowerCase();
+    const client = (o.customers?.name || o.customer_name || '').toLowerCase();
+    const textOk = ref.includes(searchTerm.toLowerCase()) || client.includes(searchTerm.toLowerCase());
+    const statusOk = statusFilter === 'all' || o.status === statusFilter;
+    return textOk && statusOk;
+  });
+
+  return (
+    <>
+      <div className="page-top-actions">
+        <div className="search-filters">
+          <Search size={16} style={{ position: 'absolute', left: 15, top: 12, color: '#94a3b8' }} />
+          <input type="text" placeholder="Rechercher par N° commande ou client..." className="large-input" style={{ paddingLeft: 40 }} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+          <select className="filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+            <option value="all">Tous les statuts</option>
+            <option value="pending">En attente (Non livrée)</option>
+            <option value="delivered">Livrée (BL généré)</option>
+          </select>
+        </div>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button className="secondary-btn" onClick={exportOrdersCSV} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Download size={16} /> Exporter CSV</button>
+          <button className="primary-btn" onClick={() => setShowAdd(!showAdd)} style={{ backgroundColor: '#10b981', borderColor: '#10b981', color: 'white' }}><PlusCircle size={16} /> Nouvelle Commande</button>
+        </div>
+      </div>
+
+      {showAdd && (
+        <div className="card mt-4" style={{ borderLeft: '4px solid #10b981', backgroundColor: '#ecfdf5', padding: '25px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h3 style={{ margin: 0, color: '#065f46' }}>Saisir une nouvelle commande</h3>
+            <button style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#059669' }} onClick={() => setShowAdd(false)}><X size={20} /></button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '25px' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#065f46', fontWeight: 600 }}>Client (Sélectionner)</label>
+              <select 
+                value={formData.customerId} 
+                onChange={e => {
+                  const c = (customers || []).find(x => x.id === e.target.value);
+                  setFormData({ ...formData, customerId: e.target.value, customerName: c ? c.name : '' });
+                }} 
+                className="filter-select" 
+                style={{ width: '100%', borderColor: '#6ee7b7' }}
+              >
+                <option value="">Client de passage / Autre</option>
+                {(Array.isArray(customers) ? customers : []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: 5, fontSize: '0.9rem', color: '#065f46', fontWeight: 600 }}>Nom du Client (si non répertorié)</label>
+              <input type="text" value={formData.customerName} onChange={e => setFormData({ ...formData, customerName: e.target.value })} placeholder="Ex: Client X" className="large-input" style={{ width: '100%', borderColor: '#6ee7b7' }} />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '25px', backgroundColor: 'white', padding: '15px', borderRadius: '10px', border: '1px solid #a7f3d0' }}>
+            <div style={{ display: 'flex', justifycontent: 'space-between', alignItems: 'center', marginBottom: '15px', justifyContent: 'space-between' }}>
+              <h4 style={{ margin: 0, color: '#065f46' }}>Articles de la commande</h4>
+              <button onClick={addManualItem} className="secondary-btn" style={{ fontSize: '0.8rem', padding: '5px 10px' }}>+ Ajouter un article</button>
+            </div>
+            
+            {Array.isArray(formData.items) && formData.items.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {formData.items.map((item, idx) => (
+                  <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: '10px', alignItems: 'flex-end' }}>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: 3, fontSize: '0.8rem', color: '#64748b' }}>Produit</label>
+                      <select value={item.productId} onChange={e => updateManualItem(idx, 'productId', e.target.value)} className="filter-select" style={{ width: '100%' }}>
+                        <option value="">Sélectionner un produit</option>
+                        {(products || []).map(p => <option key={p.id} value={p.id}>{p.name} ({p.selling_price} F)</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: 3, fontSize: '0.8rem', color: '#64748b' }}>Quantité</label>
+                      <input type="number" min="1" value={item.quantity} onChange={e => updateManualItem(idx, 'quantity', e.target.value)} className="large-input" style={{ width: '100%' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: 3, fontSize: '0.8rem', color: '#64748b' }}>Prix unitaire (F)</label>
+                      <input type="number" value={item.unitPrice} onChange={e => updateManualItem(idx, 'unitPrice', e.target.value)} className="large-input" style={{ width: '100%' }} />
+                    </div>
+                    <button onClick={() => removeManualItem(idx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', paddingBottom: 10 }}><Trash2 size={18} /></button>
+                  </div>
+                ))}
+              </div>
+            ) : <p style={{ color: '#64748b', fontSize: '0.9rem', textAlign: 'center', padding: '15px' }}>Aucun article ajouté. Ajoutez des produits ci-dessus.</p>}
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#065f46' }}>Total Commande : {calculateTotal().toLocaleString()} F</div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button className="secondary-btn" onClick={() => setShowAdd(false)}>Annuler</button>
+              <button className="primary-btn" onClick={handleSave} disabled={isSaving} style={{ backgroundColor: '#10b981', borderColor: '#10b981', color: 'white' }}>
+                {isSaving ? 'Création...' : 'Valider la Commande'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {filteredOrders.length === 0 && !showAdd ? (
+        <div className="card mt-4" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '350px', border: '2px dashed #cbd5e1', backgroundColor: '#f8fafc', boxShadow: 'none' }}>
+          <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: '#d1fae5', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
+            <ClipboardList size={36} color="#10b981" />
+          </div>
+          <h3 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '10px' }}>Aucune commande enregistrée</h3>
+          <p style={{ color: '#64748b', maxWidth: '450px', textAlign: 'center', marginBottom: '30px', lineHeight: '1.6' }}>
+            Suivez et gérez les commandes de vos clients. Vous pouvez les livrer et générer un bon de livraison avec mise à jour automatique des stocks.
+          </p>
+          <button className="primary-btn" onClick={() => setShowAdd(true)} style={{ backgroundColor: '#10b981', borderColor: '#10b981', color: 'white' }}><PlusCircle size={16} /> Nouvelle Commande</button>
+        </div>
+      ) : filteredOrders.length > 0 ? (
+        <div className="card mt-4">
+          <div className="table-responsive">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Référence</th>
+                  <th>Client</th>
+                  <th>Montant</th>
+                  <th>Statut</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredOrders.map(o => (
+                  <tr key={o.id} className="table-row-hover">
+                    <td>{new Date(o.order_date).toLocaleDateString('fr-FR')}</td>
+                    <td style={{ color: '#10b981', cursor: 'pointer', fontWeight: 600, textDecoration: 'underline' }} onClick={() => setSelectedOrder(o)}>
+                      CMD-{o.id.substring(0, 8).toUpperCase()}
+                    </td>
+                    <td>{o.customers?.name || o.customer_name || 'Client de passage'}</td>
+                    <td style={{ fontWeight: 'bold', color: '#1e293b' }}>{o.total_amount.toLocaleString()} F</td>
+                    <td>
+                      <span className={`status-badge ${o.status === 'delivered' ? 'success' : 'warning'}`}>
+                        {o.status === 'delivered' ? 'Livrée' : 'En attente'}
+                      </span>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button className="secondary-btn" onClick={() => printOrder(o)} style={{ padding: '4px 8px', fontSize: '0.75rem' }}>PDF Commande</button>
+                        {o.status === 'delivered' && (
+                          <button className="secondary-btn" onClick={() => printDeliveryNote(o)} style={{ padding: '4px 8px', fontSize: '0.75rem', color: '#10b981', borderColor: '#10b981' }}>PDF Bon de Livraison</button>
+                        )}
+                        <button className="secondary-btn" onClick={() => setSelectedOrder(o)} style={{ padding: '4px 8px', fontSize: '0.75rem' }}>Détails</button>
+                        {o.status !== 'delivered' && (
+                          <button className="primary-btn" onClick={() => handleConvertDelivery(o.id)} style={{ padding: '4px 8px', fontSize: '0.75rem', backgroundColor: '#10b981', borderColor: '#10b981', color: 'white' }}>Livrer / Générer BL</button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
+
+      {selectedOrder && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+          <div className="card" style={{ width: '90%', maxWidth: '600px', padding: '24px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0 }}>Détails de la Commande</h3>
+              <button onClick={() => setSelectedOrder(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px', backgroundColor: '#f8fafc', padding: '15px', borderRadius: '10px' }}>
+              <div><strong>Référence :</strong> CMD-{String(selectedOrder.id).substring(0, 8).toUpperCase()}</div>
+              <div><strong>Date :</strong> {new Date(selectedOrder.order_date).toLocaleDateString()}</div>
+              <div><strong>Client :</strong> {selectedOrder.customers?.name || selectedOrder.customer_name || 'Client de passage'}</div>
+              <div><strong>Montant Total :</strong> {selectedOrder.total_amount.toLocaleString()} F</div>
+              <div><strong>Statut :</strong>
+                <span className={`status-badge ${selectedOrder.status === 'delivered' ? 'success' : 'warning'}`} style={{ marginLeft: 5 }}>
+                  {selectedOrder.status === 'delivered' ? 'Livrée' : 'En attente de livraison'}
+                </span>
+              </div>
+            </div>
+            <h4 style={{ borderBottom: '1px solid #eee', paddingBottom: '8px' }}>Articles</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+              {(selectedOrder.order_items || []).map((item, idx) => (
+                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600 }}>{item.products?.name || 'Produit inconnu'}</div>
+                    <div style={{ fontSize: '0.85rem', color: '#64748b' }}>{item.quantity} x {item.unit_price} F</div>
+                  </div>
+                  <div style={{ fontWeight: 700 }}>{(item.quantity * item.unit_price).toLocaleString()} F</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button className="secondary-btn" onClick={() => printOrder(selectedOrder)}>Imprimer Commande</button>
+              {selectedOrder.status === 'delivered' && (
+                <button className="secondary-btn" onClick={() => printDeliveryNote(selectedOrder)} style={{ color: '#10b981', borderColor: '#10b981' }}>Imprimer Bon de Livraison</button>
+              )}
+              {selectedOrder.status !== 'delivered' && (
+                <button className="primary-btn" onClick={() => handleConvertDelivery(selectedOrder.id)} style={{ backgroundColor: '#10b981', borderColor: '#10b981', color: 'white' }}>Livrer / Générer BL</button>
+              )}
+              <button className="secondary-btn" onClick={() => setSelectedOrder(null)}>Fermer</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 

@@ -156,3 +156,78 @@ INSERT INTO platform_settings (key, value, description) VALUES
 ('platform_name', 'KAméo SaaS', 'Nom officiel de la plateforme'),
 ('support_email', 'support@kameo.com', 'Contact pour le support technique'),
 ('version', '1.2.0', 'Version actuelle du logiciel');
+
+-- 12. Table des Devis (Quotes)
+CREATE TABLE quotes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    total_amount DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    status VARCHAR(50) DEFAULT 'draft', -- draft, sent, accepted, rejected, converted
+    quote_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    valid_until TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 13. Lignes de Devis
+CREATE TABLE quote_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    quote_id UUID NOT NULL REFERENCES quotes(id) ON DELETE CASCADE,
+    product_id UUID REFERENCES products(id) ON DELETE SET NULL,
+    quantity INTEGER NOT NULL,
+    unit_price DECIMAL(12, 2) NOT NULL,
+    total DECIMAL(12, 2) NOT NULL
+);
+
+-- 14. Table des Commandes (Orders)
+CREATE TABLE orders (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    quote_id UUID REFERENCES quotes(id) ON DELETE SET NULL,
+    total_amount DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    status VARCHAR(50) DEFAULT 'pending', -- pending, completed, canceled, delivered
+    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 15. Lignes de Commande
+CREATE TABLE order_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    product_id UUID REFERENCES products(id) ON DELETE SET NULL,
+    quantity INTEGER NOT NULL,
+    unit_price DECIMAL(12, 2) NOT NULL,
+    total DECIMAL(12, 2) NOT NULL
+);
+
+-- 16. Table des Bons de Livraison (Delivery Notes)
+CREATE TABLE delivery_notes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    order_id UUID REFERENCES orders(id) ON DELETE SET NULL,
+    status VARCHAR(50) DEFAULT 'delivered', -- draft, delivered, canceled
+    delivery_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 17. Lignes de Bon de Livraison
+CREATE TABLE delivery_note_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    delivery_note_id UUID NOT NULL REFERENCES delivery_notes(id) ON DELETE CASCADE,
+    product_id UUID REFERENCES products(id) ON DELETE SET NULL,
+    quantity INTEGER NOT NULL,
+    unit_price DECIMAL(12, 2) NOT NULL,
+    total DECIMAL(12, 2) NOT NULL
+);
+
+CREATE INDEX idx_quotes_company ON quotes(company_id);
+CREATE INDEX idx_orders_company ON orders(company_id);
+CREATE INDEX idx_delivery_notes_company ON delivery_notes(company_id);
