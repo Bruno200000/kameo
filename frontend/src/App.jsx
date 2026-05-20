@@ -3131,10 +3131,7 @@ const Purchases = () => {
     quantity: '',
     status: 'pending'
   });
-  const filteredPurchases = purchases.filter((p) => {
-    const searchMatch = p.supplierName?.toLowerCase().includes(searchTerm.toLowerCase()) || p.reference?.toLowerCase().includes(searchTerm.toLowerCase());
-    return searchMatch;
-  });
+
 
   const printPurchaseInvoice = (purchase) => {
     let s = {};
