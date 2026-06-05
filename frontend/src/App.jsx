@@ -3,7 +3,7 @@ import {
   Grid, ShoppingCart, Package, Layers, FileText, Truck,
   Users, Settings, CreditCard, PenTool, X, Menu, Bell, Plus,
   DollarSign, Box, AlertTriangle, ArrowUpRight, Image as ImageIcon, Download, CloudOff, UploadCloud,
-  Edit2, Trash2, LogOut, UserPlus, Search, Filter, CheckCircle, Clock, Smartphone, Mail, TrendingUp, TrendingDown, Wallet, ArrowRightLeft, Shield, PlusCircle, Check, Printer, Building, AlertCircle, FileCheck, ClipboardList
+  Edit2, Trash2, LogOut, UserPlus, Search, Filter, CheckCircle, Clock, Smartphone, Mail, TrendingUp, TrendingDown, Wallet, ArrowRightLeft, Shield, PlusCircle, Check, Printer, Building, AlertCircle, FileCheck, ClipboardList, BookOpen, HelpCircle
 } from 'lucide-react';
 
 import AdminPanel from './admin/AdminPanel';
@@ -413,6 +413,7 @@ export default function App() {
       case 'purchases': return <Purchases />;
       case 'finance': return <FinanceModule addToast={addToast} />;
       case 'contacts': return <Contacts addToast={addToast} />;
+      case 'guide': return <Guide onNavigate={setCurrentPage} currentUser={currentUser} />;
       case 'settings': return <SettingsPage currentUser={currentUser} />;
       case 'subscription': return <Subscription />;
       case 'users': return <UsersManager />;
@@ -436,7 +437,8 @@ export default function App() {
       settings: "Paramètres", 
       subscription: "Mon Abonnement", 
       users: "Gestion Utilisateurs", 
-      admin: "Administration Plateforme" 
+      admin: "Administration Plateforme",
+      guide: "Guide d'utilisation"
     };
     return titles[currentPage] || "KAméo";
   };
@@ -457,7 +459,8 @@ export default function App() {
     settings: ["parametres", "settings", "configuration"],
     subscription: ["abonnement", "plan", "pricing", "subscription"],
     users: ["utilisateurs", "equipe", "staff", "users", "compte"],
-    admin: ["admin", "administration", "plateforme"]
+    admin: ["admin", "administration", "plateforme"],
+    guide: ["guide", "aide", "manuel", "documentation", "support", "utilisation"]
   };
 
   const handleGlobalSearchSubmit = (e) => {
@@ -532,6 +535,7 @@ export default function App() {
           <NavItem icon={<Wallet size={18} />} label="Finance (Trésorerie)" active={currentPage === 'finance'} onClick={() => setCurrentPage('finance')} />
           <p className="nav-section">GESTION</p>
           <NavItem icon={<Users size={18} />} label="Contacts" active={currentPage === 'contacts'} onClick={() => setCurrentPage('contacts')} />
+          <NavItem icon={<BookOpen size={18} />} label="Guide" active={currentPage === 'guide'} onClick={() => setCurrentPage('guide')} />
           {(currentUser.role === 'superadmin' || currentUser.role === 'admin') && (
             <>
               <NavItem icon={<Settings size={18} />} label="Paramètres" active={currentPage === 'settings'} onClick={() => setCurrentPage('settings')} />
@@ -872,6 +876,109 @@ const NavItem = ({ icon, label, active, onClick }) => (
     }} />}
   </button>
 );
+
+const Guide = ({ onNavigate, currentUser }) => {
+  const canOpenSettings = ['superadmin', 'admin'].includes(currentUser?.role);
+  const guideSections = [
+    {
+      title: 'Vendre et facturer',
+      page: 'pos',
+      action: 'Ouvrir la caisse',
+      items: [
+        'Ajoutez les produits au panier depuis la caisse.',
+        'Choisissez le client si la vente doit être rattachée à un compte.',
+        'Sélectionnez Payer, Partiel ou Crédit avant de valider.'
+      ]
+    },
+    {
+      title: 'Suivre les factures',
+      page: 'sales',
+      action: 'Voir les factures',
+      items: [
+        'Les ventes de la caisse et les factures manuelles se retrouvent au même endroit.',
+        'Utilisez le statut pour retrouver les factures payées ou en attente.',
+        'Imprimez le PDF depuis la ligne de facture.'
+      ]
+    },
+    {
+      title: 'Gérer le stock',
+      page: 'products',
+      action: 'Voir les produits',
+      items: [
+        'Créez vos produits avec prix d’achat, prix de vente et quantité.',
+        'Les alertes signalent les articles proches de la rupture.',
+        'Consultez les mouvements pour suivre les entrées et sorties.'
+      ]
+    },
+    {
+      title: 'Travailler hors connexion',
+      page: 'sales',
+      action: 'Historique ventes',
+      items: [
+        'Les ventes créées sans réseau sont gardées localement.',
+        'Le bouton Sync en haut affiche seulement les éléments de la compagnie active.',
+        'Revenez en ligne puis synchronisez les éléments en attente.'
+      ]
+    },
+    {
+      title: 'Documents commerciaux',
+      page: 'quotes',
+      action: 'Créer un devis',
+      items: [
+        'Préparez un devis pour envoyer une estimation au client.',
+        'Convertissez ensuite le devis en commande si le client confirme.',
+        'Générez un bon de livraison depuis la commande.'
+      ]
+    },
+    {
+      title: 'Paramétrage',
+      page: 'settings',
+      action: 'Ouvrir paramètres',
+      items: [
+        'Configurez les informations de l’entreprise et le logo.',
+        'Personnalisez le préfixe, le modèle et le pied de page des factures.',
+        'Les réglages s’appliquent à la compagnie connectée.'
+      ]
+    }
+  ].filter(section => section.page !== 'settings' || canOpenSettings);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <div className="card" style={{ padding: '24px', borderLeft: '4px solid #3b82f6', backgroundColor: '#f8fafc' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
+          <div style={{ width: 42, height: 42, borderRadius: 8, backgroundColor: '#dbeafe', color: '#1d4ed8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <HelpCircle size={22} />
+          </div>
+          <div>
+            <h2 style={{ margin: 0, color: '#0f172a' }}>Guide d'utilisation</h2>
+            <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.92rem' }}>Repères rapides pour les opérations courantes dans KAméo.</p>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
+        {guideSections.map(section => (
+          <div key={section.title} className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div>
+              <h3 style={{ margin: '0 0 10px', color: '#1e293b', fontSize: '1rem' }}>{section.title}</h3>
+              <ul style={{ margin: 0, paddingLeft: '18px', color: '#475569', lineHeight: 1.7, fontSize: '0.9rem' }}>
+                {section.items.map(item => <li key={item}>{item}</li>)}
+              </ul>
+            </div>
+            <button
+              type="button"
+              className="secondary-btn"
+              onClick={() => onNavigate(section.page)}
+              style={{ marginTop: 'auto', alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              <ArrowUpRight size={15} /> {section.action}
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 
 
