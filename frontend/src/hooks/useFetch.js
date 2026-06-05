@@ -2,16 +2,30 @@ import { useState, useEffect } from 'react';
 
 const API_URL = import.meta.env.VITE_API_URL || 
   (window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : '/api');
+
+const getCurrentRequestContext = () => {
+  try {
+    const user = JSON.parse(localStorage.getItem('kameo_current_user') || '{}');
+    const activeCompany = localStorage.getItem('kameo_active_company_id');
+    const companyId = activeCompany !== null ? activeCompany : (user.company_id || '');
+    return { user, companyId };
+  } catch (e) {
+    return { user: {}, companyId: '' };
+  }
+};
+
+const getCacheKey = (endpoint, companyId) => `k_cache_${companyId || 'global'}_${endpoint}`;
+
 const localCache = {
-  get: (endpoint) => {
+  get: (endpoint, companyId = '') => {
     try {
-      const stored = localStorage.getItem(`k_cache_${endpoint}`);
+      const stored = localStorage.getItem(getCacheKey(endpoint, companyId));
       return stored ? JSON.parse(stored) : null;
     } catch (e) { return null; }
   },
-  set: (endpoint, value) => {
+  set: (endpoint, value, companyId = '') => {
     try {
-      localStorage.setItem(`k_cache_${endpoint}`, JSON.stringify(value));
+      localStorage.setItem(getCacheKey(endpoint, companyId), JSON.stringify(value));
     } catch (e) {}
   }
 };
@@ -27,9 +41,11 @@ const parseResponseSafely = async (res) => {
   throw new Error(`Reponse non-JSON recue (${res.status})`);
 };
 export const useFetch = (endpoint, initialData, skip = false) => {
+  const requestContext = getCurrentRequestContext();
+  const cacheCompanyId = requestContext.companyId;
   const [data, setData] = useState(() => {
     if (skip) return initialData;
-    const cached = localCache.get(endpoint);
+    const cached = localCache.get(endpoint, cacheCompanyId);
     if (!cached) return initialData;
     if (Date.now() - cached.ts > CACHE_TTL_MS && navigator.onLine) return initialData;
     return cached.data;
@@ -42,7 +58,8 @@ export const useFetch = (endpoint, initialData, skip = false) => {
       return;
     }
 
-    const cached = localCache.get(endpoint);
+    const { user, companyId } = getCurrentRequestContext();
+    const cached = localCache.get(endpoint, companyId);
     if (cached && (Date.now() - cached.ts <= CACHE_TTL_MS || !navigator.onLine)) {
       setData(cached.data);
       setLoading(false);
@@ -52,9 +69,6 @@ export const useFetch = (endpoint, initialData, skip = false) => {
     const controller = new AbortController();
     setLoading(true);
 
-    const user = JSON.parse(localStorage.getItem('kameo_current_user') || '{}');
-    const activeCompany = localStorage.getItem('kameo_active_company_id');
-    const companyId = activeCompany !== null ? activeCompany : (user.company_id || '');
     const headers = { 'X-Company-Id': companyId, 'X-User-Data': JSON.stringify(user || {}) };
 
     fetch(`${API_URL}${endpoint}`, { signal: controller.signal, headers })
@@ -71,7 +85,7 @@ export const useFetch = (endpoint, initialData, skip = false) => {
       .then((json) => {
         if (json !== null) {
           setData(json);
-          localCache.set(endpoint, { data: json, ts: Date.now() });
+          localCache.set(endpoint, { data: json, ts: Date.now() }, companyId);
         }
       })
       .catch((err) => {
@@ -83,12 +97,12 @@ export const useFetch = (endpoint, initialData, skip = false) => {
       .finally(() => setLoading(false));
 
     return () => controller.abort();
-  }, [endpoint]);
+  }, [endpoint, cacheCompanyId, skip]);
 
   const setDataAndCache = (nextValue) => {
     setData((prev) => {
       const nextData = typeof nextValue === 'function' ? nextValue(prev) : nextValue;
-      localCache.set(endpoint, { data: nextData, ts: Date.now() });
+      localCache.set(endpoint, { data: nextData, ts: Date.now() }, getCurrentRequestContext().companyId);
       return nextData;
     });
   };

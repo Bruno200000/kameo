@@ -12,7 +12,7 @@ import { useFetch, API_URL } from './hooks/useFetch';
 import { StatCard } from './components/StatCard';
 import SalesChart from './components/SalesChart';
 import LoginPage from './pages/LoginPage';
-import { getOfflineQueue, enqueueRequest, dequeueRequest } from './utils/offlineManager';
+import { getOfflineQueueForCompany, enqueueRequest, dequeueRequest } from './utils/offlineManager';
 
 const performApiFetch = async (url, options) => {
   const isModification = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(options?.method);
@@ -132,7 +132,7 @@ export default function App() {
 
   useEffect(() => {
     const updateOnlineStatus = () => setIsOnline(navigator.onLine);
-    const updateQueueCount = () => setOfflineQueueCount(getOfflineQueue().length);
+    const updateQueueCount = () => setOfflineQueueCount(getOfflineQueueForCompany().length);
     
     window.addEventListener('online', updateOnlineStatus);
     window.addEventListener('offline', updateOnlineStatus);
@@ -149,7 +149,7 @@ export default function App() {
 
   const syncOfflineData = async () => {
     if (!isOnline) return addToast('Erreur', 'Vous devez être en ligne pour synchroniser.', 'error');
-    const queue = getOfflineQueue();
+    const queue = getOfflineQueueForCompany();
     if (queue.length === 0) return;
     
     let successCount = 0;
@@ -164,7 +164,7 @@ export default function App() {
         }
       } catch (err) { }
     }
-    setOfflineQueueCount(getOfflineQueue().length);
+    setOfflineQueueCount(getOfflineQueueForCompany().length);
     if (successCount > 0) {
       addToast('Succès', `${successCount} éléments synchronisés.`, 'success');
     }
@@ -175,7 +175,7 @@ export default function App() {
       addToast('Erreur', 'Connexion requise pour synchroniser.', 'error');
       return;
     }
-    const queue = getOfflineQueue();
+    const queue = getOfflineQueueForCompany();
     const req = queue.find(r => r.id === id);
     if (!req) return;
 
@@ -184,7 +184,7 @@ export default function App() {
       const res = await fetch(req.url, req.options);
       if (res.ok) {
         dequeueRequest(id);
-        const updatedQueue = getOfflineQueue();
+        const updatedQueue = getOfflineQueueForCompany();
         setOfflineQueueCount(updatedQueue.length);
         addToast('Succès', 'Élément synchronisé.', 'success');
       } else {
@@ -250,6 +250,12 @@ export default function App() {
   // Récupérer le nom de l'entreprise active pour le titre des notifications
   const actualCompanyIdForName = (activeCompanyId && activeCompanyId !== "") ? activeCompanyId : (currentUser?.company_id || null);
   const activeCompanyName = Array.isArray(companiesData) ? companiesData.find(c => c.id === actualCompanyIdForName)?.name : null;
+  const scopedProductsData = Array.isArray(productsData)
+    ? productsData.filter(p => !actualCompanyIdForName || !p.company_id || p.company_id === actualCompanyIdForName)
+    : [];
+  const scopedSalesData = Array.isArray(salesData)
+    ? salesData.filter(s => !actualCompanyIdForName || !s.company_id || s.company_id === actualCompanyIdForName)
+    : [];
 
   // Alertes d'abonnement pour le Superadmin en vue globale (Anonymisées selon demande)
   const subscriptionAlerts = (currentUser?.role === 'superadmin' && isGlobalView && Array.isArray(companiesData))
@@ -266,7 +272,7 @@ export default function App() {
 
   // Calcul des alertes en temps réel (Titre = Nom de la compagnie sélectionnée)
   const stockAlerts = showBusinessNotifications 
-    ? productsData.filter(p => p.quantity <= (p.alert_threshold || 5)).map(p => ({
+    ? scopedProductsData.filter(p => p.quantity <= (p.alert_threshold || 5)).map(p => ({
         id: `stock-${p.id}`,
         type: 'STOCK',
         icon: <AlertTriangle size={16} color="#f59e0b" />,
@@ -278,7 +284,7 @@ export default function App() {
     : [];
 
   const unpaidAlerts = showBusinessNotifications
-    ? salesData.filter(s => s.status !== 'paid').map(s => ({
+    ? scopedSalesData.filter(s => s.status !== 'paid').map(s => ({
         id: `sale-${s.id}`,
         type: 'PAYMENT',
         icon: <DollarSign size={16} color="#3b82f6" />,
@@ -745,7 +751,7 @@ export default function App() {
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {getOfflineQueue().map(req => {
+                  {getOfflineQueueForCompany().map(req => {
                     let label = "Modification";
                     let infos = "Données inconnues";
                     let details = [];
@@ -2201,7 +2207,7 @@ const Sales = ({ addToast }) => {
 
   useEffect(() => {
     const loadOfflineSales = () => {
-      const queue = getOfflineQueue();
+      const queue = getOfflineQueueForCompany();
       // Filtrer les requêtes de vente (POST /sales)
       const salesQueue = queue.filter(req => req.url.includes('/sales') && req.options.method === 'POST');
       const formatted = salesQueue.map(req => {
