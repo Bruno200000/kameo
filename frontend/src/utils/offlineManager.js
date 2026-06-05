@@ -52,7 +52,7 @@ export const getOfflineQueue = () => {
 
 export const getOfflineQueueForCompany = (companyId = getActiveCompanyId()) => {
   const queue = getOfflineQueue();
-  if (!companyId) return queue;
+  if (!companyId) return [];
   return queue.filter(req => getRequestCompanyId(req) === companyId);
 };
 
