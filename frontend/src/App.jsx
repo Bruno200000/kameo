@@ -415,7 +415,7 @@ export default function App() {
       case 'contacts': return <Contacts addToast={addToast} />;
       case 'guide': return <Guide onNavigate={setCurrentPage} currentUser={currentUser} />;
       case 'settings': return <SettingsPage currentUser={currentUser} />;
-      case 'subscription': return <Subscription />;
+      case 'subscription': return <Subscription companyPlanId={companyPlanId} companyNextBilling={companyNextBilling} />;
       case 'users': return <UsersManager />;
       case 'admin': return <AdminPanel />;
       default: return <div style={{ padding: '20px' }}>Page inconnue</div>;
@@ -1208,6 +1208,12 @@ const Dashboard = ({ onNavigate }) => {
   const [stats, statsLoading] = useFetch('/dashboard/stats', { sales_today: 0, sales_month: 0, stock_value: 0, low_stock_items: 0, active_customers: 0, historical_sales: [] }, isGlobalSuperAdmin);
   const [sales] = useFetch('/sales', [], isGlobalSuperAdmin);
   const [products] = useFetch('/products', [], isGlobalSuperAdmin);
+  const [dashboardNow, setDashboardNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setDashboardNow(new Date()), 60 * 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   if (isGlobalSuperAdmin) {
     return <SuperAdminDashboard />;
@@ -1215,13 +1221,51 @@ const Dashboard = ({ onNavigate }) => {
 
   // Filtrer les produits en stock critique (<= 5)
   const criticalStockProducts = products.filter(p => p.quantity <= 5).sort((a, b) => a.quantity - b.quantity);
+  const addDays = (date, days) => {
+    const next = new Date(date);
+    next.setDate(next.getDate() + days);
+    return next;
+  };
+  const today = dashboardNow;
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const tomorrowStart = addDays(todayStart, 1);
+  const currentWeekStart = addDays(new Date(today.getFullYear(), today.getMonth(), today.getDate()), -6);
+  const previousWeekStart = addDays(currentWeekStart, -7);
+  const previousWeekEnd = addDays(currentWeekStart, -1);
+  const getPaidAmount = (sale) => sale?.status === 'paid'
+    ? Number(sale.total_amount || 0)
+    : Number(sale.paid_amount || 0);
+  const weeklyPerformance = (Array.isArray(sales) ? sales : []).reduce((acc, sale) => {
+    const saleDate = new Date(sale.sale_date);
+    if (Number.isNaN(saleDate.getTime())) return acc;
+    const saleDay = new Date(saleDate.getFullYear(), saleDate.getMonth(), saleDate.getDate());
+    const amount = getPaidAmount(sale);
+    if (saleDay >= currentWeekStart && saleDay <= today) acc.current += amount;
+    if (saleDay >= previousWeekStart && saleDay <= previousWeekEnd) acc.previous += amount;
+    return acc;
+  }, { current: 0, previous: 0 });
+  const salesToday = (Array.isArray(sales) ? sales : []).reduce((sum, sale) => {
+    const saleDate = new Date(sale.sale_date);
+    if (Number.isNaN(saleDate.getTime())) return sum;
+    return saleDate >= todayStart && saleDate < tomorrowStart
+      ? sum + getPaidAmount(sale)
+      : sum;
+  }, 0);
+  const weeklyDelta = weeklyPerformance.previous > 0
+    ? ((weeklyPerformance.current - weeklyPerformance.previous) / weeklyPerformance.previous) * 100
+    : (weeklyPerformance.current > 0 ? 100 : 0);
+  const weeklyDeltaLabel = `${weeklyDelta >= 0 ? '+' : ''}${weeklyDelta.toFixed(1)}%`;
+  const weeklyBarPercent = weeklyPerformance.current + weeklyPerformance.previous > 0
+    ? Math.min(100, Math.round((weeklyPerformance.current / Math.max(weeklyPerformance.current, weeklyPerformance.previous)) * 100))
+    : 0;
+  const weeklyColor = weeklyDelta >= 0 ? '#10b981' : '#ef4444';
 
   if (statsLoading) return <div style={{ padding: '40px', textAlign: 'center' }}><div className="spinner"></div> Chargement du tableau de bord...</div>;
 
   return (
     <>
       <div className="dashboard-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px' }}>
-        <StatCard icon={<DollarSign size={24} />} title="Ventes (Aujourd'hui)" value={`${stats.sales_today} F`} color="blue" />
+        <StatCard icon={<DollarSign size={24} />} title="Ventes (Aujourd'hui)" value={`${salesToday.toLocaleString()} F`} color="blue" />
         <StatCard icon={<TrendingUp size={24} />} title="Ventes (Ce mois)" value={`${stats.sales_month || 0} F`} color="emerald" />
         <StatCard icon={<Box size={24} />} title="Valeur du stock" value={`${stats.stock_value} F`} color="green" />
         <StatCard icon={<AlertTriangle size={24} />} title="Ruptures" value={stats.low_stock_items} color="red" valueColor="red" />
@@ -1234,12 +1278,14 @@ const Dashboard = ({ onNavigate }) => {
         </div>
         <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <h3 style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '10px' }}>Performance Hebdomadaire</h3>
-          <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#10b981' }}>+18.4%</div>
+          <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: weeklyColor }}>{weeklyDeltaLabel}</div>
           <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '5px 0' }}>Par rapport à la semaine dernière</p>
           <div style={{ marginTop: '15px', height: '8px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' }}>
-            <div style={{ width: '70%', height: '100%', background: '#10b981' }}></div>
+            <div style={{ width: `${weeklyBarPercent}%`, height: '100%', background: weeklyColor }}></div>
           </div>
-          <p style={{ fontSize: '0.75rem', marginTop: '10px' }}>Objectif mensuel: <strong>70% atteint</strong></p>
+          <p style={{ fontSize: '0.75rem', marginTop: '10px' }}>
+            Cette semaine: <strong>{weeklyPerformance.current.toLocaleString()} F</strong> · Semaine passée: <strong>{weeklyPerformance.previous.toLocaleString()} F</strong>
+          </p>
         </div>
       </div>
       <div className="dashboard-grid">
@@ -4319,6 +4365,16 @@ const Subscription = ({ companyPlanId, companyNextBilling }) => {
   const [paymentMethod, setPaymentMethod] = useState('mobile_money');
   const [subscribeMessage, setSubscribeMessage] = useState('');
   const [contactForm, setContactForm] = useState({ company: '', phone: '', details: '' });
+  const getEndOfMonthDate = (baseDate = new Date()) => {
+    const date = new Date(baseDate);
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
+  };
+  const getPlanExpiryDate = (planId, nextBilling) => {
+    const normalizedPlan = (planId || '').toLowerCase();
+    if (nextBilling) return nextBilling;
+    if (normalizedPlan === 'pro') return getEndOfMonthDate().toISOString();
+    return null;
+  };
 
   const [subscriptionInfo, setSubscriptionInfo] = useState(() => {
     // Si companyPlanId est fourni (superadmin mode), utiliser ces données
@@ -4329,7 +4385,7 @@ const Subscription = ({ companyPlanId, companyNextBilling }) => {
         plan: planName,
         status: 'active',
         startDate: null,
-        expiryDate: companyNextBilling || null,
+        expiryDate: getPlanExpiryDate(companyPlanId, companyNextBilling),
         billing: 'Mensuel'
       };
     }
@@ -4354,7 +4410,7 @@ const Subscription = ({ companyPlanId, companyNextBilling }) => {
         plan: planName,
         status: 'active',
         startDate: null,
-        expiryDate: companyNextBilling || null,
+        expiryDate: getPlanExpiryDate(companyPlanId, companyNextBilling),
         billing: 'Mensuel'
       });
     }
@@ -4368,8 +4424,10 @@ const Subscription = ({ companyPlanId, companyNextBilling }) => {
 
   const makeSubscription = async (selectedPlan) => {
     const now = new Date();
-    const durationDays = selectedPlan === 'Pro' ? (isAnnual ? 365 : 30) : 14;
-    const expiry = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
+    const durationDays = 14;
+    const expiry = selectedPlan === 'Pro'
+      ? getEndOfMonthDate(now)
+      : new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
 
     const info = {
       plan: selectedPlan,
@@ -4403,13 +4461,15 @@ const Subscription = ({ companyPlanId, companyNextBilling }) => {
   const daysLeft = getDaysLeft();
   const isExpiringSoon = daysLeft !== null && daysLeft <= 7 && daysLeft >= 0;
   const isExpired = daysLeft !== null && daysLeft < 0;
+  const isProPlan = subscriptionInfo.plan === 'Pro';
+  const renewalDateLabel = subscriptionInfo.expiryDate ? new Date(subscriptionInfo.expiryDate).toLocaleDateString() : '-';
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
       <div style={{ textAlign: 'center', marginBottom: '30px' }}>
         <h2 style={{ fontSize: '2.5rem', color: '#0f172a', fontWeight: '800', marginBottom: '15px' }}>Votre Plan KAméo</h2>
         
-        {subscriptionInfo.plan === 'Pro' ? (
+        {isProPlan ? (
           <div style={{ 
             marginTop: '30px', 
             padding: '40px', 
@@ -4431,11 +4491,11 @@ const Subscription = ({ companyPlanId, companyNextBilling }) => {
               fontWeight: 700,
               marginBottom: '20px'
             }}>
-              <CheckCircle size={18} /> PLAN PROFESSIONNEL ACTIF
+              <CheckCircle size={18} /> {isExpired ? 'PLAN PROFESSIONNEL A RENOUVELER' : 'PLAN PROFESSIONNEL ACTIF'}
             </div>
-            <h1 style={{ fontSize: '3rem', margin: '0 0 10px', fontWeight: 900 }}>Vous êtes en version PRO</h1>
+            <h1 style={{ fontSize: '3rem', margin: '0 0 10px', fontWeight: 900 }}>{isExpired ? 'Renouvelez votre abonnement PRO' : 'Vous êtes en version PRO'}</h1>
             <p style={{ fontSize: '1.2rem', opacity: 0.9, marginBottom: '30px' }}>
-              Toutes les fonctionnalités de KAméo sont débloquées pour votre entreprise.
+              {isExpired ? 'Votre abonnement professionnel est arrive a expiration. Demandez le renouvellement pour continuer le service.' : 'Toutes les fonctionnalités de KAméo sont débloquées pour votre entreprise.'}
             </p>
             
             <div style={{ 
@@ -4452,8 +4512,8 @@ const Subscription = ({ companyPlanId, companyNextBilling }) => {
                 <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>{subscriptionInfo.startDate ? new Date(subscriptionInfo.startDate).toLocaleDateString() : '-'}</div>
               </div>
               <div>
-                <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>Prochain renouvellement</div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>{subscriptionInfo.expiryDate ? new Date(subscriptionInfo.expiryDate).toLocaleDateString() : '-'}</div>
+                <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>{isExpired ? 'Expire le' : 'Expiration fin du mois'}</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>{renewalDateLabel}</div>
               </div>
               <div>
                 <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>Type de facturation</div>
@@ -4461,9 +4521,18 @@ const Subscription = ({ companyPlanId, companyNextBilling }) => {
               </div>
               <div>
                 <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>Statut</div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 600, color: '#4ade80' }}>Actif</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 600, color: isExpired ? '#fca5a5' : '#4ade80' }}>{isExpired ? 'A renouveler' : 'Actif'}</div>
               </div>
             </div>
+            {isExpired && (
+              <button
+                className="primary-btn"
+                style={{ marginTop: '24px', padding: '12px 22px', backgroundColor: 'white', color: '#1d4ed8', border: 'none', fontWeight: 800 }}
+                onClick={() => makeSubscription('Pro')}
+              >
+                Demander le renouvellement
+              </button>
+            )}
           </div>
         ) : (
           <>
@@ -4506,7 +4575,7 @@ const Subscription = ({ companyPlanId, companyNextBilling }) => {
         )}
       </div>
 
-      {(!(subscriptionInfo.plan === 'Pro' && !isExpired)) && (
+      {!isProPlan && (
         <div style={{ display: 'flex', gap: '30px', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
           {/* Basic */}
           <div className="card" style={{ flex: '1 1 320px', maxWidth: '350px', padding: '40px 30px', border: '1px solid #e2e8f0', borderTop: '5px solid #94a3b8', borderRadius: '16px', backgroundColor: '#f8fafc', transition: 'transform 0.3s', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
