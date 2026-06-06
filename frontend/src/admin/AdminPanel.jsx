@@ -14,7 +14,7 @@ const AdminPanel = () => {
     <div style={{ padding: '0 0 40px 0' }}>
       <div style={{ display: 'flex', gap: '15px', marginBottom: '30px', borderBottom: '1px solid #e2e8f0', paddingBottom: '15px', flexWrap: 'wrap' }}>
         {isSuperAdmin && (
-          <button 
+          <button
             onClick={() => setActiveTab('companies')}
             className={`nav-item ${activeTab === 'companies' ? 'active' : ''}`}
             style={{ width: 'auto', padding: '10px 20px' }}
@@ -22,7 +22,7 @@ const AdminPanel = () => {
             <Users size={18} /> Gestion Entreprises
           </button>
         )}
-        <button 
+        <button
           onClick={() => setActiveTab('users')}
           className={`nav-item ${activeTab === 'users' ? 'active' : ''}`}
           style={{ width: 'auto', padding: '10px 20px' }}
@@ -31,21 +31,21 @@ const AdminPanel = () => {
         </button>
         {isSuperAdmin && (
           <>
-            <button 
+            <button
               onClick={() => setActiveTab('stats')}
               className={`nav-item ${activeTab === 'stats' ? 'active' : ''}`}
               style={{ width: 'auto', padding: '10px 20px' }}
             >
-              <TrendingUp size={18} /> Données Structurées
+              <TrendingUp size={18} /> Donnees Structurees
             </button>
-            <button 
+            <button
               onClick={() => setActiveTab('monitoring')}
               className={`nav-item ${activeTab === 'monitoring' ? 'active' : ''}`}
               style={{ width: 'auto', padding: '10px 20px' }}
             >
               <Activity size={18} /> Monitoring
             </button>
-            <button 
+            <button
               onClick={() => setActiveTab('config')}
               className={`nav-item ${activeTab === 'config' ? 'active' : ''}`}
               style={{ width: 'auto', padding: '10px 20px' }}
@@ -56,8 +56,8 @@ const AdminPanel = () => {
         )}
       </div>
 
-      {activeTab === 'companies' && isSuperAdmin ? <CompaniesManager /> : 
-       activeTab === 'users' ? <UsersManager /> : 
+      {activeTab === 'companies' && isSuperAdmin ? <CompaniesManager /> :
+       activeTab === 'users' ? <UsersManager /> :
        activeTab === 'stats' && isSuperAdmin ? <GlobalStatsView /> :
        activeTab === 'monitoring' && isSuperAdmin ? <SessionsMonitor /> :
        activeTab === 'config' && isSuperAdmin ? <SaaSConfig /> :
@@ -68,7 +68,21 @@ const AdminPanel = () => {
 
 const SaaSConfig = () => {
   const [settings, settingsLoading, setSettings] = useFetch('/admin/config', {});
+  const [companies, companiesLoading, setCompanies] = useFetch('/admin/companies', []);
   const [isSaving, setIsSaving] = useState(false);
+  const [isCompanySaving, setIsCompanySaving] = useState(false);
+  const [maintenanceDraft, setMaintenanceDraft] = useState('');
+  const [selectedCompanyId, setSelectedCompanyId] = useState('');
+
+  React.useEffect(() => {
+    setMaintenanceDraft(settings.maintenance_message || '');
+  }, [settings.maintenance_message]);
+
+  React.useEffect(() => {
+    if (!selectedCompanyId && companies.length > 0) {
+      setSelectedCompanyId(companies[0].id);
+    }
+  }, [companies, selectedCompanyId]);
 
   const handleUpdate = async (key, value) => {
     setIsSaving(true);
@@ -78,81 +92,189 @@ const SaaSConfig = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ [key]: value })
       });
-      if (res.ok) setSettings({ ...settings, [key]: value });
-    } catch (e) { alert("Erreur de sauvegarde"); }
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success !== false) {
+        setSettings({ ...settings, [key]: String(value) });
+      } else {
+        alert("Erreur de sauvegarde: " + (data.error || 'configuration non enregistree'));
+      }
+    } catch (e) {
+      alert("Erreur de sauvegarde");
+    }
     setIsSaving(false);
   };
 
-  if (settingsLoading) return <div>Chargement des paramètres...</div>;
+  const selectedCompany = companies.find(company => company.id === selectedCompanyId);
+
+  const updateSelectedCompanyStatus = async (status) => {
+    if (!selectedCompany) {
+      alert('Selectionnez une compagnie.');
+      return;
+    }
+
+    const actionLabel = status === 'suspended' ? 'bloquer' : 'activer';
+    if (status === 'suspended' && !window.confirm(`Voulez-vous vraiment bloquer ${selectedCompany.name} ?`)) return;
+
+    setIsCompanySaving(true);
+    try {
+      const res = await fetch(`${API_URL}/admin/companies/${selectedCompany.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subscription_status: status,
+          plan_id: selectedCompany.plan_id || 'trial'
+        })
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.success !== false) {
+        setCompanies(companies.map(company => (
+          company.id === selectedCompany.id
+            ? { ...company, subscription_status: status }
+            : company
+        )));
+      } else {
+        alert(`Impossible de ${actionLabel} la compagnie: ` + (data.error || 'erreur serveur'));
+      }
+    } catch (e) {
+      alert(`Impossible de ${actionLabel} la compagnie.`);
+    }
+    setIsCompanySaving(false);
+  };
+
+  if (settingsLoading || companiesLoading) return <div>Chargement des parametres...</div>;
 
   return (
     <div className="card" style={{ padding: '30px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-        <h3 style={{ margin: 0 }}>Paramètres de la Plateforme</h3>
-        {isSaving && <span style={{ fontSize: '12px', color: '#3b82f6' }}>Enregistrement...</span>}
+        <h3 style={{ margin: 0 }}>Parametres de la Plateforme</h3>
+        {(isSaving || isCompanySaving) && <span style={{ fontSize: '12px', color: '#3b82f6' }}>Enregistrement...</span>}
       </div>
-      
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        {/* Toggle Switches */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-          <ConfigToggle 
-            title="Mode Maintenance" 
-            desc="Désactiver l'accès publique à la plateforme" 
-            checked={settings.maintenance_mode === 'true'} 
+          <ConfigToggle
+            title="Mode Maintenance"
+            desc="Desactiver l'acces public a la plateforme"
+            checked={settings.maintenance_mode === 'true'}
             onChange={(val) => handleUpdate('maintenance_mode', val)}
           />
-          <ConfigToggle 
-            title="Inscriptions Libres" 
-            desc="Permettre aux nouvelles entreprises de s'inscrire" 
-            checked={settings.allow_new_signups === 'true'} 
+          <ConfigToggle
+            title="Inscriptions Libres"
+            desc="Permettre aux nouvelles entreprises de s'inscrire"
+            checked={settings.allow_new_signups === 'true'}
             onChange={(val) => handleUpdate('allow_new_signups', val)}
           />
-          <ConfigToggle 
-            title="Notifications d'impayés" 
-            desc="Alerter l'admin en temps réel des impayés" 
-            checked={settings.notify_unpaid === 'true'} 
+          <ConfigToggle
+            title="Notifications d'impayes"
+            desc="Alerter l'admin en temps reel des impayes"
+            checked={settings.notify_unpaid === 'true'}
             onChange={(val) => handleUpdate('notify_unpaid', val)}
           />
-          <ConfigToggle 
-            title="Suspension Automatique" 
-            desc="Bloquer les comptes à la fin de leur abonnement" 
-            checked={settings.auto_suspend === 'true'} 
+          <ConfigToggle
+            title="Suspension Automatique"
+            desc="Bloquer les comptes a la fin de leur abonnement"
+            checked={settings.auto_suspend === 'true'}
             onChange={(val) => handleUpdate('auto_suspend', val)}
           />
         </div>
 
         <hr style={{ border: 'none', borderTop: '1px solid #f1f5f9' }} />
 
-        {/* Text Fields */}
+        <div style={{ padding: '18px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+          <label style={{ fontSize: '13px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '8px' }}>Message de maintenance</label>
+          <textarea
+            rows={4}
+            className="large-input"
+            style={{ width: '100%', resize: 'vertical', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '10px' }}
+            value={maintenanceDraft}
+            onChange={(e) => setMaintenanceDraft(e.target.value)}
+            placeholder="Ex: L'application est en maintenance. Nous revenons dans quelques minutes."
+          />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+            <button className="primary-btn" onClick={() => handleUpdate('maintenance_message', maintenanceDraft)} disabled={isSaving}>
+              Enregistrer le message
+            </button>
+          </div>
+        </div>
+
+        <div style={{ padding: '18px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: '14px' }}>
+            <div>
+              <h4 style={{ margin: '0 0 4px', color: '#0f172a' }}>Controle d'acces compagnie</h4>
+              <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>Selectionnez une compagnie pour la rendre non fonctionnelle ou la reactiver.</p>
+            </div>
+            {selectedCompany && (
+              <span className={`status-badge ${selectedCompany.subscription_status === 'active' ? 'success' : 'error'}`}>
+                {selectedCompany.subscription_status || 'pending'}
+              </span>
+            )}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 1fr) auto auto', gap: '10px', alignItems: 'center' }}>
+            <select
+              className="filter-select"
+              value={selectedCompanyId}
+              onChange={(e) => setSelectedCompanyId(e.target.value)}
+              disabled={isCompanySaving || companies.length === 0}
+              style={{ width: '100%', minHeight: '38px' }}
+            >
+              {companies.length === 0 ? (
+                <option value="">Aucune compagnie disponible</option>
+              ) : companies.map(company => (
+                <option key={company.id} value={company.id}>
+                  {company.name} - {company.subscription_status || 'pending'}
+                </option>
+              ))}
+            </select>
+            <button
+              className="secondary-btn"
+              onClick={() => updateSelectedCompanyStatus('suspended')}
+              disabled={!selectedCompany || selectedCompany.subscription_status === 'suspended' || isCompanySaving}
+              style={{ backgroundColor: '#fee2e2', borderColor: '#f87171', color: '#991b1b' }}
+            >
+              Bloquer
+            </button>
+            <button
+              className="primary-btn"
+              onClick={() => updateSelectedCompanyStatus('active')}
+              disabled={!selectedCompany || selectedCompany.subscription_status === 'active' || isCompanySaving}
+              style={{ backgroundColor: '#10b981', borderColor: '#10b981', color: 'white' }}
+            >
+              Activer
+            </button>
+          </div>
+        </div>
+
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-          <ConfigInput 
-            label="Nom de la Plateforme" 
-            value={settings.platform_name || ''} 
+          <ConfigInput
+            label="Nom de la Plateforme"
+            value={settings.platform_name || ''}
             onBlur={(val) => handleUpdate('platform_name', val)}
           />
-          <ConfigInput 
-            label="Email de Support" 
-            value={settings.support_email || ''} 
+          <ConfigInput
+            label="Email de Support"
+            value={settings.support_email || ''}
             onBlur={(val) => handleUpdate('support_email', val)}
           />
-          <ConfigInput 
-            label="Version du Logiciel" 
-            value={settings.version || ''} 
+          <ConfigInput
+            label="Version du Logiciel"
+            value={settings.version || ''}
             onBlur={(val) => handleUpdate('version', val)}
           />
-          <ConfigInput 
-            label="Devise par défaut (ex: FCFA)" 
-            value={settings.default_currency || 'FCFA'} 
+          <ConfigInput
+            label="Devise par defaut (ex: FCFA)"
+            value={settings.default_currency || 'FCFA'}
             onBlur={(val) => handleUpdate('default_currency', val)}
           />
-          <ConfigInput 
-            label="Durée période d'essai (Jours)" 
-            value={settings.trial_days || '14'} 
+          <ConfigInput
+            label="Duree periode d'essai (Jours)"
+            value={settings.trial_days || '14'}
             type="number"
             onBlur={(val) => handleUpdate('trial_days', val)}
           />
           <div style={{ padding: '15px', background: '#f8fafc', borderRadius: '8px' }}>
-             <label style={{ fontSize: '13px', fontWeight: 600, color: '#64748b', display: 'block', marginBottom: '8px' }}>Dernière mise à jour</label>
+             <label style={{ fontSize: '13px', fontWeight: 600, color: '#64748b', display: 'block', marginBottom: '8px' }}>Derniere mise a jour</label>
              <div style={{ fontSize: '14px' }}>{new Date().toLocaleDateString('fr-FR', { dateStyle: 'long' })}</div>
           </div>
         </div>
@@ -167,11 +289,11 @@ const ConfigToggle = ({ title, desc, checked, onChange }) => (
       <strong style={{ fontSize: '14px' }}>{title}</strong>
       <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>{desc}</p>
     </div>
-    <input 
-      type="checkbox" 
-      checked={checked} 
+    <input
+      type="checkbox"
+      checked={checked}
       onChange={(e) => onChange(e.target.checked)}
-      style={{ width: '20px', height: '20px', cursor: 'pointer' }} 
+      style={{ width: '20px', height: '20px', cursor: 'pointer' }}
     />
   </div>
 );
@@ -179,13 +301,13 @@ const ConfigToggle = ({ title, desc, checked, onChange }) => (
 const ConfigInput = ({ label, value, type = "text", onBlur }) => {
   const [val, setVal] = useState(value);
   React.useEffect(() => setVal(value), [value]);
-  
+
   return (
     <div style={{ padding: '15px', background: '#f8fafc', borderRadius: '8px' }}>
       <label style={{ fontSize: '13px', fontWeight: 600, color: '#64748b', display: 'block', marginBottom: '8px' }}>{label}</label>
-      <input 
+      <input
         type={type}
-        className="large-input" 
+        className="large-input"
         style={{ width: '100%', padding: '8px', border: '1px solid #e2e8f0', borderRadius: '4px' }}
         value={val}
         onChange={(e) => setVal(e.target.value)}
@@ -203,12 +325,11 @@ const SessionsMonitor = () => {
     if (!lastLogin) return false;
     const date = new Date(lastLogin);
     const now = new Date();
-    // Considéré en ligne si dernière activité < 30 min
     return (now - date) < (30 * 60 * 1000);
   };
 
-  const filteredUsers = filterActive 
-    ? users.filter(u => isOnline(u.last_login_at)) 
+  const filteredUsers = filterActive
+    ? users.filter(u => isOnline(u.last_login_at))
     : users;
 
   const onlineCount = users.filter(u => isOnline(u.last_login_at)).length;
@@ -230,8 +351,8 @@ const SessionsMonitor = () => {
           <h3 style={{ margin: 0 }}>Surveillance des sessions</h3>
           <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>{onlineCount} utilisateur(s) actuellement en ligne</p>
         </div>
-        <button 
-          className="secondary-btn" 
+        <button
+          className="secondary-btn"
           onClick={() => setFilterActive(!filterActive)}
           style={{ borderColor: filterActive ? '#10b981' : '#e2e8f0', color: filterActive ? '#10b981' : '#64748b' }}
         >
@@ -246,23 +367,23 @@ const SessionsMonitor = () => {
               <tr>
                 <th>Utilisateur</th>
                 <th>Entreprise</th>
-                <th>Rôle</th>
+                <th>Role</th>
                 <th>Statut</th>
-                <th>Dernière connexion</th>
+                <th>Derniere connexion</th>
               </tr>
             </thead>
             <tbody>
               {filteredUsers.length === 0 ? (
-                <tr><td colSpan="5" style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>Aucune session trouvée</td></tr>
+                <tr><td colSpan="5" style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>Aucune session trouvee</td></tr>
               ) : filteredUsers.map(u => {
                 const active = isOnline(u.last_login_at);
                 return (
                   <tr key={u.id}>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div className="user-avatar" style={{ 
+                        <div className="user-avatar" style={{
                           width: '32px', height: '32px', fontSize: '12px',
-                          backgroundColor: active ? '#ecfdf5' : '#f8fafc', 
+                          backgroundColor: active ? '#ecfdf5' : '#f8fafc',
                           color: active ? '#10b981' : '#64748b',
                           border: active ? '1px solid #10b981' : '1px solid #e2e8f0'
                         }}>
@@ -275,8 +396,8 @@ const SessionsMonitor = () => {
                     <td><span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b' }}>{u.role}</span></td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ 
-                          width: '10px', height: '10px', borderRadius: '50%', 
+                        <div style={{
+                          width: '10px', height: '10px', borderRadius: '50%',
                           backgroundColor: active ? '#10b981' : '#cbd5e1',
                           animation: active ? 'monitor-pulse 2s infinite' : 'none'
                         }} />

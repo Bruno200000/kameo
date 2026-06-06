@@ -10,7 +10,7 @@ CREATE TABLE companies (
     logo_url TEXT,
     currency VARCHAR(10) DEFAULT 'EUR',
     plan_id VARCHAR(50) DEFAULT 'trial',
-    subscription_status VARCHAR(50) DEFAULT 'active', -- active, suspended, canceled
+    subscription_status VARCHAR(50) DEFAULT 'active', -- active, pending, rejected, suspended, canceled
     trial_ends_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -156,6 +156,14 @@ INSERT INTO platform_settings (key, value, description) VALUES
 ('platform_name', 'KAméo SaaS', 'Nom officiel de la plateforme'),
 ('support_email', 'support@kameo.com', 'Contact pour le support technique'),
 ('version', '1.2.0', 'Version actuelle du logiciel');
+
+INSERT INTO platform_settings (key, value, description) VALUES
+('maintenance_message', 'L''application est temporairement en maintenance. Merci de revenir plus tard.', 'Message affiche aux utilisateurs pendant la maintenance'),
+('notify_unpaid', 'true', 'Alerte l''admin en temps reel des impayes'),
+('auto_suspend', 'false', 'Bloque automatiquement les comptes a la fin de leur abonnement'),
+('default_currency', 'FCFA', 'Devise par defaut de la plateforme'),
+('trial_days', '14', 'Duree de la periode d''essai en jours')
+ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, description = EXCLUDED.description;
 
 -- 12. Table des Devis (Quotes)
 CREATE TABLE quotes (

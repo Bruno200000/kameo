@@ -126,6 +126,38 @@ const resolveCustomerId = async ({ customerId, customerName, req }) => {
   return created && created.length > 0 ? created[0].id : null;
 };
 
+const getPlatformSettings = async (req = null) => {
+  const config = await supabaseFetch('platform_settings?select=key,value', {}, req);
+  const settings = {};
+  if (config) config.forEach(c => settings[c.key] = c.value);
+  return settings;
+};
+
+const upsertPlatformSetting = async (key, value, req = null) => {
+  const safeKey = encodeURIComponent(key);
+  const existing = await supabaseFetch(`platform_settings?key=eq.${safeKey}&select=key&limit=1`, {}, req);
+  const payload = { value: String(value ?? '') };
+
+  if (existing && existing.length > 0) {
+    await supabaseFetch(`platform_settings?key=eq.${safeKey}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload)
+    }, req);
+    return;
+  }
+
+  await supabaseFetch('platform_settings', {
+    method: 'POST',
+    body: JSON.stringify({ key, ...payload })
+  }, req);
+};
+
+const getCompanyById = async (companyId) => {
+  if (!companyId) return null;
+  const data = await supabaseFetch(`companies?id=eq.${encodeURIComponent(companyId)}&select=id,name,subscription_status&limit=1`);
+  return data && data.length > 0 ? data[0] : null;
+};
+
 app.use(cors({
   origin: true,
   credentials: true,
@@ -281,6 +313,37 @@ router.post('/settings', async (req, res) => {
       error: "Erreur mise à jour", 
       message: err.message 
     }); 
+  }
+});
+
+router.use(async (req, res, next) => {
+  try {
+    if (req.path.startsWith('/auth') || req.path.startsWith('/admin') || req.path === '/settings') return next();
+
+    const user = JSON.parse(req.headers['x-user-data'] || '{}');
+    if (!user || user.role === 'superadmin') return next();
+
+    const settings = await getPlatformSettings(req);
+    if (settings.maintenance_mode === 'true') {
+      return res.status(503).json({
+        error: settings.maintenance_message || "L'application est temporairement en maintenance.",
+        maintenance: true
+      });
+    }
+
+    const company = await getCompanyById(user.company_id);
+    const status = company?.subscription_status || 'active';
+    if (status !== 'active') {
+      return res.status(403).json({
+        error: "Votre compagnie est bloquee. Contactez le superadmin.",
+        company_status: status,
+        company_blocked: true
+      });
+    }
+
+    next();
+  } catch (err) {
+    next();
   }
 });
 
@@ -824,17 +887,14 @@ router.post('/contacts', async (req, res) => {
 // Admin
 router.get('/admin/config', async (req, res) => {
   try {
-    const config = await supabaseFetch('platform_settings?select=key,value', {}, req);
-    const settings = {};
-    if (config) config.forEach(c => settings[c.key] = c.value);
-    res.json(settings);
+    res.json(await getPlatformSettings(req));
   } catch (err) { res.status(500).json({ error: "Erreur config" }); }
 });
 
 router.patch('/admin/config', async (req, res) => {
   try {
     for (const key in req.body) {
-      await supabaseFetch(`platform_settings?key=eq.${key}`, { method: 'PATCH', body: JSON.stringify({ value: req.body[key].toString() }) }, req);
+      await upsertPlatformSetting(key, req.body[key], req);
     }
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: "Erreur MAJ config" }); }

@@ -236,6 +236,7 @@ export default function App() {
   const [companyValidationStatus, setCompanyValidationStatus] = useState('active');
   const [companyNextBilling, setCompanyNextBilling] = useState(null);
   const [companyPlanId, setCompanyPlanId] = useState('trial');
+  const [platformSettings, setPlatformSettings] = useState({});
 
   // Données globales pour les notifications
   const [productsData] = useFetch('/products', []);
@@ -351,6 +352,20 @@ export default function App() {
   }, [currentUser]);
 
   useEffect(() => {
+    const fetchPlatformSettings = async () => {
+      try {
+        const res = await fetch(`${API_URL}/admin/config`, { headers: getHeaders() });
+        if (!res.ok) return;
+        const settings = await res.json();
+        setPlatformSettings(settings || {});
+      } catch (e) {
+        console.warn('Erreur chargement configuration plateforme', e);
+      }
+    };
+    if (currentUser) fetchPlatformSettings();
+  }, [currentUser]);
+
+  useEffect(() => {
     const onApi404 = (event) => {
       const endpoint = event?.detail?.endpoint || 'ressource';
       setCurrentPage('contacts');
@@ -381,13 +396,28 @@ export default function App() {
   if (loadingAuth) return <AppLoader />;
   if (!currentUser) return <LoginPage onLoginSuccess={handleLoginSuccess} />;
 
+  if (platformSettings.maintenance_mode === 'true' && currentUser.role !== 'superadmin') {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '30px', background: '#f8fafc' }}>
+        <div className="card" style={{ maxWidth: '560px', width: '100%', padding: '32px', textAlign: 'center', borderTop: '4px solid #f59e0b' }}>
+          <AlertTriangle size={42} color="#f59e0b" style={{ marginBottom: '14px' }} />
+          <h2 style={{ margin: '0 0 10px' }}>Maintenance en cours</h2>
+          <p style={{ color: '#475569', lineHeight: 1.6, margin: 0 }}>
+            {platformSettings.maintenance_message || "L'application est temporairement indisponible. Merci de revenir plus tard."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (currentUser && !['superadmin'].includes(currentUser.role) && companyValidationStatus !== 'active') {
+    const isSuspended = companyValidationStatus === 'suspended';
     return (
       <div style={{ padding: '40px', textAlign: 'center' }}>
         <h2>Accès restreint</h2>
-        <p>Votre plan est en attente de validation par le superadmin.</p>
+        <p>{isSuspended ? "Votre compagnie a ete bloquee par le superadmin." : "Votre plan est en attente de validation par le superadmin."}</p>
         <p>Statut actuel : <strong style={{ color: '#d97706' }}>{companyValidationStatus}</strong></p>
-        <p>Merci de patienter, un administrateur va valider votre accès.</p>
+        <p>{isSuspended ? "Contactez l'administration de la plateforme pour reactiver l'acces." : "Merci de patienter, un administrateur va valider votre acces."}</p>
       </div>
     );
   }
