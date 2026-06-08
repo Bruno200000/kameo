@@ -285,7 +285,7 @@ export default function App() {
     : [];
 
   const unpaidAlerts = showBusinessNotifications
-    ? scopedSalesData.filter(s => s.status !== 'paid').map(s => ({
+    ? scopedSalesData.filter(s => s.status !== 'paid' && s.status !== 'canceled').map(s => ({
         id: `sale-${s.id}`,
         type: 'PAYMENT',
         icon: <DollarSign size={16} color="#3b82f6" />,
@@ -1262,9 +1262,13 @@ const Dashboard = ({ onNavigate }) => {
   const currentWeekStart = addDays(new Date(today.getFullYear(), today.getMonth(), today.getDate()), -6);
   const previousWeekStart = addDays(currentWeekStart, -7);
   const previousWeekEnd = addDays(currentWeekStart, -1);
-  const getPaidAmount = (sale) => sale?.status === 'paid'
-    ? Number(sale.total_amount || 0)
-    : Number(sale.paid_amount || 0);
+  const getPaidAmount = (sale) => {
+    if (sale?.status === 'canceled') return 0;
+    return sale?.status === 'paid'
+      ? Number(sale.total_amount || 0)
+      : Number(sale.paid_amount || 0);
+  };
+  const activeSales = (Array.isArray(sales) ? sales : []).filter(s => s.status !== 'canceled');
   const weeklyPerformance = (Array.isArray(sales) ? sales : []).reduce((acc, sale) => {
     const saleDate = new Date(sale.sale_date);
     if (Number.isNaN(saleDate.getTime())) return acc;
@@ -1327,12 +1331,12 @@ const Dashboard = ({ onNavigate }) => {
             <table className="data-table">
               <thead><tr><th>Date</th><th>Montant</th><th>Statut</th></tr></thead>
               <tbody>
-                {sales.length === 0 ? <tr><td colSpan="3" style={{ textAlign: 'center', padding: '20px', color: '#94a3b8' }}>Aucune vente récente</td></tr> : null}
-                {sales.slice(0, 5).map(s => (
+                {activeSales.length === 0 ? <tr><td colSpan="3" style={{ textAlign: 'center', padding: '20px', color: '#94a3b8' }}>Aucune vente récente</td></tr> : null}
+                {activeSales.slice(0, 5).map(s => (
                   <tr key={s.id}>
                     <td>{new Date(s.sale_date).toLocaleString()}</td>
-                    <td style={{ fontWeight: 600 }}>{s.total_amount} F</td>
-                    <td><span className="status-badge success">Payé</span></td>
+                    <td style={{ fontWeight: 600 }}>{getPaidAmount(s)} F</td>
+                    <td><span className={s.status === 'paid' ? "status-badge success" : "status-badge warning"}>{s.status === 'paid' ? 'Payé' : 'En attente'}</span></td>
                   </tr>
                 ))}
               </tbody>
@@ -2324,7 +2328,7 @@ const Stock = ({ addToast, currentUser }) => {
                     {s.stock_after !== null && s.stock_after !== undefined ? `${s.stock_after} unités` : '-'}
                   </td>
                   <td>{s.reason || '-'}</td>
-                  <td style={{ fontWeight: 'bold', color: s.movement_type === 'OUT' ? '#ef4444' : '#10b981', fontSize: '1.1rem' }}>{s.movement_type === 'OUT' ? '-' : '+'}{s.quantity}</td>
+                  <td style={{ fontWeight: 'bold', color: s.movement_type === 'OUT' ? '#ef4444' : '#10b981', fontSize: '1.1rem' }}>{s.movement_type === 'OUT' ? '-' : '+'}{Math.abs(Number(s.quantity || 0))}</td>
                   <td>
                     {(currentUser.role === 'admin' || currentUser.role === 'superadmin') && (
                       <div style={{ display: 'flex', gap: '5px' }}>
@@ -2387,6 +2391,7 @@ const Sales = ({ addToast }) => {
   const [isPaying, setIsPaying] = useState(false);
   const [paymentDialog, setPaymentDialog] = useState({ open: false, sale: null, amount: '' });
   const [offlineSales, setOfflineSales] = useState([]);
+  const [cancelingSaleId, setCancelingSaleId] = useState(null);
 
   useEffect(() => {
     const loadOfflineSales = () => {
@@ -2420,17 +2425,25 @@ const Sales = ({ addToast }) => {
 
   const getSaleTotal = (sale) => Number(sale?.total_amount || 0);
   const getSalePaid = (sale) => {
+    if (sale?.status === 'canceled') return 0;
     const total = getSaleTotal(sale);
     if (sale?.status === 'paid') return total;
     return Number(sale?.paid_amount || 0);
   };
   const getSaleRemaining = (sale) => {
+    if (sale?.status === 'canceled') return 0;
     if (sale?.status === 'paid') return 0;
     const total = getSaleTotal(sale);
     const paid = getSalePaid(sale);
     return Math.max(0, Number(sale?.remaining_amount ?? (total - paid)));
   };
   const getSaleCustomerName = (sale) => sale?.customers?.name || sale?.customer_name || 'Client de passage';
+  const getSaleStatusMeta = (sale) => {
+    if (sale?.status === 'canceled') return { className: 'status-badge error', label: 'Annulée' };
+    if (sale?.status === 'paid') return { className: 'status-badge success', label: 'Payé' };
+    if (sale?.status === 'partial') return { className: 'status-badge warning', label: 'Partiel' };
+    return { className: 'status-badge warning', label: 'En attente' };
+  };
 
   const openPaymentDialog = (sale) => {
     const remainingAmount = getSaleRemaining(sale);
@@ -2497,6 +2510,31 @@ const Sales = ({ addToast }) => {
       setPaymentError(err.message || 'Erreur de connexion au serveur.');
     } finally {
       setIsPaying(false);
+    }
+  };
+
+  const cancelSale = async (sale) => {
+    if (!sale || sale.is_offline || sale.status === 'canceled') return;
+    if (!window.confirm("Annuler cette vente ? Le stock sera restauré et la vente ne comptera plus dans le tableau de bord.")) return;
+
+    setCancelingSaleId(sale.id);
+    try {
+      const res = await performApiFetch(`${API_URL}/sales/${sale.id}/cancel`, {
+        method: 'POST',
+        headers: getHeaders({ 'Content-Type': 'application/json' })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Erreur lors de l'annulation");
+      }
+      const updatedSale = data.sale || { ...sale, status: 'canceled', paid_amount: 0, remaining_amount: 0 };
+      setSales((Array.isArray(sales) ? sales : []).map(s => s.id === sale.id ? updatedSale : s));
+      setSelectedSale(prev => prev?.id === sale.id ? updatedSale : prev);
+      addToast('Succès', 'Vente annulée. Le stock et le tableau de bord ont été ajustés.', 'success');
+    } catch (err) {
+      addToast('Erreur', err.message || "Erreur lors de l'annulation", 'error');
+    } finally {
+      setCancelingSaleId(null);
     }
   };
 
@@ -2694,7 +2732,11 @@ const Sales = ({ addToast }) => {
 
     // Déterminer un tampon unique pour éviter toute superposition
     let statusStamp = '';
-    if (isCredit) {
+    if (sale.status === 'canceled') {
+      statusStamp = invoiceFormat === 'THERMAL'
+        ? '<div class="center bold" style="margin-top: 10px; border: 1px solid #ef4444; color: #ef4444; padding: 5px;">VENTE ANNULÉE</div>'
+        : '<div class="credit-badge">VENTE ANNULÉE</div>';
+    } else if (isCredit) {
       statusStamp = invoiceFormat === 'THERMAL' 
         ? '<div class="center bold" style="margin-top: 10px; border: 1px solid #000; padding: 5px;">VENTE À CRÉDIT</div>'
         : '<div class="credit-badge">VENTE À CRÉDIT</div>';
@@ -2972,7 +3014,7 @@ const Sales = ({ addToast }) => {
         <div className="search-filters">
           <Search size={16} style={{ position: 'absolute', left: 15, top: 12, color: '#94a3b8' }} />
           <input type="text" placeholder="Rechercher par N° facture ou client..." className="large-input" style={{ paddingLeft: 40 }} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-          <select className="filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}><option value="all">Tous les statuts</option><option value="paid">Payé</option><option value="pending">En attente</option></select>
+          <select className="filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}><option value="all">Tous les statuts</option><option value="paid">Payé</option><option value="partial">Partiel</option><option value="pending">En attente</option><option value="canceled">Annulée</option></select>
         </div>
         <button className="primary-btn" onClick={() => setShowAdd(!showAdd)}><FileText size={16} /> Créer une Facture Manuelle</button>
       </div>
@@ -3133,10 +3175,10 @@ const Sales = ({ addToast }) => {
                     </td>
                     <td>{s.customers?.name || s.customer_name || 'Client de passage'}</td>
                     <td style={{ fontSize: '0.85rem', color: '#64748b' }}>{s.created_by_name || 'Système'}</td>
-                    <td style={{ fontWeight: 'bold', color: '#10b981' }}>+ {s.total_amount} F</td>
+                    <td style={{ fontWeight: 'bold', color: s.status === 'canceled' ? '#64748b' : '#10b981' }}>{s.status === 'canceled' ? '' : '+ '}{s.total_amount} F</td>
                     <td>
-                      <span className={s.status === 'paid' ? "status-badge success" : "status-badge warning"} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <CheckCircle size={12} /> {s.status === 'paid' ? 'Payé' : 'En attente'}
+                      <span className={getSaleStatusMeta(s).className} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <CheckCircle size={12} /> {getSaleStatusMeta(s).label}
                       </span>
                       {s.is_offline && (
                         <div style={{ marginTop: '4px' }}>
@@ -3174,6 +3216,15 @@ const Sales = ({ addToast }) => {
                         >
                           Dupliquer
                         </button>
+                        {!s.is_offline && s.status !== 'canceled' && (
+                          <button
+                            onClick={() => cancelSale(s)}
+                            disabled={cancelingSaleId === s.id}
+                            style={{ border: '1px solid #fecaca', background: '#fef2f2', color: '#b91c1c', padding: '6px 10px', fontSize: '0.78rem', fontWeight: 600, borderRadius: '8px', cursor: cancelingSaleId === s.id ? 'not-allowed' : 'pointer', opacity: cancelingSaleId === s.id ? 0.65 : 1 }}
+                          >
+                            {cancelingSaleId === s.id ? 'Annulation...' : 'Annuler'}
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -3200,8 +3251,8 @@ const Sales = ({ addToast }) => {
               <div><strong>Montant Payé :</strong> {getSalePaid(selectedSale).toLocaleString()} F</div>
               <div><strong>Reste à Payer :</strong> {getSaleRemaining(selectedSale).toLocaleString()} F</div>
               <div><strong>Statut :</strong>
-                <span className={selectedSale.status === 'paid' ? "status-badge success" : selectedSale.status === 'partial' ? "status-badge warning" : "status-badge error"} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  {selectedSale.status === 'paid' ? 'Payé' : selectedSale.status === 'partial' ? 'Partiel' : 'En attente'}
+                <span className={getSaleStatusMeta(selectedSale).className} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  {getSaleStatusMeta(selectedSale).label}
                 </span>
               </div>
             </div>
@@ -3227,6 +3278,15 @@ const Sales = ({ addToast }) => {
             </div>
 
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '6px' }}>
+              {selectedSale.status !== 'canceled' && !selectedSale.is_offline && (
+                <button
+                  onClick={() => cancelSale(selectedSale)}
+                  disabled={cancelingSaleId === selectedSale.id}
+                  style={{ border: '1px solid #fecaca', background: '#fef2f2', color: '#b91c1c', padding: '9px 14px', borderRadius: '8px', fontWeight: 700, cursor: cancelingSaleId === selectedSale.id ? 'not-allowed' : 'pointer', opacity: cancelingSaleId === selectedSale.id ? 0.65 : 1 }}
+                >
+                  {cancelingSaleId === selectedSale.id ? 'Annulation...' : 'Annuler la vente'}
+                </button>
+              )}
               <button onClick={() => printInvoice(selectedSale)} style={{ border: '1px solid #bfdbfe', background: 'linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%)', color: '#1d4ed8', padding: '9px 14px', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}>Imprimer</button>
               <button onClick={() => setSelectedSale(null)} style={{ border: '1px solid #e2e8f0', background: '#f8fafc', color: '#64748b', padding: '9px 14px', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}>Fermer</button>
             </div>
@@ -6045,6 +6105,3 @@ export const Orders = ({ addToast, onNavigate }) => {
     </>
   );
 };
-
-
-

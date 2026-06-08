@@ -290,7 +290,7 @@ app.use(async (req, res, next) => {
 // Dashboard Stats
 app.get('/api/dashboard/stats', async (req, res) => {
   try {
-    const salesData = await supabaseFetch('sales?select=total_amount,paid_amount,sale_date');
+    const salesData = await supabaseFetch('sales?status=neq.canceled&select=total_amount,paid_amount,sale_date,status');
     const productsData = await supabaseFetch('products?select=quantity,selling_price,alert_threshold');
     const customersData = await supabaseFetch('customers?select=id');
 
@@ -351,7 +351,7 @@ app.get('/api/dashboard/stats', async (req, res) => {
 // Finance Summary
 app.get('/api/finance/summary', async (req, res) => {
   try {
-    const sales = await supabaseFetch('sales?select=total_amount,paid_amount,sale_date,status&order=sale_date.desc') || [];
+    const sales = await supabaseFetch('sales?status=neq.canceled&select=total_amount,paid_amount,sale_date,status&order=sale_date.desc') || [];
     const purchases = await supabaseFetch('purchases?select=total_amount,purchase_date,status&order=purchase_date.desc') || [];
     
     const totalRecettes = sales.reduce((sum, s) => sum + Number(s.paid_amount || 0), 0);
@@ -590,7 +590,7 @@ app.post('/api/sales', async (req, res) => {
             company_id: companyId,
             product_id: item.id,
             movement_type: 'OUT',
-            quantity: -item.cartQuantity,
+            quantity: Math.abs(Number(item.cartQuantity || 0)),
             stock_after: currentQty - item.cartQuantity,
             reason: `Vente #${saleId.split('-')[0]}${status === 'partial' ? ' (Paiement partiel)' : ''}`
           })
@@ -672,6 +672,67 @@ app.post('/api/sales/:id/payment', async (req, res) => {
   } catch (err) {
     console.error('Error in payment update:', err);
     res.status(500).json({ error: "Erreur lors du paiement: " + err.message });
+  }
+});
+
+app.post('/api/sales/:id/cancel', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const existing = await supabaseFetch(`sales?id=eq.${id}&select=*,sale_items(product_id,quantity)`);
+    if (!existing || existing.length === 0) return res.status(404).json({ error: 'Vente non trouvée' });
+
+    const sale = existing[0];
+    if (sale.status === 'canceled') return res.status(400).json({ error: 'Cette vente est déjà annulée' });
+
+    const companyId = sale.company_id || await getOrCreateCompanyId();
+    const items = Array.isArray(sale.sale_items) ? sale.sale_items : [];
+    for (const item of items) {
+      if (!item.product_id) continue;
+      const restoreQty = Math.abs(Number(item.quantity || 0));
+      if (!restoreQty) continue;
+
+      const prodData = await supabaseFetch(`products?id=eq.${item.product_id}&select=quantity`);
+      const currentQty = Number(prodData?.[0]?.quantity || 0);
+      const newQty = currentQty + restoreQty;
+
+      await supabaseFetch(`products?id=eq.${item.product_id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ quantity: newQty })
+      });
+
+      await supabaseFetch('stock_movements', {
+        method: 'POST',
+        body: JSON.stringify({
+          company_id: companyId,
+          product_id: item.product_id,
+          movement_type: 'IN',
+          quantity: restoreQty,
+          stock_after: newQty,
+          reason: `Annulation vente #${id.split('-')[0]}`
+        })
+      });
+    }
+
+    const remainingDebt = Number(sale.remaining_amount || 0);
+    if (sale.customer_id && remainingDebt > 0) {
+      const customerData = await supabaseFetch(`customers?id=eq.${sale.customer_id}&select=current_debt`);
+      const currentDebt = Number(customerData?.[0]?.current_debt || 0);
+      await supabaseFetch(`customers?id=eq.${sale.customer_id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ current_debt: Math.max(0, currentDebt - remainingDebt) })
+      });
+    }
+
+    await supabaseFetch(`sales?id=eq.${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'canceled', paid_amount: 0, remaining_amount: 0 })
+    });
+
+    const fullSale = await supabaseFetch(`sales?id=eq.${id}&select=*,customers(name,contact_info),sale_items(product_id,quantity,unit_price,total,products(name,image_url))`);
+    res.json({ success: true, sale: (fullSale && fullSale.length > 0) ? fullSale[0] : { ...sale, status: 'canceled', paid_amount: 0, remaining_amount: 0 } });
+  } catch (err) {
+    console.error('Error canceling sale:', err);
+    res.status(500).json({ error: "Erreur lors de l'annulation: " + err.message });
   }
 });
 
@@ -793,7 +854,8 @@ app.patch('/api/purchases/:id', async (req, res) => {
 // Stock Mouvements
 app.get('/api/stock', async (req, res) => {
   try {
-    const data = await supabaseFetch('stock_movements?select=*,products:product_id(name,quantity)&order=movement_date.desc');
+    const companyId = await getOrCreateCompanyId();
+    const data = await supabaseFetch(`stock_movements?company_id=eq.${companyId}&select=*,products:product_id(name,quantity)&order=movement_date.desc`);
     res.json(data || []);
   } catch (err) {
     res.status(500).json({ error: "Erreur serveur interne" });
@@ -806,13 +868,14 @@ app.post('/api/stock', async (req, res) => {
     const { product_id, movement_type, quantity, reason } = req.body;
     if (!product_id || !quantity) return res.status(400).json({ error: 'Produit et quantité requis' });
     const companyId = await getOrCreateCompanyId();
+    const normalizedQuantity = Math.abs(Number(quantity || 0));
     
     // 1. Insérer le mouvement
     const movementData = {
       company_id: companyId,
       product_id,
       movement_type: movement_type || 'IN',
-      quantity: Number(quantity) || 0,
+      quantity: normalizedQuantity,
       reason: reason || ''
     };
     
@@ -828,8 +891,8 @@ app.post('/api/stock', async (req, res) => {
     const prod = await supabaseFetch(`products?id=eq.${product_id}&select=quantity`);
     if (prod && prod.length > 0) {
       let newQty = Number(prod[0].quantity) || 0;
-      if (movement_type === 'IN') newQty += Number(quantity);
-      else newQty -= Number(quantity);
+      if (movement_type === 'IN') newQty += normalizedQuantity;
+      else newQty -= normalizedQuantity;
       
       const finalQty = newQty < 0 ? 0 : newQty;
       
@@ -1528,7 +1591,7 @@ app.post('/api/orders/:id/convert-delivery', async (req, res) => {
               company_id: order.company_id,
               product_id: item.product_id,
               movement_type: 'OUT',
-              quantity: -item.quantity,
+              quantity: Math.abs(Number(item.quantity || 0)),
               stock_after: currentQty - item.quantity,
               reason: `Livraison Commande #${order.id.split('-')[0]}`
             })

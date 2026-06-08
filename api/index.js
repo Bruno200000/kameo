@@ -44,7 +44,7 @@ const supabaseFetch = async (resourcePath, options = {}, req = null) => {
   // Exclure les tables qui n'ont pas de colonne company_id
   // Déterminer la table de base pour savoir si on applique le filtre
   const baseTable = resourcePath.split(/[?\/]/)[0];
-  const isExcluded = ['companies', 'platform_settings', 'sale_items', 'purchase_items', 'order_items', 'quote_items', 'delivery_note_items', 'stock_movements'].includes(baseTable);
+  const isExcluded = ['companies', 'platform_settings', 'sale_items', 'purchase_items', 'order_items', 'quote_items', 'delivery_note_items'].includes(baseTable);
   const isUserPath = baseTable === 'users';
 
   // Si Superadmin en vue globale, on peut accepter un company_id direct dans le body pour les créations
@@ -351,7 +351,7 @@ router.use(async (req, res, next) => {
 // Dashboard
 router.get('/dashboard/stats', async (req, res) => {
   try {
-    const salesData = await supabaseFetch('sales?select=total_amount,paid_amount,sale_date', {}, req);
+    const salesData = await supabaseFetch('sales?status=neq.canceled&select=total_amount,paid_amount,sale_date,status', {}, req);
     const productsData = await supabaseFetch('products?select=quantity,selling_price,alert_threshold', {}, req);
     const customersData = await supabaseFetch('customers?select=id', {}, req);
 
@@ -419,7 +419,7 @@ router.get('/dashboard/stats', async (req, res) => {
 // Finance
 router.get('/finance/summary', async (req, res) => {
   try {
-    const sales = await supabaseFetch('sales?select=total_amount,paid_amount,sale_date,status&order=sale_date.desc', {}, req) || [];
+    const sales = await supabaseFetch('sales?status=neq.canceled&select=total_amount,paid_amount,sale_date,status&order=sale_date.desc', {}, req) || [];
     const purchases = await supabaseFetch('purchases?select=total_amount,purchase_date,status&order=purchase_date.desc', {}, req) || [];
     const totalRecettes = sales.reduce((sum, s) => sum + Number(s.paid_amount || 0), 0);
     const totalDepenses = purchases.reduce((sum, p) => sum + Number(p.total_amount), 0);
@@ -611,7 +611,7 @@ router.post('/sales', async (req, res) => {
               body: JSON.stringify({
                 product_id: item.id,
                 movement_type: 'OUT',
-                quantity: -item.cartQuantity,
+                quantity: Math.abs(Number(item.cartQuantity || 0)),
                 stock_after: Math.max(0, newQty),
                 reason: `Vente #${saleId.split('-')[0]}${status === 'partial' ? ' (Paiement partiel)' : ''}`
               })
@@ -673,6 +673,73 @@ router.post('/sales/:id/payment', async (req, res) => {
     
     res.json({ success: true, sale: (fullSale && fullSale.length > 0) ? fullSale[0] : updated[0] });
   } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.post('/sales/:id/cancel', async (req, res) => {
+  try {
+    const saleId = req.params.id;
+    const existing = await supabaseFetch(
+      `sales?id=eq.${saleId}&select=*,sale_items(product_id,quantity)`,
+      {},
+      req
+    );
+    if (!existing || existing.length === 0) return res.status(404).json({ error: 'Vente non trouvée' });
+
+    const sale = existing[0];
+    if (sale.status === 'canceled') return res.status(400).json({ error: 'Cette vente est déjà annulée' });
+
+    const items = Array.isArray(sale.sale_items) ? sale.sale_items : [];
+    for (const item of items) {
+      if (!item.product_id) continue;
+      const restoreQty = Math.abs(Number(item.quantity || 0));
+      if (!restoreQty) continue;
+
+      const prodData = await supabaseFetch(`products?id=eq.${item.product_id}&select=quantity`, {}, req);
+      const currentQty = Number(prodData?.[0]?.quantity || 0);
+      const newQty = currentQty + restoreQty;
+
+      await supabaseFetch(`products?id=eq.${item.product_id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ quantity: newQty })
+      }, req);
+
+      await supabaseFetch('stock_movements', {
+        method: 'POST',
+        body: JSON.stringify({
+          product_id: item.product_id,
+          movement_type: 'IN',
+          quantity: restoreQty,
+          stock_after: newQty,
+          reason: `Annulation vente #${saleId.split('-')[0]}`
+        })
+      }, req);
+    }
+
+    const remainingDebt = Number(sale.remaining_amount || 0);
+    if (sale.customer_id && remainingDebt > 0) {
+      const customerData = await supabaseFetch(`customers?id=eq.${sale.customer_id}&select=current_debt`, {}, req);
+      const currentDebt = Number(customerData?.[0]?.current_debt || 0);
+      await supabaseFetch(`customers?id=eq.${sale.customer_id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ current_debt: Math.max(0, currentDebt - remainingDebt) })
+      }, req);
+    }
+
+    await supabaseFetch(`sales?id=eq.${saleId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        status: 'canceled',
+        paid_amount: 0,
+        remaining_amount: 0
+      })
+    }, req);
+
+    const fullSale = await supabaseFetch(`sales?id=eq.${saleId}&select=*,companies(name),customers(name,contact_info),sale_items(product_id,quantity,unit_price,total,products(name,image_url))`, {}, req);
+    res.json({ success: true, sale: (fullSale && fullSale.length > 0) ? fullSale[0] : { ...sale, status: 'canceled', paid_amount: 0, remaining_amount: 0 } });
+  } catch (err) {
+    console.error("Erreur annulation vente:", err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Achats
@@ -773,10 +840,11 @@ router.get('/stock', async (req, res) => {
 
 router.post('/stock', async (req, res) => {
   try {
+    const normalizedQuantity = Math.abs(Number(req.body.quantity || 0));
     const moveRes = await supabaseFetch('stock_movements', {
       method: 'POST',
       headers: { 'Prefer': 'return=representation' },
-      body: JSON.stringify(req.body)
+      body: JSON.stringify({ ...req.body, quantity: normalizedQuantity })
     }, req);
 
     const moveId = moveRes[0].id;
@@ -785,7 +853,7 @@ router.post('/stock', async (req, res) => {
     const prod = await supabaseFetch(`products?id=eq.${req.body.product_id}&select=quantity`, {}, req);
     if (prod && prod.length > 0) {
       const currentQty = prod[0].quantity;
-      const newQty = req.body.movement_type === 'IN' ? currentQty + Number(req.body.quantity) : currentQty - Number(req.body.quantity);
+      const newQty = req.body.movement_type === 'IN' ? currentQty + normalizedQuantity : currentQty - normalizedQuantity;
       const finalQty = Math.max(0, newQty);
 
       await supabaseFetch(`products?id=eq.${req.body.product_id}`, { 
@@ -808,6 +876,7 @@ router.post('/stock', async (req, res) => {
 router.patch('/stock/:id', async (req, res) => {
   try {
     const { product_id, movement_type, quantity, reason } = req.body;
+    const normalizedQuantity = Math.abs(Number(quantity || 0));
     const oldRes = await supabaseFetch(`stock_movements?id=eq.${req.params.id}`, {}, req);
     if (!oldRes || oldRes.length === 0) return res.status(404).json({ error: "Mouvement non trouvé" });
     const oldM = oldRes[0];
@@ -815,17 +884,17 @@ router.patch('/stock/:id', async (req, res) => {
     const updatedRes = await supabaseFetch(`stock_movements?id=eq.${req.params.id}`, {
       method: 'PATCH',
       headers: { 'Prefer': 'return=representation' },
-      body: JSON.stringify({ product_id, movement_type, quantity: Number(quantity), reason })
+      body: JSON.stringify({ product_id, movement_type, quantity: normalizedQuantity, reason })
     }, req);
     const newM = updatedRes[0];
 
     const prod = await supabaseFetch(`products?id=eq.${product_id}&select=quantity`, {}, req);
     if (prod && prod.length > 0) {
       let currentQty = prod[0].quantity;
-      if (oldM.movement_type === 'IN') currentQty -= oldM.quantity;
-      else currentQty += oldM.quantity;
-      if (newM.movement_type === 'IN') currentQty += newM.quantity;
-      else currentQty -= newM.quantity;
+      if (oldM.movement_type === 'IN') currentQty -= Math.abs(Number(oldM.quantity || 0));
+      else currentQty += Math.abs(Number(oldM.quantity || 0));
+      if (newM.movement_type === 'IN') currentQty += Math.abs(Number(newM.quantity || 0));
+      else currentQty -= Math.abs(Number(newM.quantity || 0));
       await supabaseFetch(`products?id=eq.${product_id}`, { method: 'PATCH', body: JSON.stringify({ quantity: Math.max(0, currentQty) }) }, req);
     }
     res.json({ success: true, movement: newM });
@@ -840,7 +909,8 @@ router.delete('/stock/:id', async (req, res) => {
     await supabaseFetch(`stock_movements?id=eq.${req.params.id}`, { method: 'DELETE' }, req);
     const prod = await supabaseFetch(`products?id=eq.${m.product_id}&select=quantity`, {}, req);
     if (prod && prod.length > 0) {
-      const newQty = m.movement_type === 'IN' ? prod[0].quantity - m.quantity : prod[0].quantity + m.quantity;
+      const movementQty = Math.abs(Number(m.quantity || 0));
+      const newQty = m.movement_type === 'IN' ? prod[0].quantity - movementQty : prod[0].quantity + movementQty;
       await supabaseFetch(`products?id=eq.${m.product_id}`, { method: 'PATCH', body: JSON.stringify({ quantity: Math.max(0, newQty) }) }, req);
     }
     res.json({ success: true });
@@ -1329,7 +1399,7 @@ router.post('/orders/:id/convert-delivery', async (req, res) => {
             body: JSON.stringify({
               product_id: item.product_id,
               movement_type: 'OUT',
-              quantity: -item.quantity,
+              quantity: Math.abs(Number(item.quantity || 0)),
               stock_after: currentQty - item.quantity,
               reason: `Livraison Commande #${order.id.split('-')[0]}`
             })
