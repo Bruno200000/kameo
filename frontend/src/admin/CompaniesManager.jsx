@@ -1,8 +1,30 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Edit2, Lock, Unlock } from 'lucide-react';
+import { Plus, Trash2, Edit2, Lock, Unlock, Clock } from 'lucide-react';
 import { useFetch, API_URL } from '../hooks/useFetch';
 
-const emptyForm = { name: '', email: '', phone: '', address: '', plan_id: 'trial', password: '' };
+const emptyForm = { name: '', email: '', phone: '', address: '', plan_id: 'trial', trial_ends_at: '', password: '' };
+
+const toDateTimeLocalValue = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (isNaN(date.getTime())) return '';
+  const offsetMs = date.getTimezoneOffset() * 60 * 1000;
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
+};
+
+const getTrialCountdownLabel = (company) => {
+  if ((company.plan_id || 'trial') !== 'trial') return '-';
+  if (company.trial_countdown_enabled === false) return 'Desactive';
+  if (!company.trial_ends_at) return 'Non defini';
+
+  const diffMs = new Date(company.trial_ends_at).getTime() - Date.now();
+  if (!Number.isFinite(diffMs)) return 'Non defini';
+  if (diffMs <= 0 || company.trial_expired) return 'Expire';
+
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diffMs / (1000 * 60 * 60)) % 24);
+  return `${days}j ${hours}h`;
+};
 
 const CompaniesManager = () => {
   const [companies, companiesLoading, setCompanies] = useFetch('/admin/companies', []);
@@ -29,6 +51,11 @@ const CompaniesManager = () => {
       const method = isEditing ? 'PATCH' : 'POST';
       const payload = { ...formData };
       if (isEditing && !payload.password) delete payload.password;
+      if (payload.trial_ends_at) {
+        payload.trial_ends_at = new Date(payload.trial_ends_at).toISOString();
+      } else {
+        delete payload.trial_ends_at;
+      }
 
       const res = await fetch(url, {
         method,
@@ -61,6 +88,7 @@ const CompaniesManager = () => {
       phone: company.phone || '',
       address: company.address || '',
       plan_id: company.plan_id || 'trial',
+      trial_ends_at: toDateTimeLocalValue(company.trial_ends_at),
       password: ''
     });
     setShowAdd(true);
@@ -86,7 +114,7 @@ const CompaniesManager = () => {
       });
       const d = await res.json();
       if (d.success) {
-        setCompanies(companies.map(c => c.id === company.id ? { ...c, subscription_status: status, plan_id: planId } : c));
+        setCompanies(companies.map(c => c.id === company.id ? { ...c, ...(d.company || {}), subscription_status: status, plan_id: planId } : c));
       } else {
         alert('Erreur mise a jour: ' + (d.error || ''));
       }
@@ -135,6 +163,14 @@ const CompaniesManager = () => {
               <option value="pro">Professionnel</option>
               <option value="enterprise">Entreprise</option>
             </select>
+            <input
+              type="datetime-local"
+              className="large-input"
+              value={formData.trial_ends_at}
+              onChange={e => setFormData({ ...formData, trial_ends_at: e.target.value })}
+              disabled={formData.plan_id !== 'trial'}
+              title="Date de fin de l'offre gratuite"
+            />
           </div>
           <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
             <button className="primary-btn" onClick={handleSave} disabled={isSaving}>
@@ -153,6 +189,7 @@ const CompaniesManager = () => {
                 <th>Nom</th>
                 <th>Email</th>
                 <th>Plan</th>
+                <th>Essai gratuit</th>
                 <th>Statut</th>
                 <th>Actions</th>
               </tr>
@@ -163,6 +200,11 @@ const CompaniesManager = () => {
                   <td><strong>{c.name}</strong></td>
                   <td>{c.email}</td>
                   <td><span className="status-badge" style={{ backgroundColor: '#e2e8f0' }}>{c.plan_id || 'trial'}</span></td>
+                  <td>
+                    <span className={`status-badge ${getTrialCountdownLabel(c) === 'Expire' ? 'error' : 'warning'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                      <Clock size={12} /> {getTrialCountdownLabel(c)}
+                    </span>
+                  </td>
                   <td><span className={`status-badge ${c.subscription_status === 'active' ? 'success' : 'error'}`}>{c.subscription_status || 'pending'}</span></td>
                   <td>
                     <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>

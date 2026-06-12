@@ -152,9 +152,55 @@ const upsertPlatformSetting = async (key, value, req = null) => {
   }, req);
 };
 
+const isTrialCountdownEnabled = (settings = {}) => settings.trial_countdown_enabled !== 'false';
+
+const getTrialDays = (settings = {}) => {
+  const days = Number(settings.trial_days);
+  return Number.isFinite(days) && days > 0 ? days : 14;
+};
+
+const calculateTrialEndsAt = (createdAt, settings = {}) => {
+  const start = createdAt ? new Date(createdAt) : new Date();
+  if (isNaN(start.getTime())) return null;
+  start.setDate(start.getDate() + getTrialDays(settings));
+  return start.toISOString();
+};
+
+const enrichTrialCompany = (company, settings = {}) => {
+  if (!company) return company;
+  const isTrial = (company.plan_id || 'trial') === 'trial';
+  const countdownEnabled = isTrialCountdownEnabled(settings);
+  const trialEndsAt = company.trial_ends_at || (isTrial ? calculateTrialEndsAt(company.created_at, settings) : null);
+  const trialEndsTime = trialEndsAt ? new Date(trialEndsAt).getTime() : null;
+  const trialExpired = Boolean(isTrial && countdownEnabled && trialEndsTime && trialEndsTime <= Date.now());
+  const computedStatus = trialExpired && company.subscription_status === 'active'
+    ? 'trial_expired'
+    : (company.subscription_status || 'active');
+
+  return {
+    ...company,
+    trial_ends_at: trialEndsAt,
+    trial_countdown_enabled: countdownEnabled,
+    trial_expired: trialExpired,
+    computed_subscription_status: computedStatus
+  };
+};
+
+const persistTrialExpirationIfNeeded = async (company, settings = {}, req = null) => {
+  const enriched = enrichTrialCompany(company, settings);
+  if (enriched?.trial_expired && company.subscription_status === 'active') {
+    await supabaseFetch(`companies?id=eq.${company.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ subscription_status: 'trial_expired' })
+    }, req);
+    return { ...enriched, subscription_status: 'trial_expired', computed_subscription_status: 'trial_expired' };
+  }
+  return enriched;
+};
+
 const getCompanyById = async (companyId) => {
   if (!companyId) return null;
-  const data = await supabaseFetch(`companies?id=eq.${encodeURIComponent(companyId)}&select=id,name,subscription_status&limit=1`);
+  const data = await supabaseFetch(`companies?id=eq.${encodeURIComponent(companyId)}&select=id,name,plan_id,subscription_status,trial_ends_at,created_at&limit=1`);
   return data && data.length > 0 ? data[0] : null;
 };
 
@@ -266,7 +312,9 @@ router.get('/settings', async (req, res) => {
     if (!companyId) return res.json({});
     // On filtre explicitement par ID pour être sûr de récupérer la bonne entreprise
     const data = await supabaseFetch(`companies?id=eq.${companyId}&select=*&limit=1`, {}, req);
-    const company = data && data.length > 0 ? data[0] : {};
+    const settings = await getPlatformSettings(req);
+    let company = data && data.length > 0 ? data[0] : {};
+    company = await persistTrialExpirationIfNeeded(company, settings, req);
     
     // Mapping du logo
     if (company.logo_url) {
@@ -331,11 +379,13 @@ router.use(async (req, res, next) => {
       });
     }
 
-    const company = await getCompanyById(user.company_id);
-    const status = company?.subscription_status || 'active';
+    const company = await persistTrialExpirationIfNeeded(await getCompanyById(user.company_id), settings, req);
+    const status = company?.computed_subscription_status || company?.subscription_status || 'active';
     if (status !== 'active') {
       return res.status(403).json({
-        error: "Votre compagnie est bloquee. Contactez le superadmin.",
+        error: status === 'trial_expired'
+          ? "Votre periode d'essai est terminee. Contactez le superadmin."
+          : "Votre compagnie est bloquee. Contactez le superadmin.",
         company_status: status,
         company_blocked: true
       });
@@ -972,15 +1022,27 @@ router.patch('/admin/config', async (req, res) => {
 
 router.get('/admin/companies', async (req, res) => {
   try {
+    const settings = await getPlatformSettings(req);
     const data = await supabaseFetch('companies?select=*&order=created_at.desc', {}, req);
-    res.json(data || []);
+    const companies = await Promise.all((data || []).map(company => persistTrialExpirationIfNeeded(company, settings, req)));
+    res.json(companies);
   } catch (err) { res.status(500).json({ error: "Erreur" }); }
 });
 
 router.post('/admin/companies', async (req, res) => {
   try {
     const { password, ...companyPayload } = req.body;
-    const companyData = await supabaseFetch('companies', { method: 'POST', headers: { 'Prefer': 'return=representation' }, body: JSON.stringify(companyPayload) }, req);
+    const settings = await getPlatformSettings(req);
+    const planId = companyPayload.plan_id || 'trial';
+    const payload = {
+      ...companyPayload,
+      plan_id: planId,
+      subscription_status: companyPayload.subscription_status || 'active',
+      trial_ends_at: planId === 'trial'
+        ? (companyPayload.trial_ends_at || calculateTrialEndsAt(new Date().toISOString(), settings))
+        : (companyPayload.trial_ends_at || null)
+    };
+    const companyData = await supabaseFetch('companies', { method: 'POST', headers: { 'Prefer': 'return=representation' }, body: JSON.stringify(payload) }, req);
 
     if (companyData && companyData.length > 0) {
       const newCompanyId = companyData[0].id;
@@ -995,7 +1057,7 @@ router.post('/admin/companies', async (req, res) => {
         };
         await supabaseFetch('users', { method: 'POST', body: JSON.stringify(newAdmin) }, req);
       }
-      res.json({ success: true, company: companyData[0] });
+      res.json({ success: true, company: enrichTrialCompany(companyData[0], settings) });
     } else {
       res.status(500).json({ error: "Échec de création entreprise" });
     }
@@ -1004,8 +1066,13 @@ router.post('/admin/companies', async (req, res) => {
 
 router.patch('/admin/companies/:id', async (req, res) => {
   try {
-    const updated = await supabaseFetch(`companies?id=eq.${req.params.id}`, { method: 'PATCH', headers: { 'Prefer': 'return=representation' }, body: JSON.stringify(req.body) }, req);
-    res.json({ success: true, company: updated ? updated[0] : null });
+    const settings = await getPlatformSettings(req);
+    const payload = { ...req.body };
+    if (payload.plan_id && payload.plan_id !== 'trial' && payload.trial_ends_at === undefined) {
+      payload.trial_ends_at = null;
+    }
+    const updated = await supabaseFetch(`companies?id=eq.${req.params.id}`, { method: 'PATCH', headers: { 'Prefer': 'return=representation' }, body: JSON.stringify(payload) }, req);
+    res.json({ success: true, company: updated ? enrichTrialCompany(updated[0], settings) : null });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

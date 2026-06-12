@@ -162,6 +162,7 @@ INSERT INTO platform_settings (key, value, description) VALUES
 ('notify_unpaid', 'true', 'Alerte l''admin en temps reel des impayes'),
 ('auto_suspend', 'false', 'Bloque automatiquement les comptes a la fin de leur abonnement'),
 ('default_currency', 'FCFA', 'Devise par defaut de la plateforme'),
+('trial_countdown_enabled', 'true', 'Active le decompte des 14 jours gratuits'),
 ('trial_days', '14', 'Duree de la periode d''essai en jours')
 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, description = EXCLUDED.description;
 

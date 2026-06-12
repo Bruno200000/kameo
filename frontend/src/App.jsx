@@ -67,6 +67,17 @@ const getHeaders = (extra = {}) => {
   }
 };
 
+const getTrialRemaining = (trialEndsAt) => {
+  if (!trialEndsAt) return null;
+  const endTime = new Date(trialEndsAt).getTime();
+  if (!Number.isFinite(endTime)) return null;
+  const totalMs = endTime - Date.now();
+  const clampedMs = Math.max(0, totalMs);
+  const days = Math.floor(clampedMs / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((clampedMs / (1000 * 60 * 60)) % 24);
+  return { totalMs, days, hours, expired: totalMs <= 0 };
+};
+
 const CompanySwitcher = ({ currentUser }) => {
   const [companies, setCompanies] = useState([]);
   const activeCompany = localStorage.getItem('kameo_active_company_id');
@@ -94,6 +105,41 @@ const CompanySwitcher = ({ currentUser }) => {
       <option value="">-- Toutes les entreprises --</option>
       {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
     </select>
+  );
+};
+
+const TrialCountdown = ({ planId, trialEndsAt, countdownEnabled }) => {
+  const [remaining, setRemaining] = useState(() => getTrialRemaining(trialEndsAt));
+
+  useEffect(() => {
+    setRemaining(getTrialRemaining(trialEndsAt));
+    const timer = setInterval(() => setRemaining(getTrialRemaining(trialEndsAt)), 60 * 1000);
+    return () => clearInterval(timer);
+  }, [trialEndsAt]);
+
+  if (countdownEnabled === false || planId !== 'trial' || !trialEndsAt || !remaining) return null;
+
+  const urgent = remaining.totalMs <= 48 * 60 * 60 * 1000;
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '7px 12px',
+        borderRadius: '999px',
+        backgroundColor: urgent ? '#fff7ed' : '#eff6ff',
+        border: `1px solid ${urgent ? '#fdba74' : '#bfdbfe'}`,
+        color: urgent ? '#9a3412' : '#1d4ed8',
+        fontSize: '0.82rem',
+        fontWeight: 700,
+        whiteSpace: 'nowrap'
+      }}
+      title={`Fin de l'offre gratuite: ${new Date(trialEndsAt).toLocaleString('fr-FR')}`}
+    >
+      <Clock size={15} />
+      {remaining.expired ? "Essai termine" : `Essai: ${remaining.days}j ${remaining.hours}h`}
+    </div>
   );
 };
 
@@ -236,6 +282,8 @@ export default function App() {
   const [companyValidationStatus, setCompanyValidationStatus] = useState('active');
   const [companyNextBilling, setCompanyNextBilling] = useState(null);
   const [companyPlanId, setCompanyPlanId] = useState('trial');
+  const [companyTrialEndsAt, setCompanyTrialEndsAt] = useState(null);
+  const [trialCountdownEnabled, setTrialCountdownEnabled] = useState(true);
   const [platformSettings, setPlatformSettings] = useState({});
 
   // Données globales pour les notifications
@@ -335,14 +383,18 @@ export default function App() {
           return;
         }
         const settings = await res.json();
-        if (settings?.subscription_status) {
-          setCompanyValidationStatus(settings.subscription_status);
+        if (settings?.computed_subscription_status || settings?.subscription_status) {
+          setCompanyValidationStatus(settings.computed_subscription_status || settings.subscription_status);
         }
-        if (settings?.expiry_date) {
-          setCompanyNextBilling(settings.expiry_date);
+        if (settings?.trial_ends_at || settings?.expiry_date) {
+          setCompanyNextBilling(settings.trial_ends_at || settings.expiry_date);
+          setCompanyTrialEndsAt(settings.trial_ends_at || null);
         }
         if (settings?.plan_id) {
           setCompanyPlanId(settings.plan_id);
+        }
+        if (settings?.trial_countdown_enabled !== undefined) {
+          setTrialCountdownEnabled(settings.trial_countdown_enabled !== false);
         }
       } catch (e) {
         console.error('Erreur chargement statut entreprise', e);
@@ -412,6 +464,7 @@ export default function App() {
 
   if (currentUser && !['superadmin'].includes(currentUser.role) && companyValidationStatus !== 'active') {
     const isSuspended = companyValidationStatus === 'suspended';
+    const isTrialExpired = companyValidationStatus === 'trial_expired';
     return (
       <div style={{ padding: '40px', textAlign: 'center' }}>
         <h2>Accès restreint</h2>
@@ -611,6 +664,13 @@ export default function App() {
             <h1 className="page-title">{getPageTitle()}</h1>
           </div>
           <div className="topbar-right">
+            {currentUser.role !== 'superadmin' && (
+              <TrialCountdown
+                planId={companyPlanId}
+                trialEndsAt={companyTrialEndsAt}
+                countdownEnabled={trialCountdownEnabled}
+              />
+            )}
             <span 
               onClick={() => offlineQueueCount > 0 && setShowOfflineModal(true)}
               style={{ 

@@ -177,6 +177,12 @@ const SaaSConfig = () => {
             checked={settings.auto_suspend === 'true'}
             onChange={(val) => handleUpdate('auto_suspend', val)}
           />
+          <ConfigToggle
+            title="Decompte essai gratuit"
+            desc="Afficher et appliquer le decompte des jours gratuits"
+            checked={settings.trial_countdown_enabled !== 'false'}
+            onChange={(val) => handleUpdate('trial_countdown_enabled', val)}
+          />
         </div>
 
         <hr style={{ border: 'none', borderTop: '1px solid #f1f5f9' }} />
