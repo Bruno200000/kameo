@@ -4390,11 +4390,11 @@ const SettingsPage = ({ currentUser }) => {
                         </thead>
                         <tbody>
                           <tr><td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>1x Produit A</td><td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0', textAlign: 'right' }}>15 000</td></tr>
-                          <tr><td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>2x Produit B</td><td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0', textAlign: 'right' }}>20 000</td></tr>
+                          <tr><td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>2x Produit B</td><td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0', textAlign: 'right' }}>0</td></tr>
                         </tbody>
                       </table>
                       <div style={{ textAlign: 'right', marginTop: '12px', fontWeight: 'bold', fontSize: '0.9rem', color: settings.invoice_color || '#2563eb' }}>
-                        Total TTC : 35 000 {settings.currency || 'XOF'}
+                        Total TTC : 15 000 {settings.currency || 'XOF'}
                       </div>
                     </div>
 
@@ -4509,6 +4509,10 @@ const SettingsPage = ({ currentUser }) => {
 
 
 const Subscription = ({ companyPlanId, companyNextBilling }) => {
+  const proMonthlyPrice = 15000;
+  const proAnnualMonthlyPrice = 12000;
+  const proAnnualDiscountMonthly = proMonthlyPrice - proAnnualMonthlyPrice;
+  const formatPrice = (amount) => `${Number(amount).toLocaleString('fr-FR')} F`;
   const [isAnnual, setIsAnnual] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [showContact, setShowContact] = useState(false);
@@ -4751,7 +4755,7 @@ const Subscription = ({ companyPlanId, companyNextBilling }) => {
             <h3 style={{ fontSize: '1.5rem', color: '#2563eb', margin: '0 0 10px' }}>Professionnel</h3>
             <p style={{ color: '#64748b', fontSize: '0.95rem', minHeight: '40px' }}>L'outil complet pour gérer et scaler votre commerce au quotidien.</p>
             <p style={{ fontSize: '2.5rem', fontWeight: '800', margin: '20px 0', color: '#0f172a' }}>
-              {isAnnual ? '28 000 F' : '35 000 F'} <span style={{ fontSize: '1rem', color: '#94a3b8', fontWeight: 'normal' }}>/ mois</span>
+              {formatPrice(isAnnual ? proAnnualMonthlyPrice : proMonthlyPrice)} <span style={{ fontSize: '1rem', color: '#94a3b8', fontWeight: 'normal' }}>/ mois</span>
             </p>
             {subscriptionInfo.plan === 'Pro' ? (
               <button className="primary-btn w-100" style={{ padding: '14px', fontSize: '1.1rem', marginBottom: '30px', borderRadius: '8px', backgroundColor: '#6d28d9', border: 'none', boxShadow: '0 4px 10px rgba(107, 40, 217, 0.4)', color: '#fff' }} disabled>Plan Actuel</button>
@@ -4790,9 +4794,9 @@ const Subscription = ({ companyPlanId, companyNextBilling }) => {
             <p style={{ color: '#64748b', marginBottom: '20px' }}>Saisie sécurisée pour le plan Professionnel - {isAnnual ? 'Facturation Annuelle' : 'Facturation Mensuelle'}</p>
 
             <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '15px', marginBottom: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', color: '#64748b' }}><span>Abonnement Pro</span><span>{isAnnual ? (35000 * 12).toLocaleString() + ' F' : '35 000 F'}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', color: '#10b981', fontWeight: 'bold' }}><span>{isAnnual ? 'Réduction Annuelle (-20%)' : 'Remises'}</span><span>{isAnnual ? '- ' + (7000 * 12).toLocaleString() + ' F' : '- 0 F'}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.2rem', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #e2e8f0', color: '#1e293b' }}><span>Total à régler</span><span>{isAnnual ? (28000 * 12).toLocaleString() + ' F' : '35 000 F'}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', color: '#64748b' }}><span>Abonnement Pro</span><span>{isAnnual ? formatPrice(proMonthlyPrice * 12) : formatPrice(proMonthlyPrice)}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', color: '#10b981', fontWeight: 'bold' }}><span>{isAnnual ? 'Réduction Annuelle (-20%)' : 'Remises'}</span><span>{isAnnual ? '- ' + formatPrice(proAnnualDiscountMonthly * 12) : '- 0 F'}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.2rem', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #e2e8f0', color: '#1e293b' }}><span>Total à régler</span><span>{isAnnual ? formatPrice(proAnnualMonthlyPrice * 12) : formatPrice(proMonthlyPrice)}</span></div>
             </div>
 
             <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#475569', fontSize: '0.9rem' }}>Méthode de paiement</label>
@@ -4806,7 +4810,7 @@ const Subscription = ({ companyPlanId, companyNextBilling }) => {
               setSubscribeMessage(`Paiement validé via ${paymentMethod === 'card' ? 'Carte' : 'Mobile Money'} : plan Professionnel activé.`);
               setShowPayment(false);
             }}>
-              Payer {isAnnual ? (28000 * 12).toLocaleString() + ' F' : '35 000 F'}
+              Payer {isAnnual ? formatPrice(proAnnualMonthlyPrice * 12) : formatPrice(proMonthlyPrice)}
             </button>
           </div>
         </div>
